@@ -1,0 +1,10 @@
+{
+  "id": "seo",
+  "name": "SEO",
+  "version": "0.1.0",
+  "runtime": "runtime.php",
+  "capabilities": [
+    "seo.publications",
+    "seo.sitemap"
+  ]
+}
