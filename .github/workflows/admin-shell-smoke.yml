@@ -78,7 +78,7 @@ jobs:
           mkdir -p storage/sessions storage/cache storage/logs storage/rate-limits storage/uploads
           php -r '
           require "core.php";
-          $renderer = ChurchCMSCoreThemeRenderer::fromConfig();
+          $renderer = \ChurchCMS\Core\ThemeRenderer::fromConfig();
           $html = $renderer->capture("layout.admin", [
               "title" => "Публикации",
               "siteName" => "Тестовый приход",
