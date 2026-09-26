@@ -6,148 +6,216 @@ Last updated: 2026-09-26
 
 `develop`
 
-## Completed foundations
-
-- PHP 8.3+ standalone runtime.
-- Native autoloader.
-- Router / Request / Response.
-- PDO database manager.
-- Native migration runner.
-- Module manifests / registry / runtime providers.
-- Theme manifests / inheritance / renderer.
-- Dependency-free theme validator.
-- Modernized legacy-inspired default theme.
-- External API v1 foundation.
-- Partner Bearer tokens stored by SHA-256 hash.
-- API scopes, CORS allowlist and file-backed rate limiting.
-- Generic syndication engine.
-- Generic RSS 2.0 feed.
-- Rambler/News feed adapter.
-- Publication product/domain requirements recorded.
-
-## Publications module — current implementation
+## Runtime baseline
 
 Implemented:
 
-- publication workflow statuses;
-- publication types;
-- publication table migration;
-- stable public UUID;
-- site key for future multi-site;
-- slug/title/excerpt/rich body;
-- HTML allowlist sanitizer;
-- author;
-- publication timestamps;
+- PHP 8.3+ standalone runtime;
+- no mandatory Composer/framework/npm dependency;
+- native autoloader;
+- router/request/response;
+- PDO PostgreSQL/MySQL infrastructure;
+- migration runner;
+- module manifests/runtime providers/capabilities;
+- theme manifests and inheritance;
+- PHP 8.3 lint + theme validation CI.
+
+## Installation
+
+Implemented:
+
+- four-step browser installer;
+- environment/extension/writeability checks;
+- automatic URL defaults;
+- site profile selection;
+- PostgreSQL/MySQL setup;
+- automatic DB creation where credentials allow it;
+- automatic migrations;
+- first superadmin creation;
+- atomic local configuration;
+- generated 256-bit secret key;
+- completed-installer lock;
+- interrupted-install recovery before completion.
+
+Pending:
+
+- final installation healthcheck;
+- update/backup wizard.
+
+## Security / administration
+
+Implemented:
+
+- hardened session cookies;
+- CSRF for authenticated browser mutations;
+- stateless HMAC token for anonymous public forms;
+- security headers/CSP;
+- login throttling;
+- admin authentication with password_hash/password_verify;
+- automatic password rehash;
+- RBAC schema/services;
+- scope storage;
+- audit event foundation;
+- protected admin dashboard;
+- friendly publication editor;
+- comment moderation queue.
+
+Pending:
+
+- roles/users management UI;
+- password reset;
+- optional 2FA;
+- production error handler;
+- scoped permission enforcement in future domain modules.
+
+## Publications
+
+Implemented:
+
+- types and workflow statuses;
+- DB schema and public UUID;
+- site key;
+- automatic Russian-friendly slug;
+- title/excerpt/body/author;
+- comments_enabled per publication;
 - explicit syndication targets;
-- target-specific title/excerpt fields;
-- internal write service:
-  - create draft;
-  - publish;
-  - withdraw;
-  - change syndication targets;
-- public published-only repository queries;
-- public list/detail site routes;
-- default theme templates for list/detail;
-- public JSON API;
-- partner JSON API with `content.read`;
-- incremental partner sync using `updated_since`;
-- publication syndication provider;
-- lazy DB access during module boot.
+- internal create/update/publish/withdraw service;
+- public list/detail pages;
+- admin list/editor;
+- public API;
+- partner API with incremental sync;
+- RSS/Rambler syndication provider;
+- audit/cache invalidation on changes.
 
-Not yet exposed:
+Next:
 
-- HTTP/admin write routes.
+- categories/tags;
+- revisions;
+- scheduled publication execution;
+- Media/cover relation.
 
-Reason: write endpoints are intentionally blocked until Auth + RBAC + CSRF + audit log exist.
-
-## Administrator security — current implementation
+## Comments
 
 Implemented:
 
-- hardened PHP session cookie configuration;
-- lazy session start;
-- session id rotation on login;
-- CSRF token service and middleware;
-- baseline CSP/security headers;
-- administrator login rate limiting;
-- admin user table;
-- roles and permissions tables;
-- user-role and role-permission relations;
-- role scope storage for future site/section restrictions;
-- password_hash/password_verify login;
-- automatic password rehash when PHP defaults change;
-- protected /admin dashboard;
-- CSRF-protected logout;
-- first-superadmin CLI provisioning.
+- optional module;
+- per-publication on/off switch;
+- approved public comments;
+- premoderated submissions by default;
+- plain-text input;
+- stateless public form token;
+- rate limiting;
+- approve/reject/spam moderation;
+- audit events.
 
-Not yet implemented:
+## SEO / sharing
 
-- audit/security event log;
-- permission management UI;
-- role assignment UI;
-- scope enforcement in individual domain modules;
-- password reset flow;
-- optional 2FA.
+Implemented:
 
-## Immediate next work
+- SEO module;
+- per-publication SEO storage;
+- automatic SEO defaults from publication;
+- optional SEO title/description/keywords;
+- canonical override;
+- index/follow controls;
+- Open Graph;
+- Twitter/X card tags;
+- social title/description/image overrides;
+- Article/NewsArticle microdata;
+- author/published/modified semantic metadata;
+- dynamic robots.txt;
+- dynamic XML sitemap;
+- Sitemap directive;
+- configurable share providers;
+- Telegram/VK/OK share links;
+- native Web Share button;
+- copy-link action;
+- no third-party share SDK/runtime dependency.
 
-1. Validate current PHP 8.3 CI and fix issues.
-2. Harden migrations and add database-backed smoke test.
-3. Add audit/security event log.
-4. Add permission guard for publication administration.
-5. Build Publications admin/editor UI.
-6. Add categories/tags/revisions/scheduling.
-7. Build Media module and publication cover relation.
+Next:
 
-## Durable planning documents
+- Media image dimensions/variants in Article markup;
+- video structured metadata when Video/Media module lands;
+- organization/site-level SEO settings UI;
+- redirect manager.
+
+## Performance
+
+Implemented:
+
+- anonymous pages do not start PHP sessions;
+- dependency-free full-page cache;
+- version-based O(1) cache invalidation;
+- public max-age + stale-while-revalidate;
+- versioned immutable theme assets;
+- query/API result bounds;
+- third-party channel sync isolated from public requests.
+
+Pending before 1.0:
+
+- database-backed smoke environment in CI;
+- large fixture dataset;
+- HTTP load tests;
+- query-plan/index audit;
+- reference hardware thresholds;
+- Nginx/reverse-proxy deployment profile.
+
+## External channels / social / video
+
+Architecture implemented:
+
+- open provider IDs: no fixed provider whitelist in storage;
+- adapter capability vocabulary;
+- generic inbound/outbound DTOs;
+- encrypted credential storage foundation;
+- connection schema;
+- publication outbox schema;
+- inbound external-content inbox;
+- remote ID/fingerprint deduplication;
+- sync cursor/error state;
+- polling synchronization service;
+- runtime capability.
+
+The intended model is:
+
+```
+official ChurchCMS publication
+        |
+        +--> selected external channels (outbox)
+        |
+        +--> canonical official URL
+
+external network/video content
+        |
+        +--> inbox/review
+        |
+        +--> explicit import/link by operator
+```
+
+External content never becomes official automatically by default.
+
+Next:
+
+- connection/admin UI;
+- outbound worker;
+- inbound review UI;
+- Telegram/VK/MAX adapters;
+- YouTube/Rutube adapters;
+- webhook contract.
+
+## Durable project memory
 
 - `docs/PRODUCT_REQUIREMENTS.md`
 - `docs/ROADMAP.md`
 - `docs/BACKLOG.md`
 - `docs/DECISIONS.md`
+- `docs/STATUS.md`
 - `docs/ARCHITECTURE.md`
 - `docs/THEMES.md`
 - `docs/DESIGN_SYSTEM.md`
 - `docs/API.md`
 - `docs/SYNDICATION.md`
+- `docs/COMMENTS.md`
+- `docs/INSTALLATION.md`
 
 Update this file at the end of every substantial implementation increment.
-
-
-## Publication comments switch
-
-Implemented publication-level comment availability:
-
-- `comments_enabled` stored per publication;
-- default is off;
-- domain entity exposes the state;
-- PublicationService can enable/disable comments independently for each publication;
-- public API exposes whether comments are enabled;
-- disabling future comments is designed to close new submissions without deleting existing approved comments.
-
-The actual comments/moderation module and editor toggle UI remain separate backlog items.
-
-
-## Operator UX increment — 2026-09-26
-
-Implemented:
-
-- four-step browser installer inspired by the proven Notes installer flow;
-- automatic PHP/extension/writeability checks;
-- site URL defaults and site-profile selection;
-- PostgreSQL/MySQL setup with automatic DB creation where permitted;
-- atomic local configuration;
-- automatic migrations;
-- first superadmin creation;
-- completed-installer lock;
-- interrupted-install recovery until the first admin is created;
-- publication administration list;
-- single-screen create/edit publication workflow;
-- automatic Russian-friendly URL generation;
-- normal plain-text publication editing without requiring HTML;
-- explicit per-publication "Allow comments" switch;
-- optional external distribution checkboxes;
-- diocesan partner API now exports only publications explicitly marked for the `diocese` target;
-- publish/withdraw actions;
-- public premoderated comments;
-- friendly comments moderation queue.
