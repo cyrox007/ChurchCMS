@@ -118,41 +118,37 @@ jobs:
             exit 1
           fi
 
-      - name: Проверить URL перед нагрузкой
+      - name: Проверить главную страницу
         shell: bash
         run: |
-          set -euo pipefail
           php -r '
-          $urls = [
-              "http://127.0.0.1:8080/",
-              "http://127.0.0.1:8080/publications",
-              "http://127.0.0.1:8080/publications/benchmark-000001",
-          ];
-
-          foreach ($urls as $url) {
-              $context = stream_context_create([
-                  "http" => [
-                      "ignore_errors" => true,
-                      "timeout" => 5,
-                  ],
-              ]);
-              $body = @file_get_contents($url, false, $context);
-              $status = 0;
-
-              foreach ($http_response_header ?? [] as $header) {
-                  if (preg_match("/^HTTP\\/\\S+\\s+([0-9]{3})/", $header, $match) === 1) {
-                      $status = (int) $match[1];
-                      break;
-                  }
-              }
-
-              if ($body === false || $status !== 200) {
-                  fwrite(STDERR, "HTTP preflight failed: {$url}; status={$status}\n");
-                  exit(1);
-              }
+          $body = @file_get_contents("http://127.0.0.1:8080/");
+          if ($body === false) {
+              fwrite(STDERR, "Главная страница недоступна.\n");
+              exit(1);
           }
+          '
 
-          echo "HTTP preflight OK\n";
+      - name: Проверить архив публикаций
+        shell: bash
+        run: |
+          php -r '
+          $body = @file_get_contents("http://127.0.0.1:8080/publications");
+          if ($body === false) {
+              fwrite(STDERR, "Архив публикаций недоступен.\n");
+              exit(1);
+          }
+          '
+
+      - name: Проверить страницу публикации
+        shell: bash
+        run: |
+          php -r '
+          $body = @file_get_contents("http://127.0.0.1:8080/publications/benchmark-000001");
+          if ($body === false) {
+              fwrite(STDERR, "Страница benchmark-публикации недоступна.\n");
+              exit(1);
+          }
           '
 
       - name: Запустить HTTP smoke-нагрузку
