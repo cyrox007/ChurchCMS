@@ -155,7 +155,7 @@ Priority is ordered within each section.
 - [ ] representative dataset benchmark;
 - [ ] HTTP load-test scenario for publication list/detail and home page;
 - [ ] define reference hardware and release thresholds;
-- [ ] verify reverse-proxy Nginx configuration;
+- [x] verify reverse-proxy Nginx configuration;
 - [ ] query-plan/index audit with production-scale fixture data.
 
 ## P1 — External Channels
