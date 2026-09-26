@@ -18,6 +18,8 @@ $required = [
     '/core/Csrf.php',
     '/core/SecurityHeaders.php',
     '/core/SecretVault.php',
+    '/core/PageCache.php',
+    '/core/PublicFormToken.php',
     '/core/Request.php',
     '/core/Response.php',
     '/core/RouteTemplate.php',
