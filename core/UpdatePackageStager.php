@@ -11,6 +11,7 @@ use Throwable;
 final class UpdatePackageStager
 {
     private const FORMAT = 'churchcms-update-v1';
+    private const STAGE_ID_PATTERN = '/^[0-9]{8}T[0-9]{6}Z-[a-f0-9]{12}$/D';
 
     public function __construct(
         private readonly string $root,
@@ -85,6 +86,66 @@ final class UpdatePackageStager
 
             throw new RuntimeException('Не удалось подготовить пакет обновления.', 0, $e);
         }
+    }
+
+    /**
+     * Повторно проверяет уже подготовленный staging-пакет.
+     *
+     * @return array{
+     *     id:string,
+     *     version:string,
+     *     path:string,
+     *     files:array<string,array{path:string,bytes:int,sha256:string}>,
+     *     deleted_files:list<string>
+     * }
+     */
+    public function inspect(string $stageId): array
+    {
+        if (preg_match(self::STAGE_ID_PATTERN, $stageId) !== 1) {
+            throw new RuntimeException('Некорректный идентификатор staging-пакета.');
+        }
+
+        $stagingRoot = $this->prepareStagingRoot();
+        $path = realpath($stagingRoot . DIRECTORY_SEPARATOR . $stageId);
+
+        if (
+            $path === false
+            || !is_dir($path)
+            || is_link($path)
+            || dirname($path) !== $stagingRoot
+        ) {
+            throw new RuntimeException('Проверенный staging-пакет не найден.');
+        }
+
+        $manifest = $this->readManifest($path);
+        $files = $this->validateManifest($manifest);
+        $payload = $path . DIRECTORY_SEPARATOR . 'payload';
+
+        if (!is_dir($payload) || is_link($payload)) {
+            throw new RuntimeException('Payload staging-пакета отсутствует или небезопасен.');
+        }
+
+        $actual = $this->discoverPackageFiles($payload);
+        $expected = array_keys($files);
+        sort($actual, SORT_STRING);
+        sort($expected, SORT_STRING);
+
+        if ($actual !== $expected) {
+            throw new RuntimeException('Набор файлов staging-пакета не совпадает с манифестом.');
+        }
+
+        $this->verifyStagedFiles($path, $files);
+
+        $deleted = array_values($manifest['deleted_files'] ?? []);
+        sort($deleted, SORT_STRING);
+
+        return [
+            'id' => $stageId,
+            'version' => (string) $manifest['version'],
+            'path' => $path,
+            'files' => $files,
+            'deleted_files' => $deleted,
+        ];
     }
 
     private function sourceDirectory(string $sourceDirectory): string
