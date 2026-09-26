@@ -42,7 +42,8 @@ final class PublicationService
         $slug = strtolower(trim($slug));
         $siteKey = trim($siteKey);
 
-        if ($title === '' || mb_strlen($title) > 255) {
+        $titleLength = function_exists('mb_strlen') ? mb_strlen($title, 'UTF-8') : strlen($title);
+        if ($title === '' || $titleLength > 255) {
             throw new InvalidArgumentException('Publication title is required and must be <= 255 characters.');
         }
 
