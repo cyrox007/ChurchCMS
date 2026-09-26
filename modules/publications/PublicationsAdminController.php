@@ -6,6 +6,7 @@ namespace ChurchCMS\Modules\Publications;
 
 use ChurchCMS\App\Services\AdminAuthorization;
 use ChurchCMS\Core\AuditLog;
+use ChurchCMS\Core\ModuleRuntimeLoader;
 use ChurchCMS\Core\Request;
 use ChurchCMS\Core\Response;
 use ChurchCMS\Core\ThemeRenderer;
@@ -50,6 +51,7 @@ final class PublicationsAdminController
         }
 
         try {
+            $repository = PublicationRepository::fromDatabase();
             $publicId = PublicationService::fromDatabase()->createDraft(
                 title: $form['title'],
                 slug: $form['slug'],
@@ -60,6 +62,11 @@ final class PublicationsAdminController
                 syndicationTargets: $this->targetsForRequest($request, []),
                 commentsEnabled: $form['comments_enabled'],
             );
+
+            $publication = $repository->findByPublicId($publicId);
+            if ($publication !== null) {
+                $this->saveSeo($publication, $form);
+            }
 
             $this->audit($request, 'publication.created', $publicId);
             Response::redirectLocal('/admin/publications/' . rawurlencode($publicId) . '?saved=1');
@@ -119,6 +126,11 @@ final class PublicationsAdminController
                 syndicationTargets: $this->targetsForRequest($request, $publication->syndicationTargets),
                 commentsEnabled: $form['comments_enabled'],
             );
+
+            $updated = $repository->findByPublicId($publicId);
+            if ($updated !== null) {
+                $this->saveSeo($updated, $form);
+            }
 
             $this->audit($request, 'publication.updated', $publicId);
             Response::redirectLocal('/admin/publications/' . rawurlencode($publicId) . '?saved=1');
@@ -189,12 +201,21 @@ final class PublicationsAdminController
             'author_name' => trim((string) $request->post('author_name', '')),
             'slug' => trim((string) $request->post('slug', '')),
             'comments_enabled' => $request->post('comments_enabled') === '1',
+            'seo_title' => trim((string) $request->post('seo_title', '')),
+            'seo_description' => trim((string) $request->post('seo_description', '')),
+            'seo_keywords' => trim((string) $request->post('seo_keywords', '')),
+            'canonical_url' => trim((string) $request->post('canonical_url', '')),
+            'social_title' => trim((string) $request->post('social_title', '')),
+            'social_description' => trim((string) $request->post('social_description', '')),
+            'social_image_url' => trim((string) $request->post('social_image_url', '')),
+            'robots_index' => $request->post('robots_index') === '1',
+            'robots_follow' => $request->post('robots_follow') === '1',
         ];
     }
 
     private function formFromPublication(Publication $publication): array
     {
-        return [
+        $form = [
             'type' => $publication->type->value,
             'title' => $publication->title,
             'excerpt' => $publication->excerpt,
@@ -203,6 +224,16 @@ final class PublicationsAdminController
             'slug' => $publication->slug,
             'comments_enabled' => $publication->commentsEnabled,
         ];
+
+        $capability = ModuleRuntimeLoader::capability('seo', 'seo.publications');
+        if ($capability !== null && method_exists($capability, 'formForPublication')) {
+            $seo = $capability->formForPublication($publication);
+            if (is_array($seo)) {
+                $form = array_replace($form, $seo);
+            }
+        }
+
+        return $form + $this->seoDefaults();
     }
 
     private function emptyForm(): array
@@ -215,7 +246,42 @@ final class PublicationsAdminController
             'author_name' => '',
             'slug' => '',
             'comments_enabled' => false,
+        ] + $this->seoDefaults();
+    }
+
+    private function seoDefaults(): array
+    {
+        return [
+            'seo_title' => '',
+            'seo_description' => '',
+            'seo_keywords' => '',
+            'canonical_url' => '',
+            'social_title' => '',
+            'social_description' => '',
+            'social_image_url' => '',
+            'robots_index' => true,
+            'robots_follow' => true,
         ];
+    }
+
+    private function saveSeo(Publication $publication, array $form): void
+    {
+        $capability = ModuleRuntimeLoader::capability('seo', 'seo.publications');
+        if ($capability === null || !method_exists($capability, 'savePublication')) {
+            return;
+        }
+
+        $capability->savePublication($publication, [
+            'seo_title' => $form['seo_title'] ?? '',
+            'seo_description' => $form['seo_description'] ?? '',
+            'seo_keywords' => $form['seo_keywords'] ?? '',
+            'canonical_url' => $form['canonical_url'] ?? '',
+            'social_title' => $form['social_title'] ?? '',
+            'social_description' => $form['social_description'] ?? '',
+            'social_image_url' => $form['social_image_url'] ?? '',
+            'robots_index' => ($form['robots_index'] ?? true) === true,
+            'robots_follow' => ($form['robots_follow'] ?? true) === true,
+        ]);
     }
 
     /**
