@@ -7,7 +7,6 @@ namespace ChurchCMS\Modules\Social;
 use ChurchCMS\Core\DatabaseManager;
 use DateTimeImmutable;
 use PDO;
-use RuntimeException;
 
 final class SocialConnectionRepository
 {
@@ -42,6 +41,40 @@ final class SocialConnectionRepository
         );
     }
 
+    /** @return list<SocialConnection> */
+    public function inboundEnabled(): array
+    {
+        $statement = $this->pdo->prepare(
+            'SELECT * FROM social_connections
+             WHERE enabled = :enabled
+               AND inbound_enabled = :inbound
+             ORDER BY id'
+        );
+        $statement->execute(['enabled' => 1, 'inbound' => 1]);
+
+        return array_map(
+            fn(array $row): SocialConnection => $this->hydrate($row),
+            $statement->fetchAll(),
+        );
+    }
+
+    /** @return list<SocialConnection> */
+    public function outboundEnabled(): array
+    {
+        $statement = $this->pdo->prepare(
+            'SELECT * FROM social_connections
+             WHERE enabled = :enabled
+               AND outbound_enabled = :outbound
+             ORDER BY name, id'
+        );
+        $statement->execute(['enabled' => 1, 'outbound' => 1]);
+
+        return array_map(
+            fn(array $row): SocialConnection => $this->hydrate($row),
+            $statement->fetchAll(),
+        );
+    }
+
     public function findByPublicId(string $publicId): ?SocialConnection
     {
         $statement = $this->pdo->prepare(
@@ -66,11 +99,6 @@ final class SocialConnectionRepository
 
     private function hydrate(array $row): SocialConnection
     {
-        $provider = SocialProvider::tryFrom((string) ($row['provider'] ?? ''));
-        if ($provider === null) {
-            throw new RuntimeException('Unknown social provider.');
-        }
-
         $settings = json_decode((string) ($row['settings_json'] ?? '{}'), true);
         if (!is_array($settings)) {
             $settings = [];
@@ -79,12 +107,16 @@ final class SocialConnectionRepository
         return new SocialConnection(
             id: (int) $row['id'],
             publicId: (string) $row['public_id'],
-            provider: $provider,
+            provider: SocialProvider::normalize((string) $row['provider']),
             name: (string) $row['name'],
             targetRef: (string) $row['target_ref'],
             tokenEncrypted: (string) $row['token_encrypted'],
             settings: $settings,
             enabled: self::dbBool($row['enabled'] ?? false),
+            outboundEnabled: self::dbBool($row['outbound_enabled'] ?? true),
+            inboundEnabled: self::dbBool($row['inbound_enabled'] ?? false),
+            inboundPolicy: (string) ($row['inbound_policy'] ?? 'review'),
+            connectionKind: (string) ($row['connection_kind'] ?? 'social'),
             createdAt: new DateTimeImmutable((string) $row['created_at']),
             updatedAt: new DateTimeImmutable((string) $row['updated_at']),
         );
