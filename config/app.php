@@ -41,6 +41,33 @@ return [
         'username' => 'churchcms',
         'password' => '',
     ],
+    'site' => [
+        'name' => 'ChurchCMS',
+    ],
+    'seo' => [
+        'default_description' => '',
+        'default_image' => '',
+    ],
+    'sharing' => [
+        'enabled' => true,
+        'providers' => [
+            'telegram' => [
+                'enabled' => true,
+                'label' => 'Telegram',
+                'url' => 'https://t.me/share/url?url={url}&text={text}',
+            ],
+            'vk' => [
+                'enabled' => true,
+                'label' => 'ВКонтакте',
+                'url' => 'https://vk.com/share.php?url={url}&title={title}',
+            ],
+            'ok' => [
+                'enabled' => true,
+                'label' => 'Одноклассники',
+                'url' => 'https://connect.ok.ru/offer?url={url}',
+            ],
+        ],
+    ],
     'theme' => [
         'active' => 'default',
     ],
