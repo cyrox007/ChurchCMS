@@ -8,7 +8,7 @@ use ChurchCMS\App\Services\AdminAuthorization;
 use ChurchCMS\Core\AuditLog;
 use ChurchCMS\Core\Request;
 use ChurchCMS\Core\Response;
-use ChurchCMS\Core\ThemeRenderer;
+use ChurchCMS\App\Services\AdminShell;
 
 final class CommentsAdminController
 {
@@ -16,12 +16,10 @@ final class CommentsAdminController
     {
         AdminAuthorization::requirePermission($request, 'comments.moderate');
 
-        ThemeRenderer::fromConfig()->page('admin.comments', [
+        AdminShell::page($request, 'admin.comments', [
             'title' => 'Комментарии',
-            'siteName' => 'ChurchCMS',
             'comments' => CommentRepository::fromDatabase()->moderationQueue(),
-            'adminUser' => $request->attribute('admin.user'),
-        ]);
+        ], 'comments');
     }
 
     public function moderate(Request $request, string $publicId): never

@@ -1427,3 +1427,247 @@ svg {
         grid-template-columns: 1fr;
     }
 }
+
+
+/* Единая оболочка административной панели */
+.admin-app {
+    margin: 0;
+    min-width: 20rem;
+    color: var(--ink-950);
+    background: #eef2f6;
+}
+
+.admin-frame {
+    min-height: 100vh;
+    display: grid;
+    grid-template-columns: 17rem minmax(0, 1fr);
+}
+
+.admin-sidebar {
+    position: sticky;
+    top: 0;
+    height: 100vh;
+    display: flex;
+    flex-direction: column;
+    gap: 1.5rem;
+    padding: 1.25rem;
+    color: #f8fbff;
+    background: #071d36;
+}
+
+.admin-brand {
+    display: flex;
+    align-items: center;
+    gap: .75rem;
+    color: inherit;
+    text-decoration: none;
+}
+
+.admin-brand__mark {
+    min-width: 2.7rem;
+    min-height: 2.7rem;
+    display: grid;
+    place-items: center;
+    border: 1px solid rgba(255, 255, 255, .18);
+    border-radius: .75rem;
+    background: rgba(255, 255, 255, .08);
+    font-size: .72rem;
+    font-weight: 850;
+    letter-spacing: .08em;
+}
+
+.admin-brand span:last-child {
+    display: grid;
+    gap: .15rem;
+}
+
+.admin-brand small {
+    color: rgba(248, 251, 255, .68);
+}
+
+.admin-nav {
+    display: grid;
+    gap: .3rem;
+}
+
+.admin-nav a {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: .75rem;
+    min-height: 2.75rem;
+    padding: .65rem .75rem;
+    border-radius: .7rem;
+    color: rgba(248, 251, 255, .78);
+    text-decoration: none;
+    font-weight: 700;
+}
+
+.admin-nav a:hover,
+.admin-nav a:focus-visible {
+    color: #fff;
+    background: rgba(255, 255, 255, .08);
+}
+
+.admin-nav a[aria-current="page"] {
+    color: #fff;
+    background: rgba(255, 255, 255, .14);
+}
+
+.admin-nav__badge {
+    min-width: 1.65rem;
+    min-height: 1.65rem;
+    display: grid;
+    place-items: center;
+    padding: 0 .35rem;
+    border-radius: 999px;
+    color: #351018;
+    background: #f6d9df;
+    font-size: .75rem;
+    font-weight: 850;
+}
+
+.admin-sidebar__footer {
+    margin-top: auto;
+    display: grid;
+    gap: .65rem;
+    padding-top: 1rem;
+    border-top: 1px solid rgba(255, 255, 255, .13);
+    color: rgba(248, 251, 255, .78);
+    font-size: .85rem;
+}
+
+.admin-logout {
+    width: 100%;
+    min-height: 2.6rem;
+    padding: .55rem .75rem;
+    border: 1px solid rgba(255, 255, 255, .18);
+    border-radius: .65rem;
+    color: #fff;
+    background: transparent;
+    font: inherit;
+    font-weight: 750;
+    cursor: pointer;
+}
+
+.admin-logout:hover,
+.admin-logout:focus-visible {
+    background: rgba(255, 255, 255, .08);
+}
+
+.admin-workspace {
+    min-width: 0;
+}
+
+.admin-topbar {
+    min-height: 4.25rem;
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 1rem;
+    padding: .8rem clamp(1rem, 3vw, 2rem);
+    border-bottom: 1px solid var(--line);
+    background: rgba(255, 255, 255, .94);
+}
+
+.admin-topbar > div {
+    min-width: 0;
+    display: flex;
+    align-items: baseline;
+    gap: .8rem;
+}
+
+.admin-topbar strong {
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+}
+
+.admin-topbar span {
+    color: var(--ink-500);
+    font-size: .82rem;
+}
+
+.admin-topbar a {
+    flex: 0 0 auto;
+    color: var(--navy-900);
+    font-weight: 750;
+    text-decoration: none;
+}
+
+.admin-content {
+    width: min(92rem, 100%);
+    margin: 0 auto;
+    padding: clamp(1.25rem, 3vw, 2.25rem);
+}
+
+.admin-content > .admin-shell {
+    width: 100%;
+    margin: 0;
+}
+
+@media (max-width: 56rem) {
+    .admin-frame {
+        grid-template-columns: 1fr;
+    }
+
+    .admin-sidebar {
+        position: static;
+        width: 100%;
+        height: auto;
+        gap: .85rem;
+        padding: .85rem 1rem;
+    }
+
+    .admin-brand small,
+    .admin-sidebar__footer > span {
+        display: none;
+    }
+
+    .admin-nav {
+        display: flex;
+        gap: .35rem;
+        overflow-x: auto;
+        padding-bottom: .15rem;
+    }
+
+    .admin-nav a {
+        flex: 0 0 auto;
+    }
+
+    .admin-sidebar__footer {
+        margin: 0;
+        padding: 0;
+        border: 0;
+    }
+
+    .admin-sidebar__footer form {
+        position: absolute;
+        top: .85rem;
+        right: 1rem;
+    }
+
+    .admin-logout {
+        width: auto;
+        min-height: 2.45rem;
+    }
+}
+
+@media (max-width: 36rem) {
+    .admin-topbar {
+        align-items: flex-start;
+    }
+
+    .admin-topbar > div {
+        display: grid;
+        gap: .15rem;
+    }
+
+    .admin-topbar span {
+        display: none;
+    }
+
+    .admin-content {
+        padding: 1rem;
+    }
+}

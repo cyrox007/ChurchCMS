@@ -24,7 +24,6 @@ $typeLabels = [
         </div>
 
         <div class="admin-heading__actions">
-            <a class="button button--quiet" href="<?= $theme->e($theme->route('admin_dashboard')) ?>">← В панель</a>
             <?php if (!empty($canCreate)): ?>
                 <a class="button button--primary" href="<?= $theme->e($theme->route('admin_publication_new')) ?>">+ Новая публикация</a>
             <?php endif; ?>
