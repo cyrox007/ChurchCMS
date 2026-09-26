@@ -6,7 +6,6 @@
             <h1>На проверке</h1>
             <p>Оставляйте только полезные и корректные сообщения. Остальное можно отклонить или отметить как спам.</p>
         </div>
-        <a class="button button--quiet" href="<?= $theme->e($theme->route('admin_dashboard')) ?>">← В панель</a>
     </header>
 
     <?php if (empty($comments)): ?>
