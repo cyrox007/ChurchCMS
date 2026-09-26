@@ -161,7 +161,7 @@ Core publication requirements:
 - categories/tags later;
 - publication date;
 - revision/history later;
-- SEO later;
+- first-class SEO metadata and search/social presentation;
 - explicit syndication targets;
 - external API projection;
 - withdrawal support;
@@ -247,7 +247,6 @@ Do not block initial delivery on:
 - OJS replacement;
 - complex payment processing;
 - full forum/comments platform;
-- social network features;
 - arbitrary plugin marketplace.
 
 Moodle/OJS should be integrated, not reimplemented.
@@ -307,3 +306,83 @@ Requirements:
 - ability to close discussion without deleting existing comments;
 - publication authors/editors can view comment count/state in the publication editor;
 - comments are not included in external syndication feeds by default.
+
+
+## SEO and discoverability
+
+SEO is a first-class capability for all public content types.
+
+The CMS must support:
+
+- human-readable stable URLs;
+- unique page titles;
+- meta descriptions;
+- canonical URLs;
+- robots index/follow controls;
+- Open Graph metadata;
+- Twitter/X card metadata;
+- social preview image/title/description overrides;
+- semantic Schema.org markup for applicable content;
+- XML Sitemap;
+- robots.txt with Sitemap directive;
+- publication dates and modification dates;
+- author metadata;
+- image/video structured metadata as Media/Video modules are added;
+- redirect management for moved legacy URLs;
+- noindex for drafts, previews, admin and internal endpoints;
+- easy defaults so normal editors do not need SEO knowledge.
+
+For Publications, SEO/social fields default to normal publication title/excerpt. Manual overrides are advanced options.
+
+Public pages must expose lightweight share controls without loading third-party SDKs.
+
+## External channels and video platforms
+
+ChurchCMS must support bidirectional integration with arbitrary social networks, messengers and video hosting platforms through adapters.
+
+The provider list is open-ended. VK, Telegram, MAX, YouTube, Rutube, Dzen, OK and future platforms are examples, not a hard-coded whitelist.
+
+Each adapter declares capabilities such as:
+
+- publish text;
+- publish links;
+- publish images;
+- publish video;
+- update/delete remote item;
+- import posts;
+- import video;
+- webhook synchronization;
+- polling synchronization.
+
+Synchronization rules:
+
+- the official website remains the source of truth for official site publications;
+- editors explicitly choose what is sent outward;
+- external-only content is allowed to remain external-only;
+- inbound external posts/videos go to an Inbox/Review queue;
+- inbound content never becomes an official site publication automatically by default;
+- imported items keep remote IDs and links to prevent loops/duplicates;
+- no last-write-wins conflict merging between site and external platforms;
+- credentials are encrypted at rest;
+- remote API calls never block public page requests;
+- publishing/sync uses queue/outbox workers with retries and logs.
+
+## Performance and scale
+
+ChurchCMS must remain responsive under traffic spikes involving thousands of visitors.
+
+Architecture requirements:
+
+- anonymous public pages are stateless;
+- full-page cache for anonymous GET traffic;
+- correct public Cache-Control headers for reverse proxy/CDN use;
+- cache invalidation when published content/SEO/visible comments change;
+- immutable caching for versioned theme assets;
+- bounded pagination and bounded APIs;
+- indexed public queries;
+- no social/API/video network calls in public page requests;
+- imports, syndication, media processing and external-channel sync run asynchronously via queue/cron workers;
+- graceful stale content is preferable to blocking on third-party services;
+- sitemap/feed generation must be cacheable;
+- load testing is a release gate before 1.0;
+- capacity targets are verified on documented reference hardware rather than guessed.
