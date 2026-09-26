@@ -38,12 +38,12 @@ Priority is ordered within each section.
   - [ ] доверенный источник/аутентичность релизного пакета до автоматической сетевой загрузки;
   - [ ] обязательная резервная копия перед миграциями/заменой файлов и сценарий отката;
   - [ ] мастер обновления/резервного копирования в Admin Shell;
-- [ ] replace dashboard-card prototype with unified Admin Shell;
+- [x] replace dashboard-card prototype with unified Admin Shell;
 - [ ] persistent/collapsible admin navigation;
-- [ ] shared admin header with site context and current user;
+- [x] shared admin header with site context and current user;
 - [ ] global admin search foundation;
 - [ ] task/notification center for pending moderation, failed sync and editorial work;
-- [ ] responsive admin shell for tablet/mobile;
+- [x] responsive admin shell for tablet/mobile;
 - [ ] module navigation registration contract;
 - [ ] unified empty/error/success/loading states across admin screens;
 - [ ] keyboard/focus/accessibility audit for administration.
