@@ -86,6 +86,13 @@ final class ThemeManifest
         return is_string($value) ? $value : null;
     }
 
+    /** @return array<string,string> */
+    public function templates(): array
+    {
+        $templates = $this->data['templates'] ?? [];
+        return is_array($templates) ? $templates : [];
+    }
+
     /** @return list<string> */
     public function profiles(): array
     {
