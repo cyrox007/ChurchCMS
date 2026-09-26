@@ -6,6 +6,7 @@ declare(strict_types=1);
 use ChurchCMS\Core\BackupManager;
 use ChurchCMS\Core\Config;
 use ChurchCMS\Core\DatabaseManager;
+use ChurchCMS\Core\DatabaseRestoreManager;
 
 $root = dirname(__DIR__);
 require $root . '/core.php';
@@ -13,10 +14,16 @@ require $root . '/core.php';
 $command = $argv[1] ?? 'create';
 $positionals = [];
 $backupPath = null;
+$confirmation = null;
 
 foreach (array_slice($argv, 2) as $argument) {
     if (str_starts_with($argument, '--path=')) {
         $backupPath = substr($argument, strlen('--path='));
+        continue;
+    }
+
+    if (str_starts_with($argument, '--confirm=')) {
+        $confirmation = substr($argument, strlen('--confirm='));
         continue;
     }
 
@@ -59,10 +66,39 @@ try {
         exit(0);
     }
 
+    if ($command === 'restore-db') {
+        $backupId = (string) ($positionals[0] ?? '');
+
+        if ($backupId === '' || $confirmation !== $backupId) {
+            fwrite(
+                STDERR,
+                "Для восстановления БД укажите идентификатор копии и повторите его в --confirm=<идентификатор>.\n",
+            );
+            exit(2);
+        }
+
+        $restore = new DatabaseRestoreManager(
+            DatabaseManager::getInstance(),
+            $root,
+            $backupPath,
+        );
+        $result = $restore->restore($backupId);
+
+        echo sprintf(
+            "База данных восстановлена: %s; таблиц: %d; строк: %d\n",
+            $backupId,
+            $result['tables'],
+            $result['rows'],
+        );
+        exit(0);
+    }
+
     fwrite(
         STDERR,
-        "Использование: php bin/backup.php create [--path=/абсолютный/путь] "
-        . "или php bin/backup.php verify <идентификатор> [--path=/абсолютный/путь]\n",
+        "Использование: php bin/backup.php create [--path=/абсолютный/путь], "
+        . "php bin/backup.php verify <идентификатор> [--path=/абсолютный/путь] "
+        . "или php bin/backup.php restore-db <идентификатор> "
+        . "--confirm=<идентификатор> [--path=/абсолютный/путь]\n",
     );
     exit(2);
 } catch (Throwable $e) {
