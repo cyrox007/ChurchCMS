@@ -12,6 +12,7 @@ final class Request
 
     private array $json = [];
     private ?string $jsonError = null;
+    private array $attributes = [];
 
     public function __construct(
         private readonly array $get = [],
@@ -57,6 +58,37 @@ final class Request
     public function files(string $key, mixed $default = null): mixed
     {
         return $this->files[$key] ?? $default;
+    }
+
+    public function server(string $key, mixed $default = null): mixed
+    {
+        return $this->server[$key] ?? $default;
+    }
+
+    public function header(string $name, mixed $default = null): mixed
+    {
+        $normalized = strtoupper(str_replace('-', '_', $name));
+        $key = in_array($normalized, ['CONTENT_TYPE', 'CONTENT_LENGTH'], true)
+            ? $normalized
+            : 'HTTP_' . $normalized;
+
+        return $this->server[$key] ?? $default;
+    }
+
+    public function ip(): string
+    {
+        $ip = (string) ($this->server['REMOTE_ADDR'] ?? '');
+        return filter_var($ip, FILTER_VALIDATE_IP) !== false ? $ip : 'unknown';
+    }
+
+    public function setAttribute(string $key, mixed $value): void
+    {
+        $this->attributes[$key] = $value;
+    }
+
+    public function attribute(string $key, mixed $default = null): mixed
+    {
+        return $this->attributes[$key] ?? $default;
     }
 
     public function hasInvalidJson(): bool
