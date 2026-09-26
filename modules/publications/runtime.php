@@ -7,6 +7,8 @@ use ChurchCMS\App\Middlewares\ApiEnabledMiddleware;
 use ChurchCMS\App\Middlewares\ApiPartnerRateLimitMiddleware;
 use ChurchCMS\App\Middlewares\ApiPublicRateLimitMiddleware;
 use ChurchCMS\App\Middlewares\PartnerApiMiddleware;
+use ChurchCMS\App\Middlewares\CsrfMiddleware;
+use ChurchCMS\App\Middlewares\RequireAdminMiddleware;
 use ChurchCMS\Core\ModuleRuntimeProvider;
 use ChurchCMS\Core\Router;
 use ChurchCMS\Core\SyndicationRegistry;
@@ -14,6 +16,7 @@ use ChurchCMS\Modules\Publications\PublicationSyndicationProvider;
 use ChurchCMS\Modules\Publications\PublicationsApiController;
 use ChurchCMS\Modules\Publications\PublicationsCapability;
 use ChurchCMS\Modules\Publications\PublicationsController;
+use ChurchCMS\Modules\Publications\PublicationsAdminController;
 
 $moduleRoot = __DIR__;
 foreach ([
@@ -27,6 +30,7 @@ foreach ([
     'PublicationsCapability.php',
     'PublicationsController.php',
     'PublicationsApiController.php',
+    'PublicationsAdminController.php',
 ] as $file) {
     require_once $moduleRoot . '/' . $file;
 }
@@ -74,6 +78,56 @@ return new class implements ModuleRuntimeProvider {
             [PublicationsController::class, 'show'],
             [],
             'publication_show',
+        );
+
+        $router->add(
+            'GET',
+            '/admin/publications',
+            [PublicationsAdminController::class, 'index'],
+            [RequireAdminMiddleware::class],
+            'admin_publications',
+        );
+        $router->add(
+            'GET',
+            '/admin/publications/new',
+            [PublicationsAdminController::class, 'createForm'],
+            [RequireAdminMiddleware::class],
+            'admin_publication_new',
+        );
+        $router->add(
+            'POST',
+            '/admin/publications',
+            [PublicationsAdminController::class, 'create'],
+            [RequireAdminMiddleware::class, CsrfMiddleware::class],
+            'admin_publication_create',
+        );
+        $router->add(
+            'GET',
+            '/admin/publications/{publicId}',
+            [PublicationsAdminController::class, 'edit'],
+            [RequireAdminMiddleware::class],
+            'admin_publication_edit',
+        );
+        $router->add(
+            'POST',
+            '/admin/publications/{publicId}',
+            [PublicationsAdminController::class, 'update'],
+            [RequireAdminMiddleware::class, CsrfMiddleware::class],
+            'admin_publication_update',
+        );
+        $router->add(
+            'POST',
+            '/admin/publications/{publicId}/publish',
+            [PublicationsAdminController::class, 'publish'],
+            [RequireAdminMiddleware::class, CsrfMiddleware::class],
+            'admin_publication_publish',
+        );
+        $router->add(
+            'POST',
+            '/admin/publications/{publicId}/withdraw',
+            [PublicationsAdminController::class, 'withdraw'],
+            [RequireAdminMiddleware::class, CsrfMiddleware::class],
+            'admin_publication_withdraw',
         );
 
         $router->add(
