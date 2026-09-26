@@ -25,7 +25,7 @@ Priority is ordered within each section.
 - [x] atomic local configuration write;
 - [x] installer lock after success;
 - [x] friendly recovery messages;
-- [ ] installation healthcheck;
+- [x] installation healthcheck;
 - [ ] updater/backup workflow after installer MVP;
 - [ ] replace dashboard-card prototype with unified Admin Shell;
 - [ ] persistent/collapsible admin navigation;
