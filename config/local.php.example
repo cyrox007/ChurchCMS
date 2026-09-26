@@ -6,6 +6,16 @@ return [
     'database' => [
         'password' => 'change-me',
     ],
+    'syndication' => [
+        // Use the canonical HTTPS production URL.
+        'site_url' => 'https://example.org',
+        'channel_title' => 'Название сайта',
+        'channel_description' => 'Новости организации',
+        'targets' => [
+            // Enable only after editorial/legal onboarding with the aggregator.
+            'rambler' => ['enabled' => false],
+        ],
+    ],
     'api' => [
         'allowed_origins' => [
             // 'https://example-diocese.ru',
