@@ -20,7 +20,8 @@ Implemented:
 - module manifests/runtime providers/capabilities;
 - theme manifests and inheritance;
 - PHP 8.3 lint + migration validation + theme validation CI;
-- PostgreSQL-backed runtime smoke verifies PDO connectivity, readiness and full migration application.
+- PostgreSQL-backed runtime smoke verifies PDO connectivity, readiness and full migration application;
+- MySQL 8.4 smoke verifies DDL migrations without invalid outer transactions, idempotent rerun and installation readiness.
 
 ## Installation
 
