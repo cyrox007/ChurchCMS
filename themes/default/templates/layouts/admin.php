@@ -95,6 +95,15 @@ $current = static fn(string $section): string =>
                 <button type="submit">Найти</button>
             </form>
 
+            <a class="admin-task-center-link" href="<?= $theme->e($theme->route('admin_tasks')) ?>">
+                Задачи
+                <?php if ((int) ($adminTaskCount ?? 0) > 0): ?>
+                    <span class="admin-task-center-link__badge">
+                        <?= $theme->e(min(99, (int) $adminTaskCount)) ?><?= (int) $adminTaskCount > 99 ? '+' : '' ?>
+                    </span>
+                <?php endif; ?>
+            </a>
+
             <a href="/" target="_blank" rel="noopener">Открыть сайт ↗</a>
         </header>
         <main class="admin-content" id="admin-content">
