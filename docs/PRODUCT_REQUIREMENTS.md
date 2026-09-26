@@ -275,6 +275,13 @@ Installation requirements:
 
 Administration UX requirements:
 
+- the current dashboard/card prototype is not the final administration UX;
+- ChurchCMS must use a unified Admin Shell shared by all administrative modules;
+- desktop/tablet layout should provide persistent primary navigation; mobile may collapse it into an accessible drawer;
+- the shell should contain a clear site/context header, current-user access, task notifications and room for global search;
+- operators should navigate by domain language such as Publications, Comments, Media, People, Services and Settings rather than module/internal terminology;
+- the dashboard should surface pending work and shortcuts, not duplicate every navigation item;
+- modules integrate into the common shell instead of inventing isolated admin layouts;
 - most routine actions should take one or two obvious actions;
 - dashboards must prioritize "what do I need to do now?";
 - no requirement to know HTML, URLs, file paths, database concepts or CMS internals;
