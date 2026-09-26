@@ -7,7 +7,9 @@
     <meta name="theme-color" content="#0b315d">
     <meta name="color-scheme" content="light">
     <title><?= $theme->e($title ?? 'ChurchCMS') ?></title>
+    <?= $theme->seoTags(is_array($seo ?? null) ? $seo : [], (string) ($title ?? 'ChurchCMS')) ?>
     <link rel="stylesheet" href="<?= $theme->e($theme->asset('css/site.css')) ?>">
+    <script src="<?= $theme->e($theme->asset('js/share.js')) ?>" defer></script>
 </head>
 <body>
 <a class="skip-link" href="#main-content">Перейти к содержанию</a>
