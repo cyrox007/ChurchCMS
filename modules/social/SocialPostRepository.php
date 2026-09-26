@@ -58,6 +58,15 @@ final class SocialPostRepository
         );
     }
 
+    public function failedCount(): int
+    {
+        $statement = $this->pdo->query(
+            "SELECT COUNT(*) FROM publication_social_posts WHERE status = 'failed'"
+        );
+
+        return (int) $statement->fetchColumn();
+    }
+
     public function markSent(int $id, ?string $remotePostId): void
     {
         $statement = $this->pdo->prepare(

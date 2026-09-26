@@ -11,11 +11,13 @@ use ChurchCMS\App\Middlewares\CsrfMiddleware;
 use ChurchCMS\App\Middlewares\RequireAdminMiddleware;
 use ChurchCMS\App\Services\AdminNavigationRegistry;
 use ChurchCMS\App\Services\AdminSearchRegistry;
+use ChurchCMS\App\Services\AdminTaskRegistry;
 use ChurchCMS\Core\ModuleRuntimeProvider;
 use ChurchCMS\Core\Router;
 use ChurchCMS\Core\SyndicationRegistry;
 use ChurchCMS\Modules\Publications\PublicationSyndicationProvider;
 use ChurchCMS\Modules\Publications\PublicationAdminSearchProvider;
+use ChurchCMS\Modules\Publications\PublicationAdminTaskProvider;
 use ChurchCMS\Modules\Publications\PublicationsApiController;
 use ChurchCMS\Modules\Publications\PublicationsCapability;
 use ChurchCMS\Modules\Publications\PublicationsController;
@@ -31,6 +33,7 @@ foreach ([
     'PublicationApiResource.php',
     'PublicationSyndicationProvider.php',
     'PublicationAdminSearchProvider.php',
+    'PublicationAdminTaskProvider.php',
     'PublicationsCapability.php',
     'PublicationsController.php',
     'PublicationsApiController.php',
@@ -77,6 +80,10 @@ return new class implements ModuleRuntimeProvider {
 
         AdminSearchRegistry::register(
             new PublicationAdminSearchProvider(),
+        );
+
+        AdminTaskRegistry::register(
+            new PublicationAdminTaskProvider(),
         );
 
         $router = Router::getInstance();

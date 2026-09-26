@@ -45,4 +45,5 @@ $router->group('/admin')
     ->add('POST', '/logout', [AdminAuthController::class, 'logout'], [RequireAdminMiddleware::class, CsrfMiddleware::class], 'admin_logout')
     ->add('GET', '', [AdminController::class, 'dashboard'], [RequireAdminMiddleware::class], 'admin_dashboard')
     ->add('GET', '/search', [AdminController::class, 'search'], [RequireAdminMiddleware::class], 'admin_search')
+    ->add('GET', '/tasks', [AdminController::class, 'tasks'], [RequireAdminMiddleware::class], 'admin_tasks')
     ->endGroup();

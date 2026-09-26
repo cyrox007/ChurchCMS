@@ -42,7 +42,7 @@ Priority is ordered within each section.
 - [x] persistent/collapsible admin navigation;
 - [x] shared admin header with site context and current user;
 - [x] global admin search foundation;
-- [ ] task/notification center for pending moderation, failed sync and editorial work;
+- [x] task/notification center for pending moderation, failed sync and editorial work;
 - [x] responsive admin shell for tablet/mobile;
 - [x] module navigation registration contract;
 - [x] unified empty/error/success/loading states across admin screens;
