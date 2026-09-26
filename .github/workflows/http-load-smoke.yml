@@ -1,0 +1,197 @@
+name: Проверка HTTP load-сценария
+
+on:
+  push:
+    branches:
+      - develop
+      - main
+    paths:
+      - 'tools/performance/http-load.php'
+      - 'tools/performance/seed.php'
+      - '.github/workflows/http-load-smoke.yml'
+      - 'index.php'
+      - 'config/routes.php'
+      - 'modules/publications/**'
+      - 'modules/comments/**'
+      - 'core/PageCache.php'
+      - 'app/middlewares/PublicPageCacheMiddleware.php'
+  pull_request:
+    branches:
+      - develop
+      - main
+    paths:
+      - 'tools/performance/http-load.php'
+      - 'tools/performance/seed.php'
+      - '.github/workflows/http-load-smoke.yml'
+      - 'index.php'
+      - 'config/routes.php'
+      - 'modules/publications/**'
+      - 'modules/comments/**'
+      - 'core/PageCache.php'
+      - 'app/middlewares/PublicPageCacheMiddleware.php'
+
+permissions:
+  contents: read
+
+jobs:
+  http-load-smoke:
+    runs-on: ubuntu-latest
+
+    services:
+      postgres:
+        image: postgres:16
+        env:
+          POSTGRES_DB: churchcms
+          POSTGRES_USER: churchcms
+          POSTGRES_PASSWORD: churchcms
+        ports:
+          - 5432:5432
+        options: >-
+          --health-cmd pg_isready
+          --health-interval 10s
+          --health-timeout 5s
+          --health-retries 5
+
+    steps:
+      - name: Получить исходный код
+        uses: actions/checkout@v4
+
+      - name: Подготовить PHP 8.3
+        uses: shivammathur/setup-php@v2
+        with:
+          php-version: '8.3'
+          extensions: dom, pdo, pdo_pgsql
+          coverage: none
+
+      - name: Подготовить disposable установку
+        shell: bash
+        run: |
+          set -euo pipefail
+          mkdir -p storage/cache storage/logs storage/sessions storage/rate-limits storage/uploads
+          cat > config/local.php <<'PHP'
+          <?php
+
+          declare(strict_types=1);
+
+          return [
+              'installation' => [
+                  'completed' => true,
+              ],
+              'app' => [
+                  'url' => 'http://127.0.0.1:8080',
+              ],
+              'security' => [
+                  'secret_key' => base64_encode(str_repeat('l', 32)),
+              ],
+              'database' => [
+                  'driver' => 'pgsql',
+                  'host' => '127.0.0.1',
+                  'port' => 5432,
+                  'database' => 'churchcms',
+                  'username' => 'churchcms',
+                  'password' => 'churchcms',
+              ],
+          ];
+          PHP
+          php bin/migrate.php
+          php tools/performance/seed.php             --site=default             --publications=100             --comments=300             --reset             --confirm=benchmark-fixture-default
+
+      - name: Запустить временный HTTP сервер
+        shell: bash
+        run: |
+          set -euo pipefail
+          server_log="$RUNNER_TEMP/churchcms-server.log"
+          PHP_CLI_SERVER_WORKERS=4 php -S 127.0.0.1:8080 index.php > "$server_log" 2>&1 &
+          echo "$!" > "$RUNNER_TEMP/churchcms-server.pid"
+
+          ready=0
+          for attempt in $(seq 1 40); do
+            if php -r 'exit(@file_get_contents("http://127.0.0.1:8080/health") === false ? 1 : 0);'; then
+              ready=1
+              break
+            fi
+            sleep 0.25
+          done
+
+          if [ "$ready" -ne 1 ]; then
+            cat "$server_log"
+            exit 1
+          fi
+
+      - name: Проверить главную страницу
+        shell: bash
+        run: |
+          php -r '
+          $body = @file_get_contents("http://127.0.0.1:8080/");
+          if ($body === false) {
+              fwrite(STDERR, "Главная страница недоступна.\n");
+              exit(1);
+          }
+          '
+
+      - name: Проверить архив публикаций
+        shell: bash
+        run: |
+          php -r '
+          $body = @file_get_contents("http://127.0.0.1:8080/publications");
+          if ($body === false) {
+              fwrite(STDERR, "Архив публикаций недоступен.\n");
+              exit(1);
+          }
+          '
+
+      - name: Проверить страницу публикации
+        shell: bash
+        run: |
+          php -r '
+          $body = @file_get_contents("http://127.0.0.1:8080/publications/benchmark-000001");
+          if ($body === false) {
+              fwrite(STDERR, "Страница benchmark-публикации недоступна.\n");
+              exit(1);
+          }
+          '
+
+      - name: Запустить HTTP smoke-нагрузку
+        shell: bash
+        run: |
+          set -euo pipefail
+          result="$RUNNER_TEMP/http-load.json"
+          server_log="$RUNNER_TEMP/churchcms-server.log"
+
+          if ! php tools/performance/http-load.php             --base=http://127.0.0.1:8080             --requests=40             --concurrency=4             --warmup=8             --slug=benchmark-000001 > "$result"; then
+            cat "$result" || true
+            cat "$server_log" || true
+            exit 1
+          fi
+
+          php -r '
+          $data = json_decode(file_get_contents($argv[1]), true, 32, JSON_THROW_ON_ERROR);
+          $required = [
+              "home_cached",
+              "publications_cached",
+              "publication_detail_cached",
+              "publication_detail_cache_miss",
+          ];
+
+          if (($data["errors"] ?? -1) !== 0 || ($data["requests"] ?? 0) !== 40) {
+              fwrite(STDERR, "HTTP load smoke завершился ошибками.\n");
+              exit(1);
+          }
+
+          foreach ($required as $scenario) {
+              if (!isset($data["scenarios"][$scenario]["p95_ms"])) {
+                  fwrite(STDERR, "В результате отсутствует сценарий: {$scenario}\n");
+                  exit(1);
+              }
+          }
+
+          echo "HTTP load scenario smoke OK\n";
+          ' "$result"
+
+      - name: Остановить временный HTTP сервер
+        if: always()
+        shell: bash
+        run: |
+          if [ -f "$RUNNER_TEMP/churchcms-server.pid" ]; then
+            kill "$(cat "$RUNNER_TEMP/churchcms-server.pid")" 2>/dev/null || true
+          fi
