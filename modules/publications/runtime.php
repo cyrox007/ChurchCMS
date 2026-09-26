@@ -10,10 +10,9 @@ use ChurchCMS\App\Middlewares\PartnerApiMiddleware;
 use ChurchCMS\Core\ModuleRuntimeProvider;
 use ChurchCMS\Core\Router;
 use ChurchCMS\Core\SyndicationRegistry;
-use ChurchCMS\Modules\Publications\PublicationRepository;
-use ChurchCMS\Modules\Publications\PublicationService;
 use ChurchCMS\Modules\Publications\PublicationSyndicationProvider;
 use ChurchCMS\Modules\Publications\PublicationsApiController;
+use ChurchCMS\Modules\Publications\PublicationsCapability;
 use ChurchCMS\Modules\Publications\PublicationsController;
 
 $moduleRoot = __DIR__;
@@ -25,6 +24,7 @@ foreach ([
     'PublicationService.php',
     'PublicationApiResource.php',
     'PublicationSyndicationProvider.php',
+    'PublicationsCapability.php',
     'PublicationsController.php',
     'PublicationsApiController.php',
 ] as $file) {
@@ -32,8 +32,7 @@ foreach ([
 }
 
 return new class implements ModuleRuntimeProvider {
-    private ?PublicationRepository $repository = null;
-    private ?PublicationService $service = null;
+    private ?PublicationsCapability $capability = null;
 
     public function moduleId(): string
     {
@@ -42,20 +41,22 @@ return new class implements ModuleRuntimeProvider {
 
     public function capabilities(): array
     {
+        $capability = $this->capability ??= new PublicationsCapability();
+
         return [
-            'publications.read' => $this->repository ?? PublicationRepository::fromDatabase(),
-            'syndication.publications' => $this->service ?? PublicationService::fromDatabase(),
+            'publications.read' => $capability,
+            'syndication.publications' => $capability,
         ];
     }
 
     public function boot(): void
     {
-        $this->repository = PublicationRepository::fromDatabase();
-        $this->service = PublicationService::fromDatabase();
+        $this->capability = new PublicationsCapability();
 
+        // Registration is lazy: no DB connection is made during module boot.
         SyndicationRegistry::register(
             'publications',
-            new PublicationSyndicationProvider($this->repository),
+            new PublicationSyndicationProvider(),
         );
 
         $router = Router::getInstance();
