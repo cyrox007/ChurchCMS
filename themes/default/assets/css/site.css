@@ -1317,3 +1317,113 @@ svg {
         width: 100%;
     }
 }
+
+
+/* SEO/social sharing */
+.share-panel {
+    width: min(var(--reading), 100%);
+    margin: 2rem auto 0;
+    padding: 1rem 0;
+    border-top: 1px solid var(--line);
+    border-bottom: 1px solid var(--line);
+}
+
+.share-panel__label {
+    display: block;
+    margin-bottom: .65rem;
+    color: var(--ink-500);
+    font-size: .8rem;
+    font-weight: 800;
+    letter-spacing: .06em;
+    text-transform: uppercase;
+}
+
+.share-panel__actions {
+    display: flex;
+    flex-wrap: wrap;
+    gap: .5rem;
+}
+
+.share-button {
+    min-height: 2.55rem;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    padding: .55rem .8rem;
+    border: 1px solid var(--line-strong);
+    border-radius: .7rem;
+    color: var(--navy-900);
+    background: var(--paper);
+    font: inherit;
+    font-size: .9rem;
+    font-weight: 750;
+    text-decoration: none;
+    cursor: pointer;
+}
+
+.share-button:hover {
+    border-color: var(--navy-800);
+    color: var(--navy-950);
+    background: #fff;
+}
+
+.share-button--telegram,
+.share-button--vk,
+.share-button--ok {
+    border-color: var(--navy-100);
+}
+
+.seo-editor summary {
+    cursor: pointer;
+}
+
+.seo-editor summary > span,
+.seo-editor summary > small {
+    display: block;
+}
+
+.seo-editor summary > span {
+    color: var(--navy-900);
+    font-weight: 800;
+}
+
+.seo-editor summary > small {
+    margin-top: .25rem;
+    color: var(--ink-500);
+    font-weight: 400;
+}
+
+.seo-editor__body {
+    display: grid;
+    gap: 1rem;
+    margin-top: 1.25rem;
+}
+
+.seo-editor__body h3 {
+    margin: 0;
+    color: var(--navy-950);
+    font-family: var(--font-display);
+    font-size: 1.2rem;
+}
+
+.seo-editor__divider {
+    height: 1px;
+    background: var(--line);
+}
+
+.seo-switches {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: .7rem;
+}
+
+@media (max-width: 40rem) {
+    .share-panel__actions,
+    .share-button {
+        width: 100%;
+    }
+
+    .seo-switches {
+        grid-template-columns: 1fr;
+    }
+}
