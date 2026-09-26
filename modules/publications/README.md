@@ -1,0 +1,95 @@
+# Publications module
+
+Initial read-only public slice of the ChurchCMS publication domain.
+
+## Current capabilities
+
+- publication workflow states;
+- publication types;
+- database migration;
+- internal write service;
+- safe rich HTML sanitization on draft creation;
+- published-list repository;
+- public site list/detail pages;
+- public API;
+- trusted partner incremental sync API;
+- syndication provider for RSS/aggregator targets.
+
+## Public routes
+
+```
+GET /publications
+GET /publications/{slug}
+```
+
+Only records with:
+
+- `status = published`;
+- non-null `published_at`;
+- `published_at <= now`
+
+are visible.
+
+## API routes
+
+```
+GET /api/v1/publications
+GET /api/v1/publications/{slug}
+GET /api/v1/partner/publications
+```
+
+Partner sync requires the `content.read` scope.
+
+Incremental sync:
+
+```
+GET /api/v1/partner/publications?updated_since=2026-09-26T00:00:00Z
+```
+
+## Syndication targets
+
+A publication stores an explicit target list such as:
+
+```json
+["rss", "diocese", "rambler"]
+```
+
+The local publication workflow and external distribution are intentionally separate.
+
+## Write access
+
+`PublicationService` already supports internal draft creation, publication, withdrawal and syndication-target changes.
+
+No HTTP write routes are exposed yet.
+
+They must not be added until ChurchCMS has:
+
+- administrator authentication;
+- RBAC;
+- CSRF protection;
+- audit logging.
+
+This prevents an insecure temporary admin API from becoming part of the product.
+
+## Theme contracts
+
+The module currently expects:
+
+```
+publication.index
+publication.show
+layout.article
+```
+
+A child theme can override any of them.
+
+## Planned next steps
+
+- categories/tags;
+- revisions;
+- scheduled publication execution;
+- editor/admin UI after Auth/RBAC;
+- stable tombstones for partner sync;
+- media/cover relation;
+- SEO metadata;
+- syndication export log and target-specific overrides.
