@@ -21,6 +21,16 @@ return [
     'theme' => [
         'active' => 'default',
     ],
+    'syndication' => [
+        'enabled' => true,
+        'site_url' => 'http://localhost',
+        'channel_title' => 'ChurchCMS',
+        'channel_description' => 'ChurchCMS publication feed',
+        'targets' => [
+            'rss' => ['enabled' => true],
+            'rambler' => ['enabled' => false],
+        ],
+    ],
     'api' => [
         'enabled' => true,
         'version' => 'v1',
