@@ -194,6 +194,22 @@ final class PublicationRepository
         );
     }
 
+    public function countEditorialWork(string $siteKey = 'default'): int
+    {
+        $statement = $this->pdo->prepare(
+            'SELECT COUNT(*) FROM publications
+             WHERE site_key = :site_key
+               AND status IN (:draft, :review)'
+        );
+        $statement->execute([
+            'site_key' => $siteKey,
+            'draft' => PublicationStatus::Draft->value,
+            'review' => PublicationStatus::Review->value,
+        ]);
+
+        return (int) $statement->fetchColumn();
+    }
+
     public function countPublished(string $siteKey = 'default'): int
     {
         $statement = $this->pdo->prepare(
