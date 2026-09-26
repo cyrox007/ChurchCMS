@@ -120,6 +120,10 @@ final class BackupManager
             throw new RuntimeException('Корневой каталог ChurchCMS недоступен.');
         }
 
+        if ($this->pathInside($this->backupRoot, $applicationRoot)) {
+            throw new RuntimeException('Резервные копии нельзя хранить по пути внутри публичного корня ChurchCMS.');
+        }
+
         if (is_link($this->backupRoot)) {
             throw new RuntimeException('Каталог резервных копий не должен быть символической ссылкой.');
         }
@@ -359,7 +363,7 @@ final class BackupManager
 
                 foreach ($columns as $column) {
                     $value = $row[$column] ?? null;
-                    $encoded[] = $value === null ? null : base64_encode((string) $value);
+                    $encoded[] = $this->encodeDatabaseValue($value);
                 }
 
                 $line = json_encode(
@@ -375,6 +379,28 @@ final class BackupManager
         }
 
         return $rows;
+    }
+
+    private function encodeDatabaseValue(mixed $value): ?string
+    {
+        if ($value === null) {
+            return null;
+        }
+
+        if (is_resource($value)) {
+            $bytes = stream_get_contents($value);
+            if (!is_string($bytes)) {
+                throw new RuntimeException('Не удалось прочитать бинарное значение из базы данных.');
+            }
+
+            return base64_encode($bytes);
+        }
+
+        if (!is_scalar($value) && !$value instanceof \Stringable) {
+            throw new RuntimeException('База данных вернула неподдерживаемый тип значения.');
+        }
+
+        return base64_encode((string) $value);
     }
 
     private function quoteIdentifier(string $identifier, string $driver): string
@@ -511,6 +537,8 @@ final class BackupManager
 
     private function pathInside(string $candidate, string $root): bool
     {
+        $candidate = str_replace(['/', '\\'], DIRECTORY_SEPARATOR, $candidate);
+        $root = str_replace(['/', '\\'], DIRECTORY_SEPARATOR, $root);
         $candidate = rtrim($candidate, DIRECTORY_SEPARATOR);
         $root = rtrim($root, DIRECTORY_SEPARATOR);
 
