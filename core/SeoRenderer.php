@@ -26,6 +26,11 @@ final class SeoRenderer
             $tags[] = self::meta('name', 'description', $description);
         }
 
+        $keywords = trim((string) ($seo['keywords'] ?? ''));
+        if ($keywords !== '') {
+            $tags[] = self::meta('name', 'keywords', $keywords);
+        }
+
         $tags[] = self::meta('name', 'robots', $robots);
         $tags[] = self::meta('name', 'yandex', $robots);
 
