@@ -45,6 +45,11 @@ final class ThemeContext
         return $this->renderer->assetUrl($path);
     }
 
+    public function route(string $name, array $params = []): string
+    {
+        return Router::getInstance()->url($name, $params);
+    }
+
     public function themeId(): string
     {
         return $this->themeId;
