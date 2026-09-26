@@ -1,0 +1,59 @@
+name: Accessibility-аудит Admin Shell
+
+on:
+  push:
+    branches:
+      - develop
+      - main
+    paths:
+      - 'themes/default/templates/layouts/admin.php'
+      - 'themes/default/templates/admin/**'
+      - 'themes/default/assets/css/site.css'
+      - 'themes/default/assets/js/admin-shell.js'
+      - 'themes/default/theme.json'
+      - 'tools/accessibility/admin-audit.php'
+      - 'docs/ACCESSIBILITY.md'
+      - '.github/workflows/admin-accessibility-audit.yml'
+  pull_request:
+    branches:
+      - develop
+      - main
+    paths:
+      - 'themes/default/templates/layouts/admin.php'
+      - 'themes/default/templates/admin/**'
+      - 'themes/default/assets/css/site.css'
+      - 'themes/default/assets/js/admin-shell.js'
+      - 'themes/default/theme.json'
+      - 'tools/accessibility/admin-audit.php'
+      - 'docs/ACCESSIBILITY.md'
+      - '.github/workflows/admin-accessibility-audit.yml'
+
+permissions:
+  contents: read
+
+jobs:
+  admin-accessibility:
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Получить исходный код
+        uses: actions/checkout@v4
+
+      - name: Подготовить PHP 8.3
+        uses: shivammathur/setup-php@v2
+        with:
+          php-version: '8.3'
+          coverage: none
+
+      - name: Проверить синтаксис
+        shell: bash
+        run: |
+          set -euo pipefail
+          php -l tools/accessibility/admin-audit.php
+          php -l themes/default/templates/layouts/admin.php
+          find themes/default/templates/admin -type f -name '*.php' -print0             | xargs -0 -n1 php -l
+          node --check themes/default/assets/js/admin-shell.js
+          php bin/theme-check.php
+
+      - name: Запустить accessibility-аудит
+        run: php tools/accessibility/admin-audit.php
