@@ -46,7 +46,7 @@ Priority is ordered within each section.
 - [x] responsive admin shell for tablet/mobile;
 - [x] module navigation registration contract;
 - [x] unified empty/error/success/loading states across admin screens;
-- [ ] keyboard/focus/accessibility audit for administration.
+- [x] keyboard/focus/accessibility audit for administration.
 
 ## P1 — Core security
 
