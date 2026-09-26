@@ -18,6 +18,7 @@ final class AdminController
         $userId = is_array($user) ? (int) ($user['id'] ?? 0) : 0;
         $roles = AuthorizationService::fromDatabase()->roles($userId);
 
+        $canManagePublications = AdminAuthorization::can($request, 'publications.read');
         $canModerateComments = AdminAuthorization::can($request, 'comments.moderate');
         $pendingComments = 0;
 
@@ -33,6 +34,7 @@ final class AdminController
             'siteName' => 'ChurchCMS',
             'adminUser' => $user,
             'roles' => $roles,
+            'canManagePublications' => $canManagePublications,
             'canModerateComments' => $canModerateComments,
             'pendingComments' => $pendingComments,
         ]);
