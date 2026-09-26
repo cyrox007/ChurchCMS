@@ -138,9 +138,11 @@ jobs:
           ]);
           $userId = (int) $user->fetchColumn();
 
-          $roleId = (int) $pdo->query(
-              "SELECT id FROM roles WHERE role_key = '''superadmin'''"
-          )->fetchColumn();
+          $role = $pdo->prepare(
+              "SELECT id FROM roles WHERE role_key = :role_key"
+          );
+          $role->execute(["role_key" => "superadmin"]);
+          $roleId = (int) $role->fetchColumn();
           $assign = $pdo->prepare(
               "INSERT INTO admin_user_roles (user_id, role_id) VALUES (:user_id, :role_id)"
           );
