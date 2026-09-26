@@ -3,6 +3,7 @@
 declare(strict_types=1);
 
 use ChurchCMS\App\Middlewares\CsrfMiddleware;
+use ChurchCMS\App\Middlewares\PublicOriginMiddleware;
 use ChurchCMS\App\Middlewares\RequireAdminMiddleware;
 use ChurchCMS\Core\ModuleRuntimeProvider;
 use ChurchCMS\Core\Router;
@@ -51,7 +52,7 @@ return new class implements ModuleRuntimeProvider {
             'POST',
             '/publications/{slug}/comments',
             [CommentsController::class, 'submit'],
-            [CsrfMiddleware::class, CommentRateLimitMiddleware::class],
+            [PublicOriginMiddleware::class, CommentRateLimitMiddleware::class],
             'comment_submit',
         );
 
