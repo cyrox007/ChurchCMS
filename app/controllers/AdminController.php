@@ -6,6 +6,7 @@ namespace ChurchCMS\App\Controllers;
 
 use ChurchCMS\App\Services\AuthorizationService;
 use ChurchCMS\App\Services\AdminSearchService;
+use ChurchCMS\App\Services\AdminTaskCenter;
 use ChurchCMS\Core\Request;
 use ChurchCMS\App\Services\AdminShell;
 
@@ -25,6 +26,22 @@ final class AdminController
                 'searchGroups' => $result['groups'],
             ],
             'search',
+        );
+    }
+
+    public function tasks(Request $request): never
+    {
+        $summary = AdminTaskCenter::summary($request);
+
+        AdminShell::page(
+            $request,
+            'admin.tasks',
+            [
+                'title' => 'Задачи',
+                'tasks' => $summary['tasks'],
+                'taskCount' => $summary['count'],
+            ],
+            'tasks',
         );
     }
 
