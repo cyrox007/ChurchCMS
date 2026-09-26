@@ -171,6 +171,20 @@ final class PublicationRepository
             syndicationTargets: array_values(array_filter($targets, 'is_string')),
             syndicationTitle: isset($row['syndication_title']) && $row['syndication_title'] !== '' ? (string) $row['syndication_title'] : null,
             syndicationExcerpt: isset($row['syndication_excerpt']) && $row['syndication_excerpt'] !== '' ? (string) $row['syndication_excerpt'] : null,
+            commentsEnabled: self::dbBool($row['comments_enabled'] ?? false),
         );
+    }
+
+    private static function dbBool(mixed $value): bool
+    {
+        if (is_bool($value)) {
+            return $value;
+        }
+
+        if (is_int($value)) {
+            return $value === 1;
+        }
+
+        return in_array(strtolower((string) $value), ['1', 't', 'true', 'yes', 'on'], true);
     }
 }
