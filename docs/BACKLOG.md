@@ -4,15 +4,15 @@ Priority is ordered within each section.
 
 ## P0 — Current
 
-- Publications database schema.
-- Publications repository/service.
-- Publication public pages.
-- Publication public API.
-- Publication partner API/scopes.
-- Publication syndication provider.
-- Publication editorial distribution flags.
-- Migration CLI validation.
-- PHP syntax/smoke checks.
+- [x] Publications database schema.
+- [x] Publications repository/service.
+- [x] Publication public pages (read-only slice).
+- [x] Publication public API.
+- [x] Publication partner API/scopes (incremental updated_since sync).
+- [x] Publication syndication provider.
+- [x] Publication distribution target storage/service; admin UI pending Auth/RBAC.
+- [ ] Migration CLI validation.
+- [ ] PHP syntax/smoke checks.
 
 ## P1 — Core security
 
