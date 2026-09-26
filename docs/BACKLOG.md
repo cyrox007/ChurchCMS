@@ -14,6 +14,20 @@ Priority is ordered within each section.
 - [ ] Migration CLI validation.
 - [x] PHP 8.3 lint/theme validation CI added; runtime DB-backed smoke test pending test database.
 
+## P0 — Installation and operator UX
+
+- [ ] four-step web installer;
+- [ ] automatic environment/self-check;
+- [ ] automatic site URL/profile detection/defaults;
+- [ ] automatic DB creation where permitted;
+- [ ] automatic migrations;
+- [ ] first-superadmin creation;
+- [ ] atomic local configuration write;
+- [ ] installer lock after success;
+- [ ] friendly recovery messages;
+- [ ] installation healthcheck;
+- [ ] updater/backup workflow after installer MVP.
+
 ## P1 — Core security
 
 - [x] hardened session lifecycle;
@@ -92,3 +106,17 @@ Priority is ordered within each section.
 - health/readiness checks;
 - deployment docs;
 - observability/log rotation.
+
+
+## P2 — Comments
+
+- optional comments module;
+- per-publication comments switch;
+- premoderation by default;
+- moderation queue;
+- public comment rate limiting;
+- plain-text comments only initially;
+- spam/reject/approve workflow;
+- close discussion without deleting comments;
+- audit moderation actions;
+- public API disabled by default for comments.
