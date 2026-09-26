@@ -31,13 +31,13 @@ $typeLabels = [
     </header>
 
     <?php if (empty($publications)): ?>
-        <section class="empty-state">
-            <h2>Публикаций пока нет</h2>
-            <p>Создайте первый материал — он сохранится как черновик и не появится на сайте, пока вы сами его не опубликуете.</p>
-            <?php if (!empty($canCreate)): ?>
-                <p><a class="button button--primary" href="<?= $theme->e($theme->route('admin_publication_new')) ?>">Создать публикацию</a></p>
-            <?php endif; ?>
-        </section>
+        <?= $theme->component('admin.state', [
+            'kind' => 'empty',
+            'title' => 'Публикаций пока нет',
+            'message' => 'Создайте первый материал — он сохранится как черновик и не появится на сайте, пока вы сами его не опубликуете.',
+            'action_href' => !empty($canCreate) ? $theme->route('admin_publication_new') : '',
+            'action_label' => !empty($canCreate) ? 'Создать публикацию' : '',
+        ]) ?>
     <?php else: ?>
         <div class="editorial-list">
             <?php foreach ($publications as $publication): ?>

@@ -1,7 +1,7 @@
 {
   "id": "default",
   "name": "ChurchCMS Default",
-  "version": "0.8.0",
+  "version": "0.8.1",
   "profiles": [
     "small-parish",
     "parish",
@@ -23,6 +23,7 @@
     "admin.comments": "admin/comments",
     "admin.publications.index": "admin/publications/index",
     "admin.publications.editor": "admin/publications/editor",
-    "layout.admin": "layouts/admin"
+    "layout.admin": "layouts/admin",
+    "admin.state": "admin/state"
   }
 }

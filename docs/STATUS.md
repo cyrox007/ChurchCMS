@@ -260,7 +260,6 @@ Next:
 - сворачиваемая desktop-навигация;
 - глобальный поиск;
 - общий центр задач/уведомлений;
-- единые loading/error/success/empty состояния;
 - полный keyboard/focus/accessibility audit;
 - подключение будущих Media, People, Worship, Events, External Channels, Users/Roles, Themes, Settings, Backups и System Health.
 
