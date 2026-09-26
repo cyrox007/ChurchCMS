@@ -12,7 +12,7 @@ Priority is ordered within each section.
 - [x] Publication syndication provider.
 - [x] Publication distribution target storage/service; admin UI pending Auth/RBAC.
 - [x] Migration CLI validation.
-- [x] PHP 8.3 lint/theme validation CI and PostgreSQL-backed runtime smoke test.
+- [x] PHP 8.3 lint/theme validation CI, PostgreSQL-backed runtime smoke test and MySQL 8 migration/runtime smoke.
 
 ## P0 — Installation and operator UX
 
