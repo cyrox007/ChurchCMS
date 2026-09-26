@@ -3,6 +3,10 @@
 declare(strict_types=1);
 
 return [
+    'security' => [
+        // Generate 32 random bytes and store as base64. The installer does this automatically.
+        'secret_key' => 'base64-encoded-32-byte-secret',
+    ],
     'database' => [
         'password' => 'change-me',
     ],
