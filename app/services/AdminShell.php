@@ -35,6 +35,7 @@ final class AdminShell
             'adminSection' => $section,
             'adminNavigation' => array_values($navigation),
             'adminNavigationBadges' => $badges,
+            'adminSearchQuery' => AdminSearchService::query($request),
         ];
 
         ThemeRenderer::fromConfig()->page(

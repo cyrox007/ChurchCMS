@@ -258,7 +258,8 @@ Next:
 
 Остаётся:
 
-- глобальный поиск;
+- глобальный поиск в общей шапке Admin Shell с RBAC-фильтрацией провайдеров;
+- Publications подключён первым поисковым провайдером: поиск ограничен по длине/количеству результатов и выполняется только по разрешённому разделу;
 - общий центр задач/уведомлений;
 - полный keyboard/focus/accessibility audit;
 - подключение будущих Media, People, Worship, Events, External Channels, Users/Roles, Themes, Settings, Backups и System Health.

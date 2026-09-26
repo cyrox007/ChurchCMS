@@ -1,0 +1,259 @@
+name: Проверка глобального поиска Admin Shell
+
+on:
+  push:
+    branches:
+      - develop
+      - main
+    paths:
+      - 'app/services/AdminSearch*.php'
+      - 'app/controllers/AdminController.php'
+      - 'config/routes.php'
+      - 'modules/publications/PublicationAdminSearchProvider.php'
+      - 'modules/publications/PublicationRepository.php'
+      - 'modules/publications/runtime.php'
+      - 'themes/default/templates/admin/search.php'
+      - 'themes/default/templates/layouts/admin.php'
+      - 'themes/default/assets/css/site.css'
+      - 'themes/default/theme.json'
+      - '.github/workflows/admin-search-smoke.yml'
+  pull_request:
+    branches:
+      - develop
+      - main
+    paths:
+      - 'app/services/AdminSearch*.php'
+      - 'app/controllers/AdminController.php'
+      - 'config/routes.php'
+      - 'modules/publications/PublicationAdminSearchProvider.php'
+      - 'modules/publications/PublicationRepository.php'
+      - 'modules/publications/runtime.php'
+      - 'themes/default/templates/admin/search.php'
+      - 'themes/default/templates/layouts/admin.php'
+      - 'themes/default/assets/css/site.css'
+      - 'themes/default/theme.json'
+      - '.github/workflows/admin-search-smoke.yml'
+
+permissions:
+  contents: read
+
+jobs:
+  admin-search:
+    runs-on: ubuntu-latest
+
+    services:
+      postgres:
+        image: postgres:16
+        env:
+          POSTGRES_DB: churchcms
+          POSTGRES_USER: churchcms
+          POSTGRES_PASSWORD: churchcms
+        ports:
+          - 5432:5432
+        options: >-
+          --health-cmd pg_isready
+          --health-interval 10s
+          --health-timeout 5s
+          --health-retries 5
+
+    steps:
+      - name: Получить исходный код
+        uses: actions/checkout@v4
+
+      - name: Подготовить PHP 8.3
+        uses: shivammathur/setup-php@v2
+        with:
+          php-version: '8.3'
+          extensions: pdo, pdo_pgsql
+          coverage: none
+
+      - name: Проверить PHP и тему
+        shell: bash
+        run: |
+          set -euo pipefail
+          php -l app/services/AdminSearchProvider.php
+          php -l app/services/AdminSearchRegistry.php
+          php -l app/services/AdminSearchService.php
+          php -l app/controllers/AdminController.php
+          php -l modules/publications/PublicationAdminSearchProvider.php
+          php -l modules/publications/PublicationRepository.php
+          php -l modules/publications/runtime.php
+          php -l themes/default/templates/admin/search.php
+          php -l themes/default/templates/layouts/admin.php
+          php bin/theme-check.php
+
+      - name: Подготовить тестовую установку
+        shell: bash
+        run: |
+          set -euo pipefail
+          mkdir -p storage/cache storage/logs storage/sessions storage/rate-limits storage/uploads
+          cat > config/local.php <<'PHP'
+          <?php
+
+          declare(strict_types=1);
+
+          return [
+              'installation' => [
+                  'completed' => true,
+              ],
+              'security' => [
+                  'secret_key' => base64_encode(str_repeat('s', 32)),
+              ],
+              'database' => [
+                  'driver' => 'pgsql',
+                  'host' => '127.0.0.1',
+                  'port' => 5432,
+                  'database' => 'churchcms',
+                  'username' => 'churchcms',
+                  'password' => 'churchcms',
+              ],
+          ];
+          PHP
+          php bin/migrate.php
+
+      - name: Проверить реальный поиск и RBAC
+        shell: bash
+        run: |
+          php -r '
+          require "core.php";
+
+          $pdo = \ChurchCMS\Core\DatabaseManager::getInstance()->connection();
+          $now = gmdate("Y-m-d H:i:s");
+
+          $user = $pdo->prepare(
+              "INSERT INTO admin_users (
+                  public_id, username, password_hash, display_name, status, created_at, updated_at
+               ) VALUES (
+                  :public_id, :username, :password_hash, :display_name, :status, :created_at, :updated_at
+               ) RETURNING id"
+          );
+          $user->execute([
+              "public_id" => "20000000-0000-4000-8000-000000000001",
+              "username" => "search-smoke",
+              "password_hash" => password_hash("smoke-password", PASSWORD_DEFAULT),
+              "display_name" => "Поисковый редактор",
+              "status" => "active",
+              "created_at" => $now,
+              "updated_at" => $now,
+          ]);
+          $userId = (int) $user->fetchColumn();
+
+          $role = $pdo->prepare(
+              "SELECT id FROM roles WHERE role_key = :role_key"
+          );
+          $role->execute(["role_key" => "superadmin"]);
+          $roleId = (int) $role->fetchColumn();
+          $assign = $pdo->prepare(
+              "INSERT INTO admin_user_roles (user_id, role_id) VALUES (:user_id, :role_id)"
+          );
+          $assign->execute([
+              "user_id" => $userId,
+              "role_id" => $roleId,
+          ]);
+
+          $service = \ChurchCMS\Modules\Publications\PublicationService::fromDatabase();
+          $targetPublicId = $service->createDraft(
+              "Пасхальное послание",
+              excerpt: "Главный праздничный материал",
+          );
+          $service->createDraft(
+              "Новости прихода",
+              excerpt: "Обычные приходские новости",
+          );
+
+          $request = new \ChurchCMS\Core\Request(["q" => "Пасх"]);
+          $request->setAttribute("admin.user", [
+              "id" => $userId,
+              "username" => "search-smoke",
+              "display_name" => "Поисковый редактор",
+          ]);
+
+          $result = \ChurchCMS\App\Services\AdminSearchService::search($request);
+          $groups = $result["groups"] ?? [];
+          $first = $groups[0]["results"][0] ?? null;
+
+          if (
+              ($result["valid"] ?? false) !== true
+              || ($groups[0]["id"] ?? null) !== "publications"
+              || ($first["title"] ?? null) !== "Пасхальное послание"
+              || ($first["route"] ?? null) !== "admin_publication_edit"
+              || ($first["route_params"]["publicId"] ?? null) !== $targetPublicId
+          ) {
+              fwrite(
+                  STDERR,
+                  "Глобальный admin-поиск вернул неожиданный результат: "
+                  . json_encode($result, JSON_UNESCAPED_UNICODE | JSON_UNESCAPED_SLASHES)
+                  . "\n",
+              );
+              exit(1);
+          }
+
+          $short = new \ChurchCMS\Core\Request(["q" => "П"]);
+          $short->setAttribute("admin.user", ["id" => $userId]);
+          if ((\ChurchCMS\App\Services\AdminSearchService::search($short)["valid"] ?? true) !== false) {
+              fwrite(STDERR, "Слишком короткий запрос был принят.\n");
+              exit(1);
+          }
+
+          echo "Admin search RBAC smoke OK\n";
+          '
+
+      - name: Проверить экран и форму поиска
+        shell: bash
+        run: |
+          php -r '
+          require "core.php";
+          $renderer = \ChurchCMS\Core\ThemeRenderer::fromConfig();
+
+          $groups = [[
+              "id" => "publications",
+              "label" => "Публикации",
+              "results" => [[
+                  "title" => "Пасхальное послание",
+                  "description" => "Черновик",
+                  "route" => "admin_publication_edit",
+                  "route_params" => [
+                      "publicId" => "20000000-0000-4000-8000-000000000001",
+                  ],
+              ]],
+          ]];
+
+          $content = $renderer->capture("admin.search", [
+              "searchQuery" => "Пасх",
+              "searchValid" => true,
+              "searchGroups" => $groups,
+          ]);
+
+          if (
+              !str_contains($content, "Пасхальное послание")
+              || !str_contains($content, "/admin/publications/20000000-0000-4000-8000-000000000001")
+          ) {
+              fwrite(STDERR, "Экран поиска не отрисовал результат.\n");
+              exit(1);
+          }
+
+          $layout = $renderer->capture("layout.admin", [
+              "title" => "Поиск",
+              "siteName" => "Тестовый приход",
+              "adminUser" => ["display_name" => "Редактор"],
+              "adminSection" => "search",
+              "adminNavigation" => [],
+              "adminNavigationBadges" => [],
+              "adminSearchQuery" => "Пасх",
+              "content" => $content,
+          ]);
+
+          foreach ([
+              "role=\"search\"",
+              "name=\"q\"",
+              "value=\"Пасх\"",
+              "/admin/search",
+          ] as $expected) {
+              if (!str_contains($layout, $expected)) {
+                  fwrite(STDERR, "Admin Shell search form не содержит: {$expected}\n");
+                  exit(1);
+              }
+          }
+
+          echo "Admin search render smoke OK\n";
+          '

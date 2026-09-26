@@ -41,7 +41,7 @@ Priority is ordered within each section.
 - [x] replace dashboard-card prototype with unified Admin Shell;
 - [x] persistent/collapsible admin navigation;
 - [x] shared admin header with site context and current user;
-- [ ] global admin search foundation;
+- [x] global admin search foundation;
 - [ ] task/notification center for pending moderation, failed sync and editorial work;
 - [x] responsive admin shell for tablet/mobile;
 - [x] module navigation registration contract;

@@ -43,6 +43,52 @@ final class PublicationRepository
         );
     }
 
+    /**
+     * @return list<Publication>
+     */
+    public function adminSearch(
+        string $query,
+        string $siteKey = 'default',
+        int $limit = 8,
+    ): array {
+        $query = trim($query);
+        $limit = max(1, min(20, $limit));
+
+        if ($query === '') {
+            return [];
+        }
+
+        $escaped = str_replace(
+            ['!', '%', '_'],
+            ['!!', '!%', '!_'],
+            $query,
+        );
+        $pattern = '%' . $escaped . '%';
+
+        $statement = $this->pdo->prepare(
+            "SELECT * FROM publications
+             WHERE site_key = :site_key
+               AND (
+                    LOWER(title) LIKE LOWER(:title_pattern) ESCAPE '!'
+                    OR LOWER(slug) LIKE LOWER(:slug_pattern) ESCAPE '!'
+                    OR LOWER(excerpt) LIKE LOWER(:excerpt_pattern) ESCAPE '!'
+               )
+             ORDER BY updated_at DESC, id DESC
+             LIMIT :limit"
+        );
+        $statement->bindValue(':site_key', $siteKey);
+        $statement->bindValue(':title_pattern', $pattern);
+        $statement->bindValue(':slug_pattern', $pattern);
+        $statement->bindValue(':excerpt_pattern', $pattern);
+        $statement->bindValue(':limit', $limit, PDO::PARAM_INT);
+        $statement->execute();
+
+        return array_map(
+            fn(array $row): Publication => $this->hydrate($row),
+            $statement->fetchAll(),
+        );
+    }
+
     public function findByPublicId(string $publicId, string $siteKey = 'default'): ?Publication
     {
         $statement = $this->pdo->prepare(

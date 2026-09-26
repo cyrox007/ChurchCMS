@@ -73,6 +73,28 @@ $current = static fn(string $section): string =>
                     <span><?= $theme->e($displayName) ?></span>
                 <?php endif; ?>
             </div>
+
+            <form
+                class="admin-global-search"
+                method="get"
+                action="<?= $theme->e($theme->route('admin_search')) ?>"
+                role="search"
+            >
+                <label class="admin-global-search__field">
+                    <span class="admin-visually-hidden">Поиск по управлению</span>
+                    <input
+                        type="search"
+                        name="q"
+                        value="<?= $theme->e($adminSearchQuery ?? '') ?>"
+                        placeholder="Найти публикацию…"
+                        minlength="2"
+                        maxlength="100"
+                        autocomplete="off"
+                    >
+                </label>
+                <button type="submit">Найти</button>
+            </form>
+
             <a href="/" target="_blank" rel="noopener">Открыть сайт ↗</a>
         </header>
         <main class="admin-content" id="admin-content">
