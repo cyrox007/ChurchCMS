@@ -11,9 +11,8 @@ use RuntimeException;
 
 final class PublicationRepository
 {
-    public function __construct(
-        private readonly PDO $pdo = new \PDO('sqlite::memory:'),
-    ) {
+    public function __construct(private readonly PDO $pdo)
+    {
     }
 
     public static function fromDatabase(): self
