@@ -42,5 +42,8 @@ jobs:
       - name: Bootstrap runtime
         run: php -r "require 'core.php'; echo 'ChurchCMS bootstrap OK', PHP_EOL;"
 
+      - name: Validate migrations
+        run: php bin/migrate.php validate
+
       - name: Validate themes
         run: php bin/theme-check.php
