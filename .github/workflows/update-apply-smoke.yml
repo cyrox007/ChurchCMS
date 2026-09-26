@@ -1,0 +1,385 @@
+name: Проверка применения code-only обновлений
+
+on:
+  push:
+    branches:
+      - develop
+      - main
+    paths:
+      - 'core/UpdatePackageStager.php'
+      - 'core/UpdatePackageApplier.php'
+      - 'bin/update.php'
+      - 'core/BackupManager.php'
+      - 'core/InstallationHealthCheck.php'
+      - 'config/app.php'
+      - '.github/workflows/update-apply-smoke.yml'
+  pull_request:
+    branches:
+      - develop
+      - main
+    paths:
+      - 'core/UpdatePackageStager.php'
+      - 'core/UpdatePackageApplier.php'
+      - 'bin/update.php'
+      - 'core/BackupManager.php'
+      - 'core/InstallationHealthCheck.php'
+      - 'config/app.php'
+      - '.github/workflows/update-apply-smoke.yml'
+
+permissions:
+  contents: read
+
+jobs:
+  update-apply-smoke:
+    runs-on: ubuntu-latest
+
+    services:
+      postgres:
+        image: postgres:16
+        env:
+          POSTGRES_DB: churchcms
+          POSTGRES_USER: churchcms
+          POSTGRES_PASSWORD: churchcms
+        ports:
+          - 5432:5432
+        options: >-
+          --health-cmd pg_isready
+          --health-interval 10s
+          --health-timeout 5s
+          --health-retries 5
+
+    steps:
+      - name: Получить исходный код
+        uses: actions/checkout@v4
+
+      - name: Подготовить PHP 8.3
+        uses: shivammathur/setup-php@v2
+        with:
+          php-version: '8.3'
+          extensions: pdo, pdo_pgsql
+          coverage: none
+
+      - name: Проверить синтаксис updater
+        shell: bash
+        run: |
+          set -euo pipefail
+          php -l core/UpdatePackageStager.php
+          php -l core/UpdatePackageApplier.php
+          php -l bin/update.php
+
+      - name: Подготовить тестовую установку
+        shell: bash
+        run: |
+          set -euo pipefail
+          mkdir -p storage/cache storage/logs storage/sessions storage/rate-limits storage/uploads
+          printf 'backup-smoke\n' > storage/uploads/smoke.txt
+          cat > config/local.php <<'PHP'
+          <?php
+
+          declare(strict_types=1);
+
+          return [
+              'installation' => [
+                  'completed' => true,
+              ],
+              'security' => [
+                  'secret_key' => base64_encode(str_repeat('u', 32)),
+              ],
+              'database' => [
+                  'driver' => 'pgsql',
+                  'host' => '127.0.0.1',
+                  'port' => 5432,
+                  'database' => 'churchcms',
+                  'username' => 'churchcms',
+                  'password' => 'churchcms',
+              ],
+          ];
+          PHP
+          php bin/migrate.php
+          printf '<?php return "delete-me";\n' > core/UpdateDeleteSmoke.php
+
+      - name: Подготовить code-only пакет
+        shell: bash
+        run: |
+          set -euo pipefail
+          package="$RUNNER_TEMP/update-code-only"
+          mkdir -p "$package/config" "$package/core"
+
+          php -r '
+          $source = file_get_contents("config/app.php");
+          if (!is_string($source)) {
+              exit(1);
+          }
+          $updated = str_replace(
+              "'\''version'\'' => '\''0.1.0-dev'\''",
+              "'\''version'\'' => '\''999.0.0-ci'\''",
+              $source,
+              $count,
+          );
+          if ($count !== 1) {
+              fwrite(STDERR, "Не удалось подготовить тестовую версию config/app.php.\n");
+              exit(1);
+          }
+          file_put_contents($argv[1] . "/config/app.php", $updated);
+          ' "$package"
+
+          cat > "$package/core/UpdateAppliedMarker.php" <<'PHP'
+          <?php
+
+          declare(strict_types=1);
+
+          return 'code-only-update-applied';
+          PHP
+
+          php -r '
+          $package = $argv[1];
+          $paths = [
+              "config/app.php",
+              "core/UpdateAppliedMarker.php",
+          ];
+          $files = [];
+          foreach ($paths as $path) {
+              $file = $package . "/" . $path;
+              $files[] = [
+                  "path" => $path,
+                  "bytes" => filesize($file),
+                  "sha256" => hash_file("sha256", $file),
+              ];
+          }
+          $manifest = [
+              "format" => "churchcms-update-v1",
+              "from_version" => "0.1.0-dev",
+              "version" => "999.0.0-ci",
+              "php_min" => "8.3",
+              "files" => $files,
+              "deleted_files" => ["core/UpdateDeleteSmoke.php"],
+          ];
+          file_put_contents(
+              $package . "/manifest.json",
+              json_encode(
+                  $manifest,
+                  JSON_THROW_ON_ERROR | JSON_PRETTY_PRINT | JSON_UNESCAPED_SLASHES
+              ) . PHP_EOL
+          );
+          ' "$package"
+
+      - name: Поместить пакет в staging
+        shell: bash
+        run: |
+          set -euo pipefail
+          staging="$RUNNER_TEMP/update-staging"
+          package="$RUNNER_TEMP/update-code-only"
+          php bin/update.php stage "$package" --path="$staging"
+
+          manifest="$(find "$staging" -mindepth 2 -maxdepth 2 -name manifest.json -type f -print -quit)"
+          test -n "$manifest"
+          stage_id="$(basename "$(dirname "$manifest")")"
+          printf '%s' "$stage_id" > "$RUNNER_TEMP/stage-id"
+
+      - name: Применить code-only пакет
+        shell: bash
+        run: |
+          set -euo pipefail
+          staging="$RUNNER_TEMP/update-staging"
+          backups="$RUNNER_TEMP/update-backups"
+          stage_id="$(cat "$RUNNER_TEMP/stage-id")"
+
+          php bin/update.php apply "$stage_id"             --confirm="$stage_id"             --path="$staging"             --backup-path="$backups"
+
+      - name: Проверить обновление и обязательный backup
+        shell: bash
+        run: |
+          set -euo pipefail
+          test -f core/UpdateAppliedMarker.php
+          test ! -e core/UpdateDeleteSmoke.php
+          grep -q "'version' => '999.0.0-ci'" config/app.php
+
+          backup_manifest="$(find "$RUNNER_TEMP/update-backups" -mindepth 2 -maxdepth 2 -name manifest.json -type f -print -quit)"
+          test -n "$backup_manifest"
+
+          if find . -type f \( -name '*.churchcms-new-*' -o -name '*.churchcms-old-*' \) -print -quit | grep -q .; then
+            echo "После успешного обновления остались временные updater-файлы." >&2
+            exit 1
+          fi
+
+          php -r '
+          require "core.php";
+          $health = (new \ChurchCMS\Core\InstallationHealthCheck(
+              \ChurchCMS\Core\DatabaseManager::getInstance(),
+              CHURCHCMS_ROOT,
+          ))->check();
+
+          if (($health["ready"] ?? false) !== true) {
+              fwrite(
+                  STDERR,
+                  "Healthcheck после code-only обновления не пройден: "
+                  . json_encode($health, JSON_UNESCAPED_SLASHES)
+                  . "\n",
+              );
+              exit(1);
+          }
+          '
+
+      - name: Подготовить пакет с синтаксической ошибкой
+        shell: bash
+        run: |
+          set -euo pipefail
+          package="$RUNNER_TEMP/update-broken"
+          mkdir -p "$package/config" "$package/core"
+
+          php -r '
+          $source = file_get_contents("config/app.php");
+          $updated = str_replace(
+              "'\''version'\'' => '\''999.0.0-ci'\''",
+              "'\''version'\'' => '\''999.0.1-ci'\''",
+              (string) $source,
+              $count,
+          );
+          if ($count !== 1) {
+              exit(1);
+          }
+          file_put_contents($argv[1] . "/config/app.php", $updated);
+          ' "$package"
+
+          printf '%s\n' '<?php this is not valid php {' > "$package/core/UpdateAppliedMarker.php"
+
+          php -r '
+          $package = $argv[1];
+          $paths = ["config/app.php", "core/UpdateAppliedMarker.php"];
+          $files = [];
+          foreach ($paths as $path) {
+              $file = $package . "/" . $path;
+              $files[] = [
+                  "path" => $path,
+                  "bytes" => filesize($file),
+                  "sha256" => hash_file("sha256", $file),
+              ];
+          }
+          file_put_contents(
+              $package . "/manifest.json",
+              json_encode([
+                  "format" => "churchcms-update-v1",
+                  "from_version" => "999.0.0-ci",
+                  "version" => "999.0.1-ci",
+                  "php_min" => "8.3",
+                  "files" => $files,
+                  "deleted_files" => [],
+              ], JSON_THROW_ON_ERROR | JSON_PRETTY_PRINT | JSON_UNESCAPED_SLASHES) . PHP_EOL
+          );
+          ' "$package"
+
+          staging="$RUNNER_TEMP/update-staging"
+          php bin/update.php stage "$package" --path="$staging"
+          manifest="$(find "$staging" -mindepth 2 -maxdepth 2 -name manifest.json -type f -newer "$package/manifest.json" -print -quit || true)"
+          if [ -z "$manifest" ]; then
+            manifest="$(find "$staging" -mindepth 2 -maxdepth 2 -name manifest.json -type f -printf '%T@ %p\n' | sort -nr | head -1 | cut -d' ' -f2-)"
+          fi
+          stage_id="$(basename "$(dirname "$manifest")")"
+          printf '%s' "$stage_id" > "$RUNNER_TEMP/broken-stage-id"
+
+      - name: Проверить автоматический rollback
+        shell: bash
+        run: |
+          set -euo pipefail
+          staging="$RUNNER_TEMP/update-staging"
+          backups="$RUNNER_TEMP/update-backups"
+          stage_id="$(cat "$RUNNER_TEMP/broken-stage-id")"
+
+          before_hash="$(sha256sum core/UpdateAppliedMarker.php | awk '{print $1}')"
+
+          if php bin/update.php apply "$stage_id"             --confirm="$stage_id"             --path="$staging"             --backup-path="$backups"; then
+            echo "Пакет с синтаксической ошибкой ошибочно применён." >&2
+            exit 1
+          fi
+
+          after_hash="$(sha256sum core/UpdateAppliedMarker.php | awk '{print $1}')"
+          test "$after_hash" = "$before_hash"
+          grep -q "'version' => '999.0.0-ci'" config/app.php
+
+          if find . -type f \( -name '*.churchcms-new-*' -o -name '*.churchcms-old-*' \) -print -quit | grep -q .; then
+            echo "После rollback остались временные updater-файлы." >&2
+            exit 1
+          fi
+
+          echo "Автоматический rollback code-only обновления проверен"
+
+      - name: Подготовить пакет с миграцией
+        shell: bash
+        run: |
+          set -euo pipefail
+          package="$RUNNER_TEMP/update-with-migration"
+          mkdir -p "$package/config" "$package/database/migrations"
+
+          php -r '
+          $source = file_get_contents("config/app.php");
+          $updated = str_replace(
+              "'\''version'\'' => '\''999.0.0-ci'\''",
+              "'\''version'\'' => '\''999.0.2-ci'\''",
+              (string) $source,
+              $count,
+          );
+          if ($count !== 1) {
+              exit(1);
+          }
+          file_put_contents($argv[1] . "/config/app.php", $updated);
+          ' "$package"
+
+          cat > "$package/database/migrations/20990101_000000_smoke.php" <<'PHP'
+          <?php
+          return null;
+          PHP
+
+          php -r '
+          $package = $argv[1];
+          $paths = [
+              "config/app.php",
+              "database/migrations/20990101_000000_smoke.php",
+          ];
+          $files = [];
+          foreach ($paths as $path) {
+              $file = $package . "/" . $path;
+              $files[] = [
+                  "path" => $path,
+                  "bytes" => filesize($file),
+                  "sha256" => hash_file("sha256", $file),
+              ];
+          }
+          file_put_contents(
+              $package . "/manifest.json",
+              json_encode([
+                  "format" => "churchcms-update-v1",
+                  "from_version" => "999.0.0-ci",
+                  "version" => "999.0.2-ci",
+                  "php_min" => "8.3",
+                  "files" => $files,
+                  "deleted_files" => [],
+              ], JSON_THROW_ON_ERROR | JSON_PRETTY_PRINT | JSON_UNESCAPED_SLASHES) . PHP_EOL
+          );
+          ' "$package"
+
+          staging="$RUNNER_TEMP/update-staging"
+          php bin/update.php stage "$package" --path="$staging"
+          manifest="$(find "$staging" -mindepth 2 -maxdepth 2 -name manifest.json -type f -printf '%T@ %p\n' | sort -nr | head -1 | cut -d' ' -f2-)"
+          stage_id="$(basename "$(dirname "$manifest")")"
+          printf '%s' "$stage_id" > "$RUNNER_TEMP/migration-stage-id"
+
+      - name: Отклонить автоматическое применение миграций
+        shell: bash
+        run: |
+          set -euo pipefail
+          staging="$RUNNER_TEMP/update-staging"
+          backups="$RUNNER_TEMP/update-backups"
+          stage_id="$(cat "$RUNNER_TEMP/migration-stage-id")"
+          before_count="$(find "$backups" -mindepth 1 -maxdepth 1 -type d | wc -l)"
+
+          if php bin/update.php apply "$stage_id"             --confirm="$stage_id"             --path="$staging"             --backup-path="$backups"; then
+            echo "Schema-changing пакет ошибочно разрешён для автоматического apply." >&2
+            exit 1
+          fi
+
+          after_count="$(find "$backups" -mindepth 1 -maxdepth 1 -type d | wc -l)"
+          test "$before_count" = "$after_count"
+          test ! -e database/migrations/20990101_000000_smoke.php
+          grep -q "'version' => '999.0.0-ci'" config/app.php
+
+          echo "Schema-changing пакет отклонён до изменения установки"
