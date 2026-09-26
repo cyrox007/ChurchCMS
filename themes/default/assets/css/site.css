@@ -1762,3 +1762,84 @@ svg {
         grid-template-columns: 1fr;
     }
 }
+
+
+/* Сворачиваемая desktop-навигация Admin Shell */
+.admin-frame,
+.admin-sidebar,
+.admin-workspace {
+    transition:
+        grid-template-columns .18s ease,
+        width .18s ease,
+        opacity .18s ease;
+}
+
+.admin-sidebar-toggle {
+    flex: 0 0 auto;
+    min-height: 2.6rem;
+    display: inline-flex;
+    align-items: center;
+    gap: .55rem;
+    padding: .55rem .75rem;
+    border: 1px solid var(--line);
+    border-radius: .65rem;
+    color: var(--navy-900);
+    background: #fff;
+    font: inherit;
+    font-weight: 750;
+    cursor: pointer;
+}
+
+.admin-sidebar-toggle:hover,
+.admin-sidebar-toggle:focus-visible {
+    border-color: var(--navy-800);
+    background: #f7f9fb;
+}
+
+.admin-topbar__context {
+    min-width: 0;
+    display: flex;
+    align-items: baseline;
+    gap: .8rem;
+}
+
+.admin-frame--collapsed {
+    grid-template-columns: 0 minmax(0, 1fr);
+}
+
+.admin-frame--collapsed .admin-sidebar {
+    width: 0;
+    min-width: 0;
+    padding-inline: 0;
+    border: 0;
+    opacity: 0;
+    overflow: hidden;
+    visibility: hidden;
+    pointer-events: none;
+}
+
+@media (prefers-reduced-motion: reduce) {
+    .admin-frame,
+    .admin-sidebar,
+    .admin-workspace {
+        transition: none;
+    }
+}
+
+@media (max-width: 56rem) {
+    .admin-frame--collapsed {
+        grid-template-columns: 1fr;
+    }
+
+    .admin-frame--collapsed .admin-sidebar {
+        width: 100%;
+        padding-inline: 1rem;
+        opacity: 1;
+        visibility: visible;
+        pointer-events: auto;
+    }
+
+    .admin-sidebar-toggle {
+        display: none !important;
+    }
+}
