@@ -20,6 +20,8 @@ $required = [
     '/core/SecretVault.php',
     '/core/PageCache.php',
     '/core/PublicFormToken.php',
+    '/core/SeoRenderer.php',
+    '/core/ShareLinks.php',
     '/core/Request.php',
     '/core/Response.php',
     '/core/RouteTemplate.php',
