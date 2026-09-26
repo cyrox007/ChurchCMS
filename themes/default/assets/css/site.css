@@ -736,3 +736,148 @@ svg {
         grid-row: 1;
     }
 }
+
+
+/* Administrator authentication and dashboard */
+.auth-shell {
+    min-height: min(42rem, 70vh);
+    display: grid;
+    place-items: center;
+}
+
+.auth-card {
+    width: min(30rem, 100%);
+    padding: clamp(1.5rem, 4vw, 2.5rem);
+    border: 1px solid var(--line);
+    border-radius: var(--radius-lg);
+    background: var(--paper);
+    box-shadow: var(--shadow-soft);
+}
+
+.auth-card h1,
+.admin-heading h1,
+.admin-tile h2 {
+    font-family: var(--font-display);
+    color: var(--navy-950);
+}
+
+.auth-card h1 {
+    margin: 0;
+    font-size: clamp(2rem, 5vw, 3.25rem);
+    line-height: 1;
+}
+
+.auth-card__intro {
+    margin: 1rem 0 0;
+    color: var(--ink-700);
+}
+
+.form-stack {
+    display: grid;
+    gap: 1rem;
+    margin-top: 1.75rem;
+}
+
+.field {
+    display: grid;
+    gap: .45rem;
+}
+
+.field > span {
+    color: var(--ink-700);
+    font-size: .88rem;
+    font-weight: 750;
+}
+
+.field input,
+.field textarea,
+.field select {
+    width: 100%;
+    min-height: 2.9rem;
+    padding: .72rem .85rem;
+    border: 1px solid var(--line-strong);
+    border-radius: .72rem;
+    color: var(--ink-950);
+    background: #fff;
+    font: inherit;
+}
+
+.field textarea {
+    min-height: 10rem;
+    resize: vertical;
+}
+
+.field input:focus,
+.field textarea:focus,
+.field select:focus {
+    border-color: var(--navy-800);
+}
+
+.form-alert {
+    margin-top: 1.25rem;
+    padding: .85rem 1rem;
+    border: 1px solid rgba(107, 31, 45, .28);
+    border-radius: .75rem;
+    color: #5f1724;
+    background: #fff3f4;
+}
+
+.admin-shell {
+    display: grid;
+    gap: 2rem;
+}
+
+.admin-heading {
+    display: flex;
+    align-items: flex-end;
+    justify-content: space-between;
+    gap: 2rem;
+    padding-bottom: 1.5rem;
+    border-bottom: 1px solid var(--line);
+}
+
+.admin-heading h1 {
+    margin: 0;
+    font-size: clamp(2.25rem, 5vw, 4.5rem);
+    line-height: 1;
+}
+
+.admin-heading p:last-child {
+    margin: .75rem 0 0;
+    color: var(--ink-700);
+}
+
+.admin-grid {
+    display: grid;
+    grid-template-columns: repeat(3, minmax(0, 1fr));
+    gap: 1rem;
+}
+
+.admin-tile {
+    padding: 1.5rem;
+    border: 1px solid var(--line);
+    border-radius: var(--radius-md);
+    background: var(--paper);
+}
+
+.admin-tile h2 {
+    margin: 0;
+    font-size: 1.45rem;
+    line-height: 1.2;
+}
+
+.admin-tile > p:last-child {
+    margin: .8rem 0 0;
+    color: var(--ink-700);
+}
+
+@media (max-width: 48rem) {
+    .admin-heading {
+        align-items: stretch;
+        flex-direction: column;
+    }
+
+    .admin-grid {
+        grid-template-columns: 1fr;
+    }
+}
