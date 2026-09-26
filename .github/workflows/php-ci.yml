@@ -184,6 +184,27 @@ jobs:
           echo "Database-backed runtime smoke OK\n";
           '
 
+      - name: Подготовить данные для проверки восстановления
+        shell: bash
+        run: |
+          php -r '
+          require "core.php";
+          $publicId = \ChurchCMS\Modules\Publications\PublicationService::fromDatabase()
+              ->createDraft("Материал до резервной копии");
+          $pdo = \ChurchCMS\Core\DatabaseManager::getInstance()->connection();
+          $statement = $pdo->prepare("SELECT id FROM publications WHERE public_id = :public_id");
+          $statement->execute(["public_id" => $publicId]);
+          $id = $statement->fetchColumn();
+
+          if ($id === false) {
+              fwrite(STDERR, "Не удалось подготовить тестовую публикацию.\n");
+              exit(1);
+          }
+
+          file_put_contents(getenv("RUNNER_TEMP") . "/restore-public-id", $publicId);
+          file_put_contents(getenv("RUNNER_TEMP") . "/restore-id", (string) $id);
+          '
+
       - name: Создать и проверить резервную копию
         shell: bash
         run: |
@@ -193,4 +214,71 @@ jobs:
           manifest="$(find "$backup_root" -mindepth 2 -maxdepth 2 -name manifest.json -type f -print -quit)"
           test -n "$manifest"
           backup_id="$(basename "$(dirname "$manifest")")"
+          printf '%s' "$backup_id" > "$RUNNER_TEMP/backup-id"
           php bin/backup.php verify "$backup_id" --path="$backup_root"
+
+      - name: Изменить данные после резервной копии
+        shell: bash
+        run: |
+          php -r '
+          require "core.php";
+          $publicId = trim((string) file_get_contents(getenv("RUNNER_TEMP") . "/restore-public-id"));
+          $pdo = \ChurchCMS\Core\DatabaseManager::getInstance()->connection();
+          $statement = $pdo->prepare(
+              "UPDATE publications SET title = :title, updated_at = :updated_at WHERE public_id = :public_id"
+          );
+          $statement->execute([
+              "title" => "Изменено после резервной копии",
+              "updated_at" => gmdate("Y-m-d H:i:s"),
+              "public_id" => $publicId,
+          ]);
+
+          if ($statement->rowCount() !== 1) {
+              fwrite(STDERR, "Не удалось изменить тестовую публикацию перед restore.\n");
+              exit(1);
+          }
+          '
+
+      - name: Восстановить данные БД
+        shell: bash
+        run: |
+          set -euo pipefail
+          backup_root="$RUNNER_TEMP/churchcms-backups"
+          backup_id="$(cat "$RUNNER_TEMP/backup-id")"
+          php bin/backup.php restore-db "$backup_id" --confirm="$backup_id" --path="$backup_root"
+
+      - name: Проверить восстановленные данные и sequence
+        shell: bash
+        run: |
+          php -r '
+          require "core.php";
+          $publicId = trim((string) file_get_contents(getenv("RUNNER_TEMP") . "/restore-public-id"));
+          $originalId = (int) trim((string) file_get_contents(getenv("RUNNER_TEMP") . "/restore-id"));
+          $pdo = \ChurchCMS\Core\DatabaseManager::getInstance()->connection();
+
+          $statement = $pdo->prepare("SELECT id, title FROM publications WHERE public_id = :public_id");
+          $statement->execute(["public_id" => $publicId]);
+          $publication = $statement->fetch();
+
+          if (
+              !is_array($publication)
+              || (int) ($publication["id"] ?? 0) !== $originalId
+              || ($publication["title"] ?? null) !== "Материал до резервной копии"
+          ) {
+              fwrite(STDERR, "Данные публикации не восстановлены.\n");
+              exit(1);
+          }
+
+          $nextPublicId = \ChurchCMS\Modules\Publications\PublicationService::fromDatabase()
+              ->createDraft("Материал после восстановления");
+          $statement = $pdo->prepare("SELECT id FROM publications WHERE public_id = :public_id");
+          $statement->execute(["public_id" => $nextPublicId]);
+          $nextId = (int) $statement->fetchColumn();
+
+          if ($nextId <= $originalId) {
+              fwrite(STDERR, "PostgreSQL sequence не синхронизирована после восстановления.\n");
+              exit(1);
+          }
+
+          echo "Восстановление БД и sequence проверено\n";
+          '
