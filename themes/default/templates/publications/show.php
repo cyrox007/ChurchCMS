@@ -15,6 +15,9 @@ $shareLinks = ChurchCMSCoreConfig::get('sharing.enabled', true) === true
         <meta itemprop="datePublished" content="<?= $theme->e($publication->publishedAt->format(DATE_ATOM)) ?>">
     <?php endif; ?>
     <meta itemprop="dateModified" content="<?= $theme->e($publication->updatedAt->format(DATE_ATOM)) ?>">
+    <?php if (!empty($seo['image'])): ?>
+        <link itemprop="image" href="<?= $theme->e(\ChurchCMS\Core\SeoRenderer::absoluteUrl((string) $seo['image'])) ?>">
+    <?php endif; ?>
 
     <header class="publication__header">
         <p class="eyebrow"><?= $theme->e($publication->type->value) ?></p>
