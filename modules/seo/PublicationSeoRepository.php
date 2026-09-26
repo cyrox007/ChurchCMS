@@ -127,11 +127,14 @@ final class PublicationSeoRepository
         $canonical = trim((string) ($row['canonical_url'] ?? ''));
         $image = trim((string) ($row['social_image_url'] ?? ''));
 
+        $resolvedTitle = $seoTitle !== '' ? $seoTitle : $publication->title;
+        $resolvedDescription = $seoDescription !== '' ? $seoDescription : $publication->excerpt;
+
         return [
-            'title' => $socialTitle !== '' ? $socialTitle : ($seoTitle !== '' ? $seoTitle : $publication->title),
-            'description' => $socialDescription !== ''
-                ? $socialDescription
-                : ($seoDescription !== '' ? $seoDescription : $publication->excerpt),
+            'title' => $resolvedTitle,
+            'description' => $resolvedDescription,
+            'og_title' => $socialTitle !== '' ? $socialTitle : $resolvedTitle,
+            'og_description' => $socialDescription !== '' ? $socialDescription : $resolvedDescription,
             'canonical' => $canonical !== '' ? $canonical : $defaultCanonical,
             'image' => $image !== '' ? $image : (string) Config::get('seo.default_image', ''),
             'og_type' => 'article',
