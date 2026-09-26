@@ -11,6 +11,19 @@ require $root . '/core.php';
 
 try {
     $runner = new MigrationRunner(DatabaseManager::getInstance(), $root);
+    $command = $argv[1] ?? 'migrate';
+
+    if ($command === 'validate') {
+        $migrations = $runner->validate();
+        echo sprintf("Migration validation OK: %d migration(s).\n", count($migrations));
+        exit(0);
+    }
+
+    if ($command !== 'migrate') {
+        fwrite(STDERR, "Usage: php bin/migrate.php [migrate|validate]\n");
+        exit(2);
+    }
+
     $applied = $runner->migrate();
 
     if ($applied === []) {
