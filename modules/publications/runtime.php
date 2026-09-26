@@ -9,6 +9,7 @@ use ChurchCMS\App\Middlewares\ApiPublicRateLimitMiddleware;
 use ChurchCMS\App\Middlewares\PartnerApiMiddleware;
 use ChurchCMS\App\Middlewares\CsrfMiddleware;
 use ChurchCMS\App\Middlewares\RequireAdminMiddleware;
+use ChurchCMS\App\Services\AdminNavigationRegistry;
 use ChurchCMS\Core\ModuleRuntimeProvider;
 use ChurchCMS\Core\Router;
 use ChurchCMS\Core\SyndicationRegistry;
@@ -61,6 +62,14 @@ return new class implements ModuleRuntimeProvider {
         SyndicationRegistry::register(
             'publications',
             new PublicationSyndicationProvider(),
+        );
+
+        AdminNavigationRegistry::register(
+            id: 'publications',
+            label: 'Публикации',
+            route: 'admin_publications',
+            permission: 'publications.read',
+            priority: 20,
         );
 
         $router = Router::getInstance();
