@@ -1,6 +1,6 @@
 <?php declare(strict_types=1);
-$canonical = ChurchCMSCoreSeoRenderer::absoluteUrl('/publications/' . rawurlencode($publication->slug));
-$shareLinks = ChurchCMSCoreConfig::get('sharing.enabled', true) === true
+$canonical = \ChurchCMS\Core\SeoRenderer::absoluteUrl('/publications/' . rawurlencode($publication->slug));
+$shareLinks = \ChurchCMS\Core\Config::get('sharing.enabled', true) === true
     ? $theme->shareLinks($canonical, $publication->title)
     : [];
 ?>
