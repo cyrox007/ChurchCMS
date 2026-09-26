@@ -5,6 +5,7 @@ declare(strict_types=1);
 namespace ChurchCMS\Modules\Seo;
 
 use ChurchCMS\Core\Config;
+use ChurchCMS\Core\GeneratedOutputCache;
 use ChurchCMS\Core\Request;
 
 final class SeoController
@@ -32,26 +33,36 @@ final class SeoController
     public function sitemap(Request $request): never
     {
         $base = rtrim((string) Config::get('app.url', ''), '/');
-        $repository = PublicationSeoRepository::fromDatabase();
-        $entries = $repository->sitemapPublications();
+        $cache = GeneratedOutputCache::fromConfig(300);
+        $key = $cache->key('sitemap', $base);
+        $xml = $cache->get($key);
+
+        if ($xml === null) {
+            $repository = PublicationSeoRepository::fromDatabase();
+            $entries = $repository->sitemapPublications();
+
+            ob_start();
+            echo '<?xml version="1.0" encoding="UTF-8"?>';
+            echo '<urlset xmlns="http://www.sitemaps.org/schemas/sitemap/0.9">';
+
+            self::url($base . '/', null);
+            self::url($base . '/publications', null);
+
+            foreach ($entries as $entry) {
+                self::url(
+                    $base . '/publications/' . rawurlencode($entry['slug']),
+                    $entry['updated_at'] !== '' ? $entry['updated_at'] : null,
+                );
+            }
+
+            echo '</urlset>';
+            $xml = (string) ob_get_clean();
+            $cache->put($key, $xml);
+        }
 
         header('Content-Type: application/xml; charset=utf-8');
         header('Cache-Control: public, max-age=300, stale-while-revalidate=600');
-
-        echo '<?xml version="1.0" encoding="UTF-8"?>';
-        echo '<urlset xmlns="http://www.sitemaps.org/schemas/sitemap/0.9">';
-
-        self::url($base . '/', null);
-        self::url($base . '/publications', null);
-
-        foreach ($entries as $entry) {
-            self::url(
-                $base . '/publications/' . rawurlencode($entry['slug']),
-                $entry['updated_at'] !== '' ? $entry['updated_at'] : null,
-            );
-        }
-
-        echo '</urlset>';
+        echo $xml;
         exit;
     }
 
