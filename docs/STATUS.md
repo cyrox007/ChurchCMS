@@ -126,3 +126,28 @@ Implemented publication-level comment availability:
 - disabling future comments is designed to close new submissions without deleting existing approved comments.
 
 The actual comments/moderation module and editor toggle UI remain separate backlog items.
+
+
+## Operator UX increment — 2026-09-26
+
+Implemented:
+
+- four-step browser installer inspired by the proven Notes installer flow;
+- automatic PHP/extension/writeability checks;
+- site URL defaults and site-profile selection;
+- PostgreSQL/MySQL setup with automatic DB creation where permitted;
+- atomic local configuration;
+- automatic migrations;
+- first superadmin creation;
+- completed-installer lock;
+- interrupted-install recovery until the first admin is created;
+- publication administration list;
+- single-screen create/edit publication workflow;
+- automatic Russian-friendly URL generation;
+- normal plain-text publication editing without requiring HTML;
+- explicit per-publication "Allow comments" switch;
+- optional external distribution checkboxes;
+- diocesan partner API now exports only publications explicitly marked for the `diocese` target;
+- publish/withdraw actions;
+- public premoderated comments;
+- friendly comments moderation queue.
