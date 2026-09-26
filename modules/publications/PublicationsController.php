@@ -56,15 +56,29 @@ final class PublicationsController
             }
         }
 
-        $commentFlash = $request->session('comment.flash');
-        $request->unsetSession('comment.flash');
+        $commentState = trim((string) $request->get('comment', ''));
+        $commentFlash = match ($commentState) {
+            'queued' => [
+                'type' => 'success',
+                'message' => 'Комментарий отправлен и появится после проверки.',
+            ],
+            'published' => [
+                'type' => 'success',
+                'message' => 'Комментарий опубликован.',
+            ],
+            'invalid' => [
+                'type' => 'error',
+                'message' => 'Не удалось отправить комментарий. Проверьте поля и повторите.',
+            ],
+            default => null,
+        };
 
         ThemeRenderer::fromConfig()->page('publication.show', [
             'title' => $publication->title,
             'publication' => $publication,
             'commentsAvailable' => $commentsAvailable,
             'comments' => $comments,
-            'commentFlash' => is_array($commentFlash) ? $commentFlash : null,
+            'commentFlash' => $commentFlash,
             'commentsMaxLength' => (int) Config::get('comments.max_length', 4000),
         ], 'layout.article');
     }
