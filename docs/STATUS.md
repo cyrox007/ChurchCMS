@@ -251,7 +251,8 @@ Next:
 - desktop использует постоянную боковую навигацию, на узких экранах она перестраивается в компактную горизонтальную панель;
 - активный раздел отмечается через `aria-current`;
 - выход из системы вынесен в общую оболочку;
-- отдельный CI-smoke проверяет регистрацию layout, использование shell контроллерами и базовую отрисовку.
+- отдельный CI-smoke проверяет регистрацию layout, использование shell контроллерами и базовую отрисовку;
+- общий theme-компонент `admin.state` задаёт единые empty/success/error/loading состояния, семантические role/aria-live и доступный loading без обязательной анимации.
 
 Остаётся:
 
@@ -259,7 +260,6 @@ Next:
 - сворачиваемая desktop-навигация;
 - глобальный поиск;
 - общий центр задач/уведомлений;
-- единые loading/error/success/empty состояния;
 - полный keyboard/focus/accessibility audit;
 - подключение будущих Media, People, Worship, Events, External Channels, Users/Roles, Themes, Settings, Backups и System Health.
 
