@@ -36,6 +36,7 @@ final class PublicationService
         string $bodyHtml = '',
         ?string $authorName = null,
         array $syndicationTargets = [],
+        bool $commentsEnabled = false,
         string $siteKey = 'default',
     ): string {
         $title = trim($title);
@@ -63,11 +64,11 @@ final class PublicationService
             'INSERT INTO publications (
                 public_id, site_key, type, status, slug, title, excerpt, body_html,
                 author_name, published_at, created_at, updated_at, syndication_targets,
-                syndication_title, syndication_excerpt
+                syndication_title, syndication_excerpt, comments_enabled
              ) VALUES (
                 :public_id, :site_key, :type, :status, :slug, :title, :excerpt, :body_html,
                 :author_name, NULL, :created_at, :updated_at, :syndication_targets,
-                NULL, NULL
+                NULL, NULL, :comments_enabled
              )'
         );
 
@@ -84,6 +85,7 @@ final class PublicationService
             'created_at' => $now,
             'updated_at' => $now,
             'syndication_targets' => json_encode($targets, JSON_THROW_ON_ERROR),
+            'comments_enabled' => $commentsEnabled ? 1 : 0,
         ]);
 
         return $publicId;
@@ -136,6 +138,22 @@ final class PublicationService
         );
         $statement->execute([
             'targets' => json_encode($targets, JSON_THROW_ON_ERROR),
+            'updated_at' => gmdate('Y-m-d H:i:s'),
+            'public_id' => $publicId,
+        ]);
+    }
+
+    public function setCommentsEnabled(string $publicId, bool $enabled): void
+    {
+        self::assertUuid($publicId);
+
+        $statement = $this->pdo->prepare(
+            'UPDATE publications
+             SET comments_enabled = :comments_enabled, updated_at = :updated_at
+             WHERE public_id = :public_id'
+        );
+        $statement->execute([
+            'comments_enabled' => $enabled ? 1 : 0,
             'updated_at' => gmdate('Y-m-d H:i:s'),
             'public_id' => $publicId,
         ]);
