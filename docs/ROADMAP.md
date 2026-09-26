@@ -15,8 +15,8 @@ Status: in progress.
 - [x] API token/scopes/rate-limit foundation.
 - [x] Syndication foundation.
 - [x] Native migration runner.
-- [ ] Security/session/CSRF foundation.
-- [ ] Authentication and RBAC.
+- [x] Security/session/CSRF foundation.
+- [x] Administrator authentication and RBAC foundation.
 - [ ] Audit/security event log.
 - [ ] Installation/update workflow.
 
