@@ -22,13 +22,28 @@ $commentCount = max(0, min(500000, (int) ($options['comments'] ?? 30000)));
 $reset = array_key_exists('reset', $options);
 $confirmation = (string) ($options['confirm'] ?? '');
 
-if ($confirmation !== 'benchmark-fixture') {
-    fwrite(STDERR, "Добавьте --confirm=benchmark-fixture для явного подтверждения тестового заполнения.\n");
+$allowedConfirmation = $siteKey === 'default'
+    ? 'benchmark-fixture-default'
+    : 'benchmark-fixture';
+
+if ($confirmation !== $allowedConfirmation) {
+    fwrite(
+        STDERR,
+        "Подтверждение не соответствует выбранному тестовому site_key.\n",
+    );
     exit(2);
 }
 
-if ($siteKey !== 'benchmark') {
-    fwrite(STDERR, "Генератор использует только изолированный site_key benchmark.\n");
+if (!in_array($siteKey, ['benchmark', 'default'], true)) {
+    fwrite(STDERR, "Генератор разрешён только для site_key benchmark или disposable default.\n");
+    exit(2);
+}
+
+if ($siteKey === 'default' && !$reset) {
+    fwrite(
+        STDERR,
+        "Для HTTP load test на site_key=default обязателен --reset и --confirm=benchmark-fixture-default.\n",
+    );
     exit(2);
 }
 
