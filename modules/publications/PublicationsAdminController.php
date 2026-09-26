@@ -9,7 +9,7 @@ use ChurchCMS\Core\AuditLog;
 use ChurchCMS\Core\ModuleRuntimeLoader;
 use ChurchCMS\Core\Request;
 use ChurchCMS\Core\Response;
-use ChurchCMS\Core\ThemeRenderer;
+use ChurchCMS\App\Services\AdminShell;
 use InvalidArgumentException;
 
 final class PublicationsAdminController
@@ -18,14 +18,13 @@ final class PublicationsAdminController
     {
         AdminAuthorization::requirePermission($request, 'publications.read');
 
-        ThemeRenderer::fromConfig()->page('admin.publications.index', [
+        AdminShell::page($request, 'admin.publications.index', [
             'title' => 'Публикации',
-            'siteName' => 'ChurchCMS',
             'publications' => PublicationRepository::fromDatabase()->adminList(),
             'canCreate' => AdminAuthorization::can($request, 'publications.create'),
             'canEdit' => AdminAuthorization::can($request, 'publications.edit'),
             'canPublish' => AdminAuthorization::can($request, 'publications.publish'),
-        ]);
+        ], 'publications');
     }
 
     public function createForm(Request $request): never
@@ -179,16 +178,15 @@ final class PublicationsAdminController
         ?string $error = null,
         ?string $success = null,
     ): never {
-        ThemeRenderer::fromConfig()->page('admin.publications.editor', [
+        AdminShell::page($request, 'admin.publications.editor', [
             'title' => $publication === null ? 'Новая публикация' : 'Редактирование публикации',
-            'siteName' => 'ChurchCMS',
             'publication' => $publication,
             'form' => $form,
             'error' => $error,
             'success' => $success,
             'canPublish' => AdminAuthorization::can($request, 'publications.publish'),
             'canSyndicate' => AdminAuthorization::can($request, 'publications.syndicate'),
-        ]);
+        ], 'publications');
     }
 
     private function formFromRequest(Request $request): array
