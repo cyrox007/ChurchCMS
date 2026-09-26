@@ -53,4 +53,17 @@ final class ModuleRuntimeLoader
     {
         return self::$providers[$moduleId] ?? null;
     }
+
+    public static function capability(string $moduleId, string $capability): ?object
+    {
+        $provider = self::provider($moduleId);
+        if ($provider === null) {
+            return null;
+        }
+
+        $capabilities = $provider->capabilities();
+        $value = $capabilities[$capability] ?? null;
+
+        return is_object($value) ? $value : null;
+    }
 }
