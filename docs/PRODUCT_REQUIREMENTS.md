@@ -251,3 +251,58 @@ Do not block initial delivery on:
 - arbitrary plugin marketplace.
 
 Moodle/OJS should be integrated, not reimplemented.
+
+
+## Installation and operator UX
+
+ChurchCMS is expected to be administered by people who may have little technical experience.
+
+Installation requirements:
+
+- web installer is the primary fresh-install path;
+- installer locks itself after successful setup;
+- no Composer or shell access required for fresh install;
+- automatic environment checks before asking for data;
+- automatic site URL detection;
+- automatic database creation when the supplied DB account permits it;
+- clear instructions when automatic DB creation is impossible;
+- create schema/migrations automatically;
+- create the first superadmin automatically;
+- select site profile during installation;
+- generate configuration atomically;
+- never display stack traces/secrets to the operator;
+- use human-readable labels instead of technical jargon;
+- advanced options should be hidden unless needed.
+
+Administration UX requirements:
+
+- most routine actions should take one or two obvious actions;
+- dashboards must prioritize "what do I need to do now?";
+- no requirement to know HTML, URLs, file paths, database concepts or CMS internals;
+- destructive actions require clear confirmation but should not create repetitive friction;
+- sensible defaults everywhere;
+- draft autosave is planned for editors;
+- publishing should expose a compact checklist rather than multiple technical forms;
+- external syndication is presented as simple destination toggles;
+- contextual help should explain outcomes, not implementation details;
+- mobile/tablet administration should remain usable;
+- errors should explain how to recover in plain language.
+
+## Publication comments
+
+Comments are an optional module, not hard-wired into Publications.
+
+Requirements:
+
+- comments can be globally disabled;
+- comments can be enabled/disabled per publication;
+- moderation modes: disabled / premoderated / open-for-approved-users in future;
+- public comments must never accept arbitrary HTML;
+- commenter display name, text, timestamps and moderation status;
+- optional email field must never be published through public APIs;
+- anti-spam/rate limiting;
+- moderation queue;
+- approve/reject/spam actions;
+- ability to close discussion without deleting existing comments;
+- publication authors/editors can view comment count/state in the publication editor;
+- comments are not included in external syndication feeds by default.
