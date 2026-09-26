@@ -16,14 +16,14 @@ Priority is ordered within each section.
 
 ## P1 — Core security
 
-- hardened session lifecycle;
-- CSRF token service/middleware;
-- security headers;
-- auth rate limit;
-- administrator authentication;
-- roles/permissions;
-- section-scoped permissions;
-- audit log;
+- [x] hardened session lifecycle;
+- [x] CSRF token service/middleware;
+- [x] security headers;
+- [x] auth rate limit;
+- [x] administrator authentication;
+- [x] roles/permissions schema and authorization service;
+- [x] scope storage schema; enforcement to be added with scoped modules;
+- [ ] audit log;
 - password reset/rotation;
 - production error handler.
 
