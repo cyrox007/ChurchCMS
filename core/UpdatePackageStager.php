@@ -27,6 +27,14 @@ final class UpdatePackageStager
     {
         $source = $this->sourceDirectory($sourceDirectory);
         $stagingRoot = $this->prepareStagingRoot();
+
+        if (
+            $this->pathInside($stagingRoot, $source)
+            || $this->pathInside($source, $stagingRoot)
+        ) {
+            throw new RuntimeException('Источник пакета и staging-каталог не должны быть вложены друг в друга.');
+        }
+
         $manifest = $this->readManifest($source);
         $files = $this->validateManifest($manifest);
         $this->assertPackageFilesMatch($source, $files);
