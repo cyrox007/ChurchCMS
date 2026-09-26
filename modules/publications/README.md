@@ -13,7 +13,8 @@ Initial read-only public slice of the ChurchCMS publication domain.
 - public site list/detail pages;
 - public API;
 - trusted partner incremental sync API;
-- syndication provider for RSS/aggregator targets.
+- syndication provider for RSS/aggregator targets;
+- per-publication `comments_enabled` toggle, disabled by default.
 
 ## Public routes
 
@@ -58,7 +59,7 @@ The local publication workflow and external distribution are intentionally separ
 
 ## Write access
 
-`PublicationService` already supports internal draft creation, publication, withdrawal and syndication-target changes.
+`PublicationService` already supports internal draft creation, publication, withdrawal, syndication-target changes and enabling/disabling comments per publication.
 
 No HTTP write routes are exposed yet.
 
