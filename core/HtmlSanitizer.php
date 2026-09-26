@@ -27,6 +27,33 @@ final class HtmlSanitizer
         'td' => ['colspan', 'rowspan'],
     ];
 
+    public static function fromEditorInput(string $input): string
+    {
+        $input = trim($input);
+        if ($input === '') {
+            return '';
+        }
+
+        if (preg_match('/<\/?[a-z][^>]*>/i', $input) === 1) {
+            return self::sanitize($input);
+        }
+
+        $paragraphs = preg_split('/\n{2,}/u', str_replace(["\r\n", "\r"], "\n", $input)) ?: [];
+        $html = [];
+
+        foreach ($paragraphs as $paragraph) {
+            $paragraph = trim($paragraph);
+            if ($paragraph === '') {
+                continue;
+            }
+
+            $escaped = htmlspecialchars($paragraph, ENT_QUOTES | ENT_SUBSTITUTE, 'UTF-8');
+            $html[] = '<p>' . nl2br($escaped, false) . '</p>';
+        }
+
+        return implode("\n", $html);
+    }
+
     public static function sanitize(string $html): string
     {
         if ($html === '') {
