@@ -19,7 +19,7 @@ Status: in progress.
 - [x] Administrator authentication and RBAC foundation.
 - [x] Audit/security event log foundation.
 - [x] Friendly four-step web installer.
-- [ ] Installation healthcheck.
+- [x] Installation healthcheck.
 - [ ] Update/backup workflow.
 - [x] Anonymous full-page caching foundation.
 - [ ] Load-test release gate.
