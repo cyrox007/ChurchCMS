@@ -216,6 +216,8 @@ jobs:
           backup_id="$(basename "$(dirname "$manifest")")"
           printf '%s' "$backup_id" > "$RUNNER_TEMP/backup-id"
           php bin/backup.php verify "$backup_id" --path="$backup_root"
+          sha256sum config/local.php > "$RUNNER_TEMP/config-local.sha256"
+          sha256sum storage/uploads/smoke.txt > "$RUNNER_TEMP/upload-smoke.sha256"
 
       - name: Изменить данные после резервной копии
         shell: bash
@@ -238,6 +240,14 @@ jobs:
               exit(1);
           }
           '
+
+      - name: Изменить файлы после резервной копии
+        shell: bash
+        run: |
+          set -euo pipefail
+          printf '\n// изменено после резервной копии\n' >> config/local.php
+          printf 'changed-after-backup\n' > storage/uploads/smoke.txt
+          printf 'new-file\n' > storage/uploads/after-backup.txt
 
       - name: Восстановить данные БД
         shell: bash
@@ -281,4 +291,34 @@ jobs:
           }
 
           echo "Восстановление БД и sequence проверено\n";
+          '
+
+      - name: Восстановить конфигурацию и uploads
+        shell: bash
+        run: |
+          set -euo pipefail
+          backup_root="$RUNNER_TEMP/churchcms-backups"
+          backup_id="$(cat "$RUNNER_TEMP/backup-id")"
+          php bin/backup.php restore-files "$backup_id" --confirm="$backup_id" --path="$backup_root"
+
+      - name: Проверить восстановленные файлы
+        shell: bash
+        run: |
+          set -euo pipefail
+          sha256sum -c "$RUNNER_TEMP/config-local.sha256"
+          sha256sum -c "$RUNNER_TEMP/upload-smoke.sha256"
+          test ! -e storage/uploads/after-backup.txt
+          test -z "$(find config storage -maxdepth 1 \
+            \( -name '.restore-*' -o -name '.rollback-*' \) -print -quit)"
+          php -r '
+          $config = require "config/local.php";
+          if (
+              !is_array($config)
+              || ($config["installation"]["completed"] ?? null) !== true
+              || ($config["database"]["database"] ?? null) !== "churchcms"
+          ) {
+              fwrite(STDERR, "Восстановленная локальная конфигурация некорректна.\n");
+              exit(1);
+          }
+          echo "Файловое восстановление проверено\n";
           '
