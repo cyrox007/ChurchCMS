@@ -52,6 +52,24 @@ The screen provides two obvious actions:
 
 The local configuration is marked `installation.completed = true`. Future requests to `install.php` return 404.
 
+
+## Installation healthcheck
+
+After setup, `/health` acts as the installation/readiness endpoint.
+
+It checks:
+
+- the configured PHP minimum (PHP 8.3+);
+- that installation is marked complete;
+- that the generated application secret is a valid 256-bit key;
+- writable runtime storage directories;
+- validity of all discoverable migration files;
+- database connectivity.
+
+A ready installation returns HTTP 200 with `status: ok`. An incomplete or unhealthy installation returns HTTP 503 with `status: not_ready`.
+
+The response exposes only boolean check results plus non-secret application metadata. It does not expose database credentials, DSNs, filesystem paths, exception text or stack traces. Before installation is marked complete, the healthcheck deliberately does not attempt a database connection.
+
 ## Interrupted installation
 
 Before the first administrator is created, `installation.completed` remains false. This intentionally allows the installation wizard to be reopened after a browser/session interruption.
