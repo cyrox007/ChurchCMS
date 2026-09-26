@@ -4,18 +4,30 @@ declare(strict_types=1);
 
 namespace ChurchCMS\Modules\Social;
 
-enum SocialProvider: string
-{
-    case Telegram = 'telegram';
-    case Vk = 'vk';
-    case Max = 'max';
+use InvalidArgumentException;
 
-    public function label(): string
+/**
+ * Provider IDs are open-ended. Constants below are only built-in adapters,
+ * not a whitelist. Third-party modules may register any valid provider ID.
+ */
+final class SocialProvider
+{
+    public const TELEGRAM = 'telegram';
+    public const VK = 'vk';
+    public const MAX = 'max';
+    public const YOUTUBE = 'youtube';
+    public const RUTUBE = 'rutube';
+    public const DZEN = 'dzen';
+    public const OK = 'ok';
+
+    public static function normalize(string $providerId): string
     {
-        return match ($this) {
-            self::Telegram => 'Telegram',
-            self::Vk => 'ВКонтакте',
-            self::Max => 'MAX',
-        };
+        $providerId = strtolower(trim($providerId));
+
+        if (preg_match('/^[a-z][a-z0-9_.-]{1,63}$/D', $providerId) !== 1) {
+            throw new InvalidArgumentException('Invalid external channel provider id.');
+        }
+
+        return $providerId;
     }
 }
