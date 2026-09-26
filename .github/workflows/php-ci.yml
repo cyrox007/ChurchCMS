@@ -39,5 +39,8 @@ jobs:
             php -l "$file"
           done < <(find . -type f -name '*.php' -not -path './legacy/*' -print0)
 
+      - name: Bootstrap runtime
+        run: php -r "require 'core.php'; echo 'ChurchCMS bootstrap OK', PHP_EOL;"
+
       - name: Validate themes
         run: php bin/theme-check.php
