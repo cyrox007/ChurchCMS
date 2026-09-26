@@ -54,7 +54,7 @@ $formAction = $isEdit
             </div>
 
             <label class="field">
-                <span>Короткое описание <small>показывается в списках</small></span>
+                <span>Короткое описание <small>показывается в списках и используется SEO по умолчанию</small></span>
                 <textarea name="excerpt" rows="3"><?= $theme->e($form['excerpt'] ?? '') ?></textarea>
             </label>
 
@@ -97,6 +97,71 @@ $formAction = $isEdit
                 </div>
             </section>
         <?php endif; ?>
+
+        <details class="editor-card seo-editor">
+            <summary>
+                <span>SEO и карточка в соцсетях</span>
+                <small>Обычно заполнять не нужно — ChurchCMS возьмёт данные из публикации.</small>
+            </summary>
+
+            <div class="seo-editor__body">
+                <div class="editor-grid">
+                    <label class="field">
+                        <span>Заголовок для поиска</span>
+                        <input name="seo_title" value="<?= $theme->e($form['seo_title'] ?? '') ?>" maxlength="255" placeholder="по умолчанию — заголовок публикации">
+                    </label>
+
+                    <label class="field">
+                        <span>Ключевые слова <small>необязательно</small></span>
+                        <input name="seo_keywords" value="<?= $theme->e($form['seo_keywords'] ?? '') ?>" maxlength="1000" placeholder="через запятую">
+                    </label>
+                </div>
+
+                <label class="field">
+                    <span>Описание для поисковых систем</span>
+                    <textarea name="seo_description" rows="3" maxlength="500" placeholder="по умолчанию — короткое описание"><?= $theme->e($form['seo_description'] ?? '') ?></textarea>
+                </label>
+
+                <div class="seo-editor__divider"></div>
+
+                <h3>Карточка при отправке ссылки</h3>
+                <p class="editor-card__hint">Open Graph и social-card теги формируются автоматически. Эти поля нужны только если карточка должна отличаться от публикации.</p>
+
+                <div class="editor-grid">
+                    <label class="field">
+                        <span>Заголовок карточки</span>
+                        <input name="social_title" value="<?= $theme->e($form['social_title'] ?? '') ?>" maxlength="255">
+                    </label>
+
+                    <label class="field">
+                        <span>Изображение карточки</span>
+                        <input name="social_image_url" value="<?= $theme->e($form['social_image_url'] ?? '') ?>" placeholder="https://...">
+                    </label>
+                </div>
+
+                <label class="field">
+                    <span>Описание карточки</span>
+                    <textarea name="social_description" rows="3" maxlength="500"><?= $theme->e($form['social_description'] ?? '') ?></textarea>
+                </label>
+
+                <div class="seo-switches">
+                    <label class="choice">
+                        <input type="checkbox" name="robots_index" value="1" <?= !empty($form['robots_index']) ? 'checked' : '' ?>>
+                        <span><strong>Показывать в поисковых системах</strong><small>Отключайте только для материалов, которые не должны индексироваться.</small></span>
+                    </label>
+                    <label class="choice">
+                        <input type="checkbox" name="robots_follow" value="1" <?= !empty($form['robots_follow']) ? 'checked' : '' ?>>
+                        <span><strong>Разрешить переход по ссылкам</strong><small>Обычно оставляется включённым.</small></span>
+                    </label>
+                </div>
+
+                <label class="field">
+                    <span>Канонический адрес <small>для специалистов</small></span>
+                    <input name="canonical_url" value="<?= $theme->e($form['canonical_url'] ?? '') ?>" placeholder="обычно оставьте пустым">
+                    <small>Нужен только если исходная версия материала находится по другому постоянному URL.</small>
+                </label>
+            </div>
+        </details>
 
         <details class="editor-card editor-advanced">
             <summary>Дополнительно</summary>
