@@ -28,6 +28,7 @@ final class Publication
         public readonly array $syndicationTargets,
         public readonly ?string $syndicationTitle,
         public readonly ?string $syndicationExcerpt,
+        public readonly bool $commentsEnabled,
     ) {
     }
 
