@@ -52,7 +52,7 @@
                             <form method="post" action="<?= $theme->e($theme->route('admin_comments_moderate', ['publicId' => $comment->publicId])) ?>">
                                 <?= $theme->csrfInput() ?>
                                 <input type="hidden" name="status" value="<?= $theme->e($status) ?>">
-                                <button class="moderation-action <?= $theme->e($class) ?>" type="submit"><?= $theme->e($label) ?></button>
+                                <button type="submit" class="moderation-action <?= $theme->e($class) ?>"><?= $theme->e($label) ?></button>
                             </form>
                         <?php endforeach; ?>
                     </div>
