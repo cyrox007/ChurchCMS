@@ -187,13 +187,14 @@ Implemented:
 - детерминированный benchmark-набор для изолированного `site_key=benchmark`;
 - CLI-измерения первой/глубокой страницы архива, detail lookup и комментариев с mean/p50/p95/p99;
 - отдельный CI-smoke performance-инструментов на PostgreSQL;
+- dependency-free HTTP load-runner для cached home/archive/detail и cache-miss detail, ограниченный локальными/приватными целями;
+- функциональный CI-smoke HTTP-сценария на disposable PostgreSQL-установке;
 - query-plan аудит ключевых publication/comment запросов на полном benchmark-наборе для PostgreSQL 16 и MySQL 8.4;
 - CI требует фактического использования ожидаемых list/detail/comment/moderation индексов;
 - third-party channel sync isolated from public requests.
 
 Pending before 1.0:
 
-- HTTP load tests;
 - reference hardware thresholds;
 
 ## External channels / social / video
