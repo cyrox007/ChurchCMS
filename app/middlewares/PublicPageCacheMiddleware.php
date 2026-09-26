@@ -72,7 +72,16 @@ final class PublicPageCacheMiddleware
         }
 
         $path = $request->path();
-        foreach (['/admin', '/api/', '/feeds/', '/_theme-asset', '/health', '/install.php'] as $prefix) {
+        foreach ([
+            '/admin',
+            '/api/',
+            '/feeds/',
+            '/_theme-asset',
+            '/health',
+            '/install.php',
+            '/robots.txt',
+            '/sitemap.xml',
+        ] as $prefix) {
             if ($path === $prefix || str_starts_with($path, $prefix)) {
                 return false;
             }
