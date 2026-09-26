@@ -17,6 +17,7 @@ $required = [
     '/core/SessionSecurity.php',
     '/core/Csrf.php',
     '/core/SecurityHeaders.php',
+    '/core/SecretVault.php',
     '/core/Request.php',
     '/core/Response.php',
     '/core/RouteTemplate.php',
