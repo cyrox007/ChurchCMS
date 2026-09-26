@@ -12,6 +12,7 @@ final class ApiResponse
         int $status = 200,
         ?int $cacheSeconds = null,
     ): never {
+        http_response_code($status);
         self::headers($cacheSeconds);
 
         echo json_encode([
@@ -28,6 +29,7 @@ final class ApiResponse
         int $status,
         array $details = [],
     ): never {
+        http_response_code($status);
         self::headers(null);
 
         echo json_encode([
