@@ -5,6 +5,7 @@ declare(strict_types=1);
 namespace ChurchCMS\Modules\Comments;
 
 use ChurchCMS\Core\Config;
+use ChurchCMS\Core\PublicFormToken;
 use ChurchCMS\Core\Request;
 use ChurchCMS\Core\Response;
 use ChurchCMS\Modules\Publications\PublicationRepository;
@@ -22,6 +23,15 @@ final class CommentsController
             Response::text('404 Not Found', 404);
         }
 
+        if (!PublicFormToken::validate(
+            'comments.submit',
+            $request->post('public_form_token'),
+        )) {
+            Response::redirectLocal(
+                '/publications/' . rawurlencode($slug) . '?comment=invalid#comments'
+            );
+        }
+
         $publication = PublicationRepository::fromDatabase()->findPublishedBySlug($slug);
         if ($publication === null || !$publication->commentsEnabled) {
             Response::text('404 Not Found', 404);
@@ -35,19 +45,17 @@ final class CommentsController
                 bodyText: (string) $request->post('body_text', ''),
             );
 
-            $request->setSession('comment.flash', [
-                'type' => 'success',
-                'message' => Config::get('comments.moderation', 'premoderated') === 'open'
-                    ? 'Комментарий опубликован.'
-                    : 'Комментарий отправлен и появится после проверки.',
-            ]);
-        } catch (InvalidArgumentException $e) {
-            $request->setSession('comment.flash', [
-                'type' => 'error',
-                'message' => 'Проверьте имя, email и текст комментария.',
-            ]);
-        }
+            $state = Config::get('comments.moderation', 'premoderated') === 'open'
+                ? 'published'
+                : 'queued';
 
-        Response::redirectLocal('/publications/' . rawurlencode($slug) . '#comments');
+            Response::redirectLocal(
+                '/publications/' . rawurlencode($slug) . '?comment=' . $state . '#comments'
+            );
+        } catch (InvalidArgumentException) {
+            Response::redirectLocal(
+                '/publications/' . rawurlencode($slug) . '?comment=invalid#comments'
+            );
+        }
     }
 }
