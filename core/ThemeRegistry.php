@@ -60,6 +60,12 @@ final class ThemeRegistry
         return new self($themes);
     }
 
+    /** @return array<string,ThemeManifest> */
+    public function all(): array
+    {
+        return $this->themes;
+    }
+
     public function get(string $id): ?ThemeManifest
     {
         return $this->themes[$id] ?? null;
