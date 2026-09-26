@@ -81,6 +81,24 @@ final class Request
         return filter_var($ip, FILTER_VALIDATE_IP) !== false ? $ip : 'unknown';
     }
 
+    public function session(string $key, mixed $default = null): mixed
+    {
+        SessionSecurity::start();
+        return $_SESSION[$key] ?? $default;
+    }
+
+    public function setSession(string $key, mixed $value): void
+    {
+        SessionSecurity::start();
+        $_SESSION[$key] = $value;
+    }
+
+    public function unsetSession(string $key): void
+    {
+        SessionSecurity::start();
+        unset($_SESSION[$key]);
+    }
+
     public function setAttribute(string $key, mixed $value): void
     {
         $this->attributes[$key] = $value;
