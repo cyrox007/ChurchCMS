@@ -35,8 +35,13 @@ final class MigrationRunner
                 continue;
             }
 
+            $transactional = $driver !== 'mysql';
+
             try {
-                $pdo->beginTransaction();
+                if ($transactional) {
+                    $pdo->beginTransaction();
+                }
+
                 $migration->up($pdo, $driver);
 
                 $statement = $pdo->prepare(
@@ -47,12 +52,16 @@ final class MigrationRunner
                     'applied_at' => gmdate('Y-m-d H:i:s'),
                 ]);
 
-                $pdo->commit();
+                if ($transactional) {
+                    $pdo->commit();
+                }
+
                 $executed[] = $id;
             } catch (Throwable $e) {
                 if ($pdo->inTransaction()) {
                     $pdo->rollBack();
                 }
+
                 throw new RuntimeException("Migration failed: {$id}", 0, $e);
             }
         }
