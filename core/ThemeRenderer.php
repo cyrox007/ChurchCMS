@@ -27,11 +27,16 @@ final class ThemeRenderer
 
     public static function fromConfig(): self
     {
+        $active = (string) Config::get('theme.active', 'default');
+        return self::forTheme($active);
+    }
+
+    public static function forTheme(string $themeId): self
+    {
         $root = defined('CHURCHCMS_ROOT') ? CHURCHCMS_ROOT : dirname(__DIR__);
         $registry = ThemeRegistry::boot($root . '/themes');
-        $active = (string) Config::get('theme.active', 'default');
 
-        return new self($registry, $active);
+        return new self($registry, $themeId);
     }
 
     public function render(string $logicalName, array $data = []): never
