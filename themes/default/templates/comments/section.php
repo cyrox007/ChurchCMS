@@ -37,7 +37,11 @@
         method="post"
         action="<?= $theme->e($theme->route('comment_submit', ['slug' => $publication->slug])) ?>"
     >
-        <?= $theme->csrfInput() ?>
+        <input
+            type="hidden"
+            name="public_form_token"
+            value="<?= $theme->e($theme->publicFormToken('comments.submit')) ?>"
+        >
 
         <h3>Оставить комментарий</h3>
         <p>Комментарий появится после проверки модератором.</p>
