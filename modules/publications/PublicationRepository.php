@@ -78,6 +78,57 @@ final class PublicationRepository
     /**
      * @return list<Publication>
      */
+    public function publishedUpdatedSince(
+        DateTimeImmutable $updatedSince,
+        string $siteKey = 'default',
+        int $limit = 100,
+    ): array {
+        $limit = max(1, min(100, $limit));
+
+        $statement = $this->pdo->prepare(
+            'SELECT * FROM publications
+             WHERE site_key = :site_key
+               AND status = :status
+               AND published_at IS NOT NULL
+               AND published_at <= :now
+               AND updated_at > :updated_since
+             ORDER BY updated_at ASC, id ASC
+             LIMIT :limit'
+        );
+        $statement->bindValue(':site_key', $siteKey);
+        $statement->bindValue(':status', PublicationStatus::Published->value);
+        $statement->bindValue(':now', gmdate('Y-m-d H:i:s'));
+        $statement->bindValue(':updated_since', $updatedSince->setTimezone(new \DateTimeZone('UTC'))->format('Y-m-d H:i:s'));
+        $statement->bindValue(':limit', $limit, PDO::PARAM_INT);
+        $statement->execute();
+
+        return array_map(
+            fn(array $row): Publication => $this->hydrate($row),
+            $statement->fetchAll(),
+        );
+    }
+
+    public function countPublished(string $siteKey = 'default'): int
+    {
+        $statement = $this->pdo->prepare(
+            'SELECT COUNT(*) FROM publications
+             WHERE site_key = :site_key
+               AND status = :status
+               AND published_at IS NOT NULL
+               AND published_at <= :now'
+        );
+        $statement->execute([
+            'site_key' => $siteKey,
+            'status' => PublicationStatus::Published->value,
+            'now' => gmdate('Y-m-d H:i:s'),
+        ]);
+
+        return (int) $statement->fetchColumn();
+    }
+
+    /**
+     * @return list<Publication>
+     */
     public function syndicated(string $target, string $siteKey = 'default', int $limit = 100): array
     {
         $items = $this->published($siteKey, min(100, max(1, $limit)), 0);
