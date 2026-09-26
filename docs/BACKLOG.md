@@ -12,7 +12,7 @@ Priority is ordered within each section.
 - [x] Publication syndication provider.
 - [x] Publication distribution target storage/service; admin UI pending Auth/RBAC.
 - [ ] Migration CLI validation.
-- [ ] PHP syntax/smoke checks.
+- [x] PHP 8.3 lint/theme validation CI added; runtime DB-backed smoke test pending test database.
 
 ## P1 — Core security
 
