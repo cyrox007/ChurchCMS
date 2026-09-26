@@ -63,7 +63,7 @@ final class PublicationsApiController
         $updatedSinceRaw = trim((string) $request->get('updated_since', ''));
 
         if ($updatedSinceRaw === '') {
-            $publications = $repository->published('default', $limit, 0);
+            $scan = $repository->published('default', $limit, 0);
         } else {
             try {
                 $updatedSince = new DateTimeImmutable($updatedSinceRaw);
@@ -75,8 +75,14 @@ final class PublicationsApiController
                 );
             }
 
-            $publications = $repository->publishedUpdatedSince($updatedSince, 'default', $limit);
+            $scan = $repository->publishedUpdatedSince($updatedSince, 'default', $limit);
         }
+
+        $publications = array_values(array_filter(
+            $scan,
+            static fn(Publication $publication): bool =>
+                in_array('diocese', $publication->syndicationTargets, true),
+        ));
 
         $items = array_map(
             static fn(Publication $publication): array =>
@@ -85,8 +91,8 @@ final class PublicationsApiController
         );
 
         $lastUpdatedAt = null;
-        if ($publications !== []) {
-            $last = $publications[array_key_last($publications)];
+        if ($scan !== []) {
+            $last = $scan[array_key_last($scan)];
             $lastUpdatedAt = $last->updatedAt
                 ->setTimezone(new \DateTimeZone('UTC'))
                 ->format(DATE_ATOM);
@@ -97,7 +103,7 @@ final class PublicationsApiController
                 'updated_since' => $updatedSinceRaw !== '' ? $updatedSinceRaw : null,
                 'next_updated_since' => $lastUpdatedAt,
                 'limit' => $limit,
-                'has_more' => count($items) === $limit,
+                'has_more' => count($scan) === $limit,
             ],
             'partner' => ApiAccess::partnerId($request),
         ]);
