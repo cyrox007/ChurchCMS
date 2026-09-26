@@ -34,8 +34,9 @@ return [
         ],
     ],
     'operations' => [
-        // По умолчанию резервные копии лежат рядом с каталогом сайта, а не внутри публичного корня.
+        // По умолчанию служебные данные лежат рядом с каталогом сайта, а не внутри публичного корня.
         'backup_path' => dirname(__DIR__, 2) . '/' . basename(dirname(__DIR__)) . '-backups',
+        'update_staging_path' => dirname(__DIR__, 2) . '/' . basename(dirname(__DIR__)) . '-updates',
     ],
     'database' => [
         'driver' => 'pgsql',
