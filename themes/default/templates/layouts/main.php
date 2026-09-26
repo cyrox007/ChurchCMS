@@ -4,16 +4,29 @@
 <head>
     <meta charset="utf-8">
     <meta name="viewport" content="width=device-width, initial-scale=1">
+    <meta name="theme-color" content="#0b315d">
+    <meta name="color-scheme" content="light">
     <title><?= $theme->e($title ?? 'ChurchCMS') ?></title>
     <link rel="stylesheet" href="<?= $theme->e($theme->asset('css/site.css')) ?>">
 </head>
 <body>
-<?= $theme->partial('partial.header', ['siteName' => $siteName ?? 'ChurchCMS']) ?>
+<a class="skip-link" href="#main-content">Перейти к содержанию</a>
 
-<main class="site-main">
-    <?= $content ?>
-</main>
+<div class="page-shell">
+    <?= $theme->partial('partial.header', [
+        'siteName' => $siteName ?? 'ChurchCMS',
+        'siteSubtitle' => $siteSubtitle ?? null,
+        'navigation' => $navigation ?? [],
+    ]) ?>
 
-<?= $theme->partial('partial.footer') ?>
+    <main class="site-main" id="main-content">
+        <?= $content ?>
+    </main>
+
+    <?= $theme->partial('partial.footer', [
+        'siteName' => $siteName ?? 'ChurchCMS',
+        'footerText' => $footerText ?? null,
+    ]) ?>
+</div>
 </body>
 </html>
