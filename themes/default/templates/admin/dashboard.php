@@ -16,11 +16,13 @@
     </header>
 
     <div class="admin-grid">
-        <article class="admin-tile">
-            <p class="card__eyebrow">Публикации</p>
-            <h2>Материалы</h2>
-            <p>Создание, редактирование и публикация материалов — ближайший редакционный экран.</p>
-        </article>
+        <?php if (!empty($canManagePublications)): ?>
+            <a class="admin-tile admin-tile--link" href="<?= $theme->e($theme->route('admin_publications')) ?>">
+                <p class="card__eyebrow">Публикации</p>
+                <h2>Материалы</h2>
+                <p>Создать новость, сохранить черновик, разрешить комментарии и опубликовать.</p>
+            </a>
+        <?php endif; ?>
 
         <?php if (!empty($canModerateComments)): ?>
             <a class="admin-tile admin-tile--link" href="<?= $theme->e($theme->route('admin_comments')) ?>">
