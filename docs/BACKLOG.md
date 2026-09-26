@@ -48,8 +48,11 @@ Priority is ordered within each section.
 - menus;
 - content revisions;
 - scheduled publication worker/cron entry;
-- canonical URL service;
-- SEO metadata;
+- [x] canonical URL/SEO metadata foundation;
+- [x] Open Graph and Twitter/X social metadata;
+- [x] XML sitemap and robots endpoints;
+- [x] lightweight social share buttons;
+- structured image/video SEO when Media is implemented;
 - redirect manager.
 
 ## P1 — Media
@@ -121,3 +124,43 @@ Priority is ordered within each section.
 - close discussion without deleting comments;
 - [x] audit moderation actions;
 - public API disabled by default for comments.
+
+
+## P0 — Performance and scale
+
+- [x] stateless anonymous public pages;
+- [x] dependency-free anonymous full-page cache;
+- [x] cache invalidation for publications, SEO and visible comments;
+- [x] public Cache-Control / stale-while-revalidate headers;
+- [x] immutable versioned theme assets;
+- [ ] cache sitemap/feed output or materialize periodically;
+- [ ] database-backed runtime smoke test;
+- [ ] representative dataset benchmark;
+- [ ] HTTP load-test scenario for publication list/detail and home page;
+- [ ] define reference hardware and release thresholds;
+- [ ] verify reverse-proxy Nginx configuration;
+- [ ] query-plan/index audit with production-scale fixture data.
+
+## P1 — External Channels
+
+- [x] open-ended provider ID model;
+- [x] adapter capability contract for social/video channels;
+- [x] encrypted credential vault foundation;
+- [x] outbound connection/outbox schema;
+- [x] inbound external content inbox schema;
+- [x] sync cursor/state model;
+- [x] polling sync service foundation;
+- [x] channel runtime/capability registration;
+- [ ] outbound dispatcher worker;
+- [ ] inbox review/admin UI;
+- [ ] connection setup/testing UI;
+- [ ] per-publication external channel selector;
+- [ ] per-channel custom post text;
+- [ ] Telegram adapter;
+- [ ] VK adapter;
+- [ ] MAX adapter;
+- [ ] YouTube adapter;
+- [ ] Rutube adapter;
+- [ ] webhook receiver contract/signature validation;
+- [ ] loop prevention tests;
+- [ ] retry/dead-letter UI.
