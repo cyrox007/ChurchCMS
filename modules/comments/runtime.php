@@ -6,10 +6,12 @@ use ChurchCMS\App\Middlewares\CsrfMiddleware;
 use ChurchCMS\App\Middlewares\PublicOriginMiddleware;
 use ChurchCMS\App\Middlewares\RequireAdminMiddleware;
 use ChurchCMS\App\Services\AdminNavigationRegistry;
+use ChurchCMS\App\Services\AdminTaskRegistry;
 use ChurchCMS\Core\ModuleRuntimeProvider;
 use ChurchCMS\Core\Router;
 use ChurchCMS\Modules\Comments\CommentRateLimitMiddleware;
 use ChurchCMS\Modules\Comments\CommentsAdminController;
+use ChurchCMS\Modules\Comments\CommentsAdminTaskProvider;
 use ChurchCMS\Modules\Comments\CommentsCapability;
 use ChurchCMS\Modules\Comments\CommentsController;
 
@@ -23,6 +25,7 @@ foreach ([
     'CommentRateLimitMiddleware.php',
     'CommentsController.php',
     'CommentsAdminController.php',
+    'CommentsAdminTaskProvider.php',
 ] as $file) {
     require_once $moduleRoot . '/' . $file;
 }
@@ -53,6 +56,10 @@ return new class implements ModuleRuntimeProvider {
             route: 'admin_comments',
             permission: 'comments.moderate',
             priority: 30,
+        );
+
+        AdminTaskRegistry::register(
+            new CommentsAdminTaskProvider(),
         );
 
         $router = Router::getInstance();
