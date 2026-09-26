@@ -177,11 +177,13 @@ Implemented:
 - dependency-free generated-output cache for sitemap and syndication feeds;
 - sitemap/feed cache shares O(1) publication invalidation with the public page cache;
 - query/API result bounds;
+- детерминированный benchmark-набор для изолированного `site_key=benchmark`;
+- CLI-измерения первой/глубокой страницы архива, detail lookup и комментариев с mean/p50/p95/p99;
+- отдельный CI-smoke performance-инструментов на PostgreSQL;
 - third-party channel sync isolated from public requests.
 
 Pending before 1.0:
 
-- large fixture dataset;
 - HTTP load tests;
 - query-plan/index audit;
 - reference hardware thresholds;
