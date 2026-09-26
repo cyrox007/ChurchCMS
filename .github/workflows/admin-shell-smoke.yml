@@ -7,7 +7,10 @@ on:
       - main
     paths:
       - 'app/services/AdminShell.php'
+      - 'app/services/AdminNavigationRegistry.php'
       - 'app/controllers/AdminController.php'
+      - 'modules/publications/runtime.php'
+      - 'modules/comments/runtime.php'
       - 'modules/publications/PublicationsAdminController.php'
       - 'modules/comments/CommentsAdminController.php'
       - 'themes/default/templates/layouts/admin.php'
@@ -21,7 +24,10 @@ on:
       - main
     paths:
       - 'app/services/AdminShell.php'
+      - 'app/services/AdminNavigationRegistry.php'
       - 'app/controllers/AdminController.php'
+      - 'modules/publications/runtime.php'
+      - 'modules/comments/runtime.php'
       - 'modules/publications/PublicationsAdminController.php'
       - 'modules/comments/CommentsAdminController.php'
       - 'themes/default/templates/layouts/admin.php'
@@ -52,7 +58,10 @@ jobs:
         run: |
           set -euo pipefail
           php -l app/services/AdminShell.php
+          php -l app/services/AdminNavigationRegistry.php
           php -l app/controllers/AdminController.php
+          php -l modules/publications/runtime.php
+          php -l modules/comments/runtime.php
           php -l modules/publications/PublicationsAdminController.php
           php -l modules/comments/CommentsAdminController.php
           php -l themes/default/templates/layouts/admin.php
@@ -71,6 +80,61 @@ jobs:
             exit 1
           fi
 
+      - name: Проверить контракт модульной навигации
+        shell: bash
+        run: |
+          set -euo pipefail
+          php -r '
+          require "core.php";
+
+          \ChurchCMS\App\Services\AdminNavigationRegistry::register(
+              "second",
+              "Второй",
+              "admin_second",
+              "second.read",
+              20,
+          );
+          \ChurchCMS\App\Services\AdminNavigationRegistry::register(
+              "first",
+              "Первый",
+              "admin_first",
+              "first.read",
+              10,
+          );
+          \ChurchCMS\App\Services\AdminNavigationRegistry::register(
+              "first",
+              "Первый",
+              "admin_first",
+              "first.read",
+              10,
+          );
+
+          $entries = \ChurchCMS\App\Services\AdminNavigationRegistry::entries();
+          if (
+              count($entries) !== 2
+              || ($entries[0]["id"] ?? null) !== "first"
+              || ($entries[1]["id"] ?? null) !== "second"
+          ) {
+              fwrite(STDERR, "Нарушен порядок или идемпотентность реестра Admin Shell.\n");
+              exit(1);
+          }
+
+          try {
+              \ChurchCMS\App\Services\AdminNavigationRegistry::register(
+                  "first",
+                  "Конфликт",
+                  "admin_other",
+                  "other.read",
+                  10,
+              );
+              fwrite(STDERR, "Конфликтующий ID навигации был принят.\n");
+              exit(1);
+          } catch (RuntimeException) {
+          }
+
+          echo "Admin navigation registry smoke OK\n";
+          '
+
       - name: Отрисовать общий layout
         shell: bash
         run: |
@@ -87,9 +151,25 @@ jobs:
                   "username" => "editor",
               ],
               "adminSection" => "publications",
-              "canManagePublications" => true,
-              "canModerateComments" => true,
-              "pendingComments" => 3,
+              "adminNavigation" => [
+                  [
+                      "id" => "publications",
+                      "label" => "Публикации",
+                      "route" => "admin_publications",
+                      "permission" => "publications.read",
+                      "priority" => 20,
+                  ],
+                  [
+                      "id" => "comments",
+                      "label" => "Комментарии",
+                      "route" => "admin_comments",
+                      "permission" => "comments.moderate",
+                      "priority" => 30,
+                  ],
+              ],
+              "adminNavigationBadges" => [
+                  "comments" => 3,
+              ],
               "content" => "<p>shell-smoke</p>",
           ]);
 
