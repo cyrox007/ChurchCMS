@@ -104,3 +104,14 @@ Controllers and modules address logical template contracts rather than files. `T
 Theme code is presentation-only. SQL, permissions, content mutations and domain rules remain in core/modules.
 
 See `docs/THEMES.md`.
+
+
+## External API layer
+
+External consumers such as diocesan websites integrate through a versioned HTTP API, never by direct database access.
+
+Public endpoints expose only published content. Trusted partner endpoints use high-entropy Bearer tokens stored by hash, explicit scopes, origin policy and rate limits.
+
+Outbound entities are explicit `ApiResource` projections; domain models/database rows are never serialized directly.
+
+See `docs/API.md`.
