@@ -4,6 +4,8 @@ declare(strict_types=1);
 
 namespace ChurchCMS\Core;
 
+use InvalidArgumentException;
+
 final class Response
 {
     public static function json(array $payload, int $status = 200): never
@@ -20,6 +22,22 @@ final class Response
         http_response_code($status);
         header('Content-Type: text/plain; charset=utf-8');
         echo $body;
+        exit;
+    }
+
+    public static function redirectLocal(string $path, int $status = 303): never
+    {
+        if (
+            $path === ''
+            || !str_starts_with($path, '/')
+            || str_starts_with($path, '//')
+            || str_contains($path, "\r")
+            || str_contains($path, "\n")
+        ) {
+            throw new InvalidArgumentException('Redirect target must be a local absolute path.');
+        }
+
+        header('Location: ' . $path, true, $status);
         exit;
     }
 }
