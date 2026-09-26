@@ -12,13 +12,9 @@ use Exception;
 
 final class PublicationsApiController
 {
-    public function __construct(
-        private readonly PublicationRepository $repository,
-    ) {
-    }
-
     public function index(Request $request): never
     {
+        $repository = PublicationRepository::fromDatabase();
         $page = max(1, (int) $request->get('page', 1));
         $perPage = max(1, min(50, (int) $request->get('per_page', 20)));
         $offset = ($page - 1) * $perPage;
@@ -26,10 +22,10 @@ final class PublicationsApiController
         $items = array_map(
             static fn(Publication $publication): array =>
                 (new PublicationApiResource($publication))->toApiArray(),
-            $this->repository->published('default', $perPage, $offset),
+            $repository->published('default', $perPage, $offset),
         );
 
-        $total = $this->repository->countPublished('default');
+        $total = $repository->countPublished('default');
 
         ApiResponse::success($items, [
             'pagination' => [
@@ -43,7 +39,11 @@ final class PublicationsApiController
 
     public function show(Request $request, string $slug): never
     {
-        $publication = $this->repository->findPublishedBySlug($slug);
+        if (preg_match('/^[a-z0-9]+(?:-[a-z0-9]+)*$/D', $slug) !== 1) {
+            ApiResponse::error('publication_not_found', 'Publication not found.', 404);
+        }
+
+        $publication = PublicationRepository::fromDatabase()->findPublishedBySlug($slug);
         if ($publication === null) {
             ApiResponse::error('publication_not_found', 'Publication not found.', 404);
         }
@@ -58,11 +58,12 @@ final class PublicationsApiController
     {
         ApiAccess::requireScope($request, 'content.read');
 
+        $repository = PublicationRepository::fromDatabase();
         $limit = max(1, min(100, (int) $request->get('limit', 100)));
         $updatedSinceRaw = trim((string) $request->get('updated_since', ''));
 
         if ($updatedSinceRaw === '') {
-            $publications = $this->repository->published('default', $limit, 0);
+            $publications = $repository->published('default', $limit, 0);
         } else {
             try {
                 $updatedSince = new DateTimeImmutable($updatedSinceRaw);
@@ -74,7 +75,7 @@ final class PublicationsApiController
                 );
             }
 
-            $publications = $this->repository->publishedUpdatedSince($updatedSince, 'default', $limit);
+            $publications = $repository->publishedUpdatedSince($updatedSince, 'default', $limit);
         }
 
         $items = array_map(
