@@ -35,6 +35,8 @@ final class MigrationRunner
                 continue;
             }
 
+            // MySQL фиксирует DDL неявно, поэтому внешняя транзакция вокруг CREATE/ALTER
+            // приводит к попытке commit уже завершённой транзакции.
             $transactional = $driver !== 'mysql';
 
             try {
