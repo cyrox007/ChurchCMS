@@ -6,7 +6,7 @@ namespace ChurchCMS\Core;
 
 use RuntimeException;
 
-final class PageCache
+final class GeneratedOutputCache
 {
     public function __construct(
         private readonly string $directory,
@@ -14,26 +14,21 @@ final class PageCache
     ) {
     }
 
-    public static function fromConfig(): self
+    public static function fromConfig(int $ttlSeconds): self
     {
         return new self(
-            CHURCHCMS_ROOT . '/storage/cache/pages',
-            max(1, min(3600, (int) Config::get('performance.page_cache.ttl_seconds', 60))),
+            CHURCHCMS_ROOT . '/storage/cache/generated',
+            max(1, min(86400, $ttlSeconds)),
         );
     }
 
-    public function key(Request $request): string
+    public function key(string $namespace, string $variant = ''): string
     {
-        $version = self::versionToken();
-        $theme = (string) Config::get('theme.active', 'default');
-        $query = trim((string) $request->server('QUERY_STRING', ''));
-
         return hash('sha256', implode('|', [
-            'v2',
-            $version,
-            $theme,
-            $request->path(),
-            $query,
+            'v1',
+            PageCache::versionToken(),
+            $namespace,
+            $variant,
         ]));
     }
 
@@ -72,44 +67,16 @@ final class PageCache
         @rename($temp, $path);
     }
 
-    public static function bumpVersion(): void
-    {
-        $directory = CHURCHCMS_ROOT . '/storage/cache/pages';
-        if (!is_dir($directory)) {
-            @mkdir($directory, 0750, true);
-        }
-
-        $file = $directory . '/.version';
-        $value = bin2hex(random_bytes(12));
-        $temp = $file . '.tmp-' . bin2hex(random_bytes(4));
-
-        if (file_put_contents($temp, $value, LOCK_EX) !== false) {
-            @chmod($temp, 0640);
-            @rename($temp, $file);
-        }
-    }
-
-    public static function versionToken(): string
-    {
-        $file = CHURCHCMS_ROOT . '/storage/cache/pages/.version';
-        if (!is_file($file)) {
-            return 'initial';
-        }
-
-        $value = trim((string) file_get_contents($file));
-        return $value !== '' ? $value : 'initial';
-    }
-
     private function path(string $key): string
     {
         if (preg_match('/^[a-f0-9]{64}$/D', $key) !== 1) {
-            throw new RuntimeException('Invalid page cache key.');
+            throw new RuntimeException('Invalid generated-output cache key.');
         }
 
         return rtrim($this->directory, DIRECTORY_SEPARATOR)
             . DIRECTORY_SEPARATOR
             . $key
-            . '.html';
+            . '.cache';
     }
 
     private function ensureDirectory(): void
@@ -119,7 +86,7 @@ final class PageCache
         }
 
         if (!mkdir($this->directory, 0750, true) && !is_dir($this->directory)) {
-            throw new RuntimeException('Unable to create page cache directory.');
+            throw new RuntimeException('Unable to create generated-output cache directory.');
         }
     }
 }

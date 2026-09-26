@@ -66,6 +66,26 @@ jobs:
           echo "Installation healthcheck smoke OK\n";
           '
 
+      - name: Smoke generated output cache
+        shell: bash
+        run: |
+          php -r '
+          require "core.php";
+          $cache = new \ChurchCMS\Core\GeneratedOutputCache(CHURCHCMS_ROOT . "/storage/cache/generated-smoke", 60);
+          $key = $cache->key("ci", "fixture");
+          $cache->put($key, "cached-output");
+          if ($cache->get($key) !== "cached-output") {
+              fwrite(STDERR, "Generated output cache miss after put.\n");
+              exit(1);
+          }
+          \ChurchCMS\Core\PageCache::bumpVersion();
+          if ($cache->key("ci", "fixture") === $key) {
+              fwrite(STDERR, "Generated output cache key was not invalidated.\n");
+              exit(1);
+          }
+          echo "Generated output cache smoke OK\n";
+          '
+
       - name: Validate themes
         run: php bin/theme-check.php
 

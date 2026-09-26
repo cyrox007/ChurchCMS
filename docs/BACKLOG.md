@@ -150,7 +150,7 @@ Priority is ordered within each section.
 - [x] cache invalidation for publications, SEO and visible comments;
 - [x] public Cache-Control / stale-while-revalidate headers;
 - [x] immutable versioned theme assets;
-- [ ] cache sitemap/feed output or materialize periodically;
+- [x] cache sitemap/feed output or materialize periodically;
 - [ ] database-backed runtime smoke test;
 - [ ] representative dataset benchmark;
 - [ ] HTTP load-test scenario for publication list/detail and home page;

@@ -5,6 +5,7 @@ declare(strict_types=1);
 namespace ChurchCMS\App\Controllers;
 
 use ChurchCMS\Core\Config;
+use ChurchCMS\Core\GeneratedOutputCache;
 use ChurchCMS\Core\RamblerSyndicationRenderer;
 use ChurchCMS\Core\Response;
 use ChurchCMS\Core\Rss2SyndicationRenderer;
@@ -39,18 +40,26 @@ final class SyndicationController
             Response::text('Syndication is not configured.', 503);
         }
 
-        $feed = new SyndicationFeed(
-            title: (string) Config::get('syndication.channel_title', 'ChurchCMS'),
-            siteUrl: $siteUrl . '/',
-            description: (string) Config::get('syndication.channel_description', 'ChurchCMS feed'),
-            entries: SyndicationRegistry::entriesFor($target, 100),
-        );
+        $cache = GeneratedOutputCache::fromConfig(60);
+        $key = $cache->key('syndication:' . $target, $siteUrl);
+        $body = $cache->get($key);
+
+        if ($body === null) {
+            $feed = new SyndicationFeed(
+                title: (string) Config::get('syndication.channel_title', 'ChurchCMS'),
+                siteUrl: $siteUrl . '/',
+                description: (string) Config::get('syndication.channel_description', 'ChurchCMS feed'),
+                entries: SyndicationRegistry::entriesFor($target, 100),
+            );
+            $body = $renderer->render($feed);
+            $cache->put($key, $body);
+        }
 
         http_response_code(200);
         header('Content-Type: ' . $renderer->contentType());
         header('Cache-Control: public, max-age=60');
         header('X-Content-Type-Options: nosniff');
-        echo $renderer->render($feed);
+        echo $body;
         exit;
     }
 }
