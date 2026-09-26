@@ -1,0 +1,127 @@
+name: Проверка восстановления файлов
+
+on:
+  push:
+    branches:
+      - develop
+      - main
+    paths:
+      - 'core/BackupManager.php'
+      - 'core/FileRestoreManager.php'
+      - 'bin/backup.php'
+      - '.github/workflows/file-restore-smoke.yml'
+  pull_request:
+    branches:
+      - develop
+      - main
+    paths:
+      - 'core/BackupManager.php'
+      - 'core/FileRestoreManager.php'
+      - 'bin/backup.php'
+      - '.github/workflows/file-restore-smoke.yml'
+
+permissions:
+  contents: read
+
+jobs:
+  file-restore-smoke:
+    runs-on: ubuntu-latest
+
+    services:
+      postgres:
+        image: postgres:16
+        env:
+          POSTGRES_DB: churchcms
+          POSTGRES_USER: churchcms
+          POSTGRES_PASSWORD: churchcms
+        ports:
+          - 5432:5432
+        options: >-
+          --health-cmd pg_isready
+          --health-interval 10s
+          --health-timeout 5s
+          --health-retries 5
+
+    steps:
+      - name: Получить исходный код
+        uses: actions/checkout@v4
+
+      - name: Подготовить PHP 8.3
+        uses: shivammathur/setup-php@v2
+        with:
+          php-version: '8.3'
+          extensions: pdo, pdo_pgsql
+          coverage: none
+
+      - name: Подготовить тестовую установку
+        shell: bash
+        run: |
+          set -euo pipefail
+          mkdir -p storage/cache storage/logs storage/sessions storage/rate-limits storage/uploads
+          printf 'backup-smoke\n' > storage/uploads/smoke.txt
+          cat > config/local.php <<'PHP'
+          <?php
+
+          declare(strict_types=1);
+
+          return [
+              'installation' => [
+                  'completed' => true,
+              ],
+              'security' => [
+                  'secret_key' => base64_encode(str_repeat('f', 32)),
+              ],
+              'database' => [
+                  'driver' => 'pgsql',
+                  'host' => '127.0.0.1',
+                  'port' => 5432,
+                  'database' => 'churchcms',
+                  'username' => 'churchcms',
+                  'password' => 'churchcms',
+              ],
+          ];
+          PHP
+          php bin/migrate.php
+
+      - name: Создать резервную копию
+        shell: bash
+        run: |
+          set -euo pipefail
+          backup_root="$RUNNER_TEMP/churchcms-backups"
+          php bin/backup.php create --path="$backup_root"
+          manifest="$(find "$backup_root" -mindepth 2 -maxdepth 2 -name manifest.json -type f -print -quit)"
+          test -n "$manifest"
+          backup_id="$(basename "$(dirname "$manifest")")"
+          printf '%s' "$backup_id" > "$RUNNER_TEMP/backup-id"
+          sha256sum config/local.php | awk '{print $1}' > "$RUNNER_TEMP/config-local-sha256"
+
+      - name: Изменить текущие файлы
+        shell: bash
+        run: |
+          set -euo pipefail
+          printf '\n// изменено после резервной копии\n' >> config/local.php
+          printf 'изменено\n' > storage/uploads/smoke.txt
+          printf 'лишний файл\n' > storage/uploads/extra-after-backup.txt
+
+      - name: Восстановить файловую часть
+        shell: bash
+        run: |
+          set -euo pipefail
+          backup_root="$RUNNER_TEMP/churchcms-backups"
+          backup_id="$(cat "$RUNNER_TEMP/backup-id")"
+          php bin/backup.php restore-files "$backup_id" --confirm="$backup_id" --path="$backup_root"
+
+      - name: Проверить результат
+        shell: bash
+        run: |
+          set -euo pipefail
+          expected_config_hash="$(cat "$RUNNER_TEMP/config-local-sha256")"
+          actual_config_hash="$(sha256sum config/local.php | awk '{print $1}')"
+
+          test "$actual_config_hash" = "$expected_config_hash"
+          test "$(cat storage/uploads/smoke.txt)" = "backup-smoke"
+          test ! -e storage/uploads/extra-after-backup.txt
+          test -z "$(find config -maxdepth 1 -name '.local.php.restore-*' -print -quit)"
+          test -z "$(find storage -maxdepth 1 -name '.uploads.restore-*' -print -quit)"
+
+          echo "Файловое восстановление проверено"
