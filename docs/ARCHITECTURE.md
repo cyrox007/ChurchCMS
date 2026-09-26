@@ -93,3 +93,14 @@ Profiles such as Parish, Cathedral and Education are compositions of modules, no
 - Explicit upload allowlists.
 - Module path traversal protection.
 - No executable user uploads.
+
+
+## Theme layer
+
+Presentation is isolated in `themes/`.
+
+Controllers and modules address logical template contracts rather than files. `ThemeRenderer` resolves those contracts through the active theme and its optional parent chain.
+
+Theme code is presentation-only. SQL, permissions, content mutations and domain rules remain in core/modules.
+
+See `docs/THEMES.md`.
