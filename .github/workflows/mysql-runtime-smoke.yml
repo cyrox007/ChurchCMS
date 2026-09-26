@@ -1,0 +1,129 @@
+name: Проверка MySQL runtime
+
+on:
+  push:
+    branches:
+      - develop
+      - main
+    paths:
+      - 'core/MigrationRunner.php'
+      - 'database/migrations/**'
+      - 'modules/*/migrations/**'
+      - '.github/workflows/mysql-runtime-smoke.yml'
+  pull_request:
+    branches:
+      - develop
+      - main
+    paths:
+      - 'core/MigrationRunner.php'
+      - 'database/migrations/**'
+      - 'modules/*/migrations/**'
+      - '.github/workflows/mysql-runtime-smoke.yml'
+
+permissions:
+  contents: read
+
+jobs:
+  mysql-runtime:
+    runs-on: ubuntu-latest
+
+    services:
+      mysql:
+        image: mysql:8.4
+        env:
+          MYSQL_DATABASE: churchcms
+          MYSQL_USER: churchcms
+          MYSQL_PASSWORD: churchcms
+          MYSQL_ROOT_PASSWORD: root
+        ports:
+          - 3306:3306
+        options: >-
+          --health-cmd="mysqladmin ping -h 127.0.0.1 -uroot -proot"
+          --health-interval 10s
+          --health-timeout 5s
+          --health-retries 10
+
+    steps:
+      - name: Получить исходный код
+        uses: actions/checkout@v4
+
+      - name: Подготовить PHP 8.3
+        uses: shivammathur/setup-php@v2
+        with:
+          php-version: '8.3'
+          extensions: pdo, pdo_mysql
+          coverage: none
+
+      - name: Подготовить тестовую установку
+        shell: bash
+        run: |
+          set -euo pipefail
+          mkdir -p storage/cache storage/logs storage/sessions storage/rate-limits storage/uploads
+          cat > config/local.php <<'PHP'
+          <?php
+
+          declare(strict_types=1);
+
+          return [
+              'installation' => [
+                  'completed' => true,
+              ],
+              'security' => [
+                  'secret_key' => base64_encode(str_repeat('y', 32)),
+              ],
+              'database' => [
+                  'driver' => 'mysql',
+                  'host' => '127.0.0.1',
+                  'port' => 3306,
+                  'database' => 'churchcms',
+                  'username' => 'churchcms',
+                  'password' => 'churchcms',
+              ],
+          ];
+          PHP
+
+      - name: Применить миграции MySQL
+        run: php bin/migrate.php
+
+      - name: Проверить повторный запуск миграций
+        shell: bash
+        run: |
+          set -euo pipefail
+          output="$(php bin/migrate.php)"
+          test "$output" = "No pending migrations."
+
+      - name: Проверить MySQL runtime и полный набор миграций
+        shell: bash
+        run: |
+          php -r '
+          require "core.php";
+          $database = ChurchCMSCoreDatabaseManager::getInstance();
+          $pdo = $database->connection();
+
+          if ((string) $pdo->getAttribute(PDO::ATTR_DRIVER_NAME) !== "mysql") {
+              fwrite(STDERR, "Unexpected database driver.\n");
+              exit(1);
+          }
+
+          $expected = (new ChurchCMSCoreMigrationRunner($database, CHURCHCMS_ROOT))->validate();
+          $applied = $pdo->query(
+              "SELECT migration_id FROM churchcms_migrations ORDER BY migration_id"
+          )->fetchAll(PDO::FETCH_COLUMN);
+
+          if ($applied !== $expected) {
+              fwrite(STDERR, "Applied MySQL migrations do not match discovered migrations.\n");
+              exit(1);
+          }
+
+          $health = (new ChurchCMSCoreInstallationHealthCheck(
+              $database,
+              CHURCHCMS_ROOT,
+          ))->check();
+
+          if (($health["ready"] ?? false) !== true) {
+              fwrite(STDERR, "MySQL runtime is not ready.\n");
+              exit(1);
+          }
+
+          echo "MySQL runtime smoke OK\n";
+          '
