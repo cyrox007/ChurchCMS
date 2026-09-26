@@ -26,6 +26,15 @@
     </div>
 </article>
 
+<?php if (!empty($commentsAvailable)): ?>
+    <?= $theme->partial('comments.section', [
+        'publication' => $publication,
+        'comments' => $comments ?? [],
+        'commentFlash' => $commentFlash ?? null,
+        'commentsMaxLength' => $commentsMaxLength ?? 4000,
+    ]) ?>
+<?php endif; ?>
+
 <nav class="article-back">
     <a href="<?= $theme->e($theme->route('publication_index')) ?>">← Все публикации</a>
 </nav>
