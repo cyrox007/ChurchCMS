@@ -15,7 +15,8 @@ Implemented:
 - native autoloader;
 - router/request/response;
 - PDO PostgreSQL/MySQL infrastructure;
-- migration runner;\n- database-free migration CLI validation (`php bin/migrate.php validate`);
+- migration runner;
+- database-free migration CLI validation (`php bin/migrate.php validate`);
 - module manifests/runtime providers/capabilities;
 - theme manifests and inheritance;
 - PHP 8.3 lint + migration validation + theme validation CI.
@@ -35,11 +36,12 @@ Implemented:
 - atomic local configuration;
 - generated 256-bit secret key;
 - completed-installer lock;
-- interrupted-install recovery before completion.
+- interrupted-install recovery before completion;
+- `/health` installation/readiness checks for PHP baseline, completed install state, 256-bit secret key, writable runtime storage, migration validity and database connectivity;
+- health endpoint returns HTTP 503 with boolean-only diagnostics when the installation is not ready.
 
 Pending:
 
-- final installation healthcheck;
 - update/backup wizard.
 
 ## Security / administration
