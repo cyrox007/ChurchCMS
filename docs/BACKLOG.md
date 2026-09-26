@@ -45,7 +45,7 @@ Priority is ordered within each section.
 - [ ] task/notification center for pending moderation, failed sync and editorial work;
 - [x] responsive admin shell for tablet/mobile;
 - [x] module navigation registration contract;
-- [ ] unified empty/error/success/loading states across admin screens;
+- [x] unified empty/error/success/loading states across admin screens;
 - [ ] keyboard/focus/accessibility audit for administration.
 
 ## P1 — Core security
