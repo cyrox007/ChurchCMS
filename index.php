@@ -1,0 +1,9 @@
+<?php
+
+declare(strict_types=1);
+
+define('SITEPATH', __DIR__);
+
+require SITEPATH . '/core.php';
+
+\ChurchCMS\Core\Router::getInstance()->dispatch();
