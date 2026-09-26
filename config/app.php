@@ -18,6 +18,13 @@ return [
     ],
     'security' => [
         'csp_report_only' => false,
+        // Generated during installation and overridden in config/local.php.
+        'secret_key' => '',
+    ],
+    'social' => [
+        'enabled' => true,
+        'dispatch_batch_size' => 20,
+        'max_attempts' => 5,
     ],
     'database' => [
         'driver' => 'pgsql',
