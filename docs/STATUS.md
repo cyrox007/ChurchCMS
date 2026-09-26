@@ -195,7 +195,7 @@ Implemented:
 
 Pending before 1.0:
 
-- reference hardware thresholds;
+- reference hardware thresholds: заблокировано до выбора/подготовки эталонного Nginx/PHP-FPM + БД стенда и снятия реальных HTTP p50/p95/p99/RPS/error-rate; CI runner не используется как источник release-порогов;
 
 ## External channels / social / video
 
