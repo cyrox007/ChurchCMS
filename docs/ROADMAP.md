@@ -26,6 +26,8 @@ Status: in progress.
 
 ## Phase 1 — Parish MVP
 
+- [ ] Unified Admin Shell for non-technical operators.
+- [ ] Admin navigation/search/notifications foundation.
 - [ ] Publications.
 - [ ] Pages/content tree.
 - [ ] Navigation/menu.
