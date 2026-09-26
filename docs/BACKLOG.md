@@ -16,15 +16,15 @@ Priority is ordered within each section.
 
 ## P0 — Installation and operator UX
 
-- [ ] four-step web installer;
-- [ ] automatic environment/self-check;
-- [ ] automatic site URL/profile detection/defaults;
-- [ ] automatic DB creation where permitted;
-- [ ] automatic migrations;
-- [ ] first-superadmin creation;
-- [ ] atomic local configuration write;
-- [ ] installer lock after success;
-- [ ] friendly recovery messages;
+- [x] four-step web installer;
+- [x] automatic environment/self-check;
+- [x] automatic site URL/profile detection/defaults;
+- [x] automatic DB creation where permitted;
+- [x] automatic migrations;
+- [x] first-superadmin creation;
+- [x] atomic local configuration write;
+- [x] installer lock after success;
+- [x] friendly recovery messages;
 - [ ] installation healthcheck;
 - [ ] updater/backup workflow after installer MVP.
 
@@ -37,7 +37,7 @@ Priority is ordered within each section.
 - [x] administrator authentication;
 - [x] roles/permissions schema and authorization service;
 - [x] scope storage schema; enforcement to be added with scoped modules;
-- [ ] audit log;
+- [x] audit log foundation and publication/comment events;
 - password reset/rotation;
 - production error handler.
 
@@ -112,7 +112,7 @@ Priority is ordered within each section.
 
 - [x] optional comments module foundation;
 - [x] per-publication comments_enabled storage/domain/service switch;
-- [ ] editor toggle for comments in publication form;
+- [x] editor toggle for comments in publication form;
 - [x] premoderation by default;
 - [x] moderation queue;
 - [x] public comment rate limiting;
