@@ -20,6 +20,7 @@ $required = [
     '/core/Router.php',
     '/core/DatabaseManager.php',
     '/core/ApiResponse.php',
+    '/core/ApiAccess.php',
     '/core/ApiTokenAuthenticator.php',
     '/core/RateLimiter.php',
     '/core/ModuleManifest.php',
