@@ -30,6 +30,15 @@ return [
     'theme' => [
         'active' => 'default',
     ],
+    'comments' => [
+        'enabled' => true,
+        'moderation' => 'premoderated',
+        'max_length' => 4000,
+        'rate_limit' => [
+            'attempts' => 5,
+            'window_seconds' => 300,
+        ],
+    ],
     'syndication' => [
         'enabled' => true,
         'site_url' => 'http://localhost',
