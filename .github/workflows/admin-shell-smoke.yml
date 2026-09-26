@@ -1,0 +1,111 @@
+name: Проверка Admin Shell
+
+on:
+  push:
+    branches:
+      - develop
+      - main
+    paths:
+      - 'app/services/AdminShell.php'
+      - 'app/controllers/AdminController.php'
+      - 'modules/publications/PublicationsAdminController.php'
+      - 'modules/comments/CommentsAdminController.php'
+      - 'themes/default/templates/layouts/admin.php'
+      - 'themes/default/templates/admin/**'
+      - 'themes/default/assets/css/site.css'
+      - 'themes/default/theme.json'
+      - '.github/workflows/admin-shell-smoke.yml'
+  pull_request:
+    branches:
+      - develop
+      - main
+    paths:
+      - 'app/services/AdminShell.php'
+      - 'app/controllers/AdminController.php'
+      - 'modules/publications/PublicationsAdminController.php'
+      - 'modules/comments/CommentsAdminController.php'
+      - 'themes/default/templates/layouts/admin.php'
+      - 'themes/default/templates/admin/**'
+      - 'themes/default/assets/css/site.css'
+      - 'themes/default/theme.json'
+      - '.github/workflows/admin-shell-smoke.yml'
+
+permissions:
+  contents: read
+
+jobs:
+  admin-shell:
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Получить исходный код
+        uses: actions/checkout@v4
+
+      - name: Подготовить PHP 8.3
+        uses: shivammathur/setup-php@v2
+        with:
+          php-version: '8.3'
+          coverage: none
+
+      - name: Проверить PHP и тему
+        shell: bash
+        run: |
+          set -euo pipefail
+          php -l app/services/AdminShell.php
+          php -l app/controllers/AdminController.php
+          php -l modules/publications/PublicationsAdminController.php
+          php -l modules/comments/CommentsAdminController.php
+          php -l themes/default/templates/layouts/admin.php
+          php bin/theme-check.php
+
+      - name: Проверить использование общего shell
+        shell: bash
+        run: |
+          set -euo pipefail
+          grep -q "AdminShell::page" app/controllers/AdminController.php
+          grep -q "AdminShell::page" modules/publications/PublicationsAdminController.php
+          grep -q "AdminShell::page" modules/comments/CommentsAdminController.php
+
+          if grep -q "ThemeRenderer::fromConfig()->page"             app/controllers/AdminController.php             modules/publications/PublicationsAdminController.php             modules/comments/CommentsAdminController.php; then
+            echo "Один из административных экранов обходит общий Admin Shell." >&2
+            exit 1
+          fi
+
+      - name: Отрисовать общий layout
+        shell: bash
+        run: |
+          set -euo pipefail
+          mkdir -p storage/sessions storage/cache storage/logs storage/rate-limits storage/uploads
+          php -r '
+          require "core.php";
+          $renderer = ChurchCMSCoreThemeRenderer::fromConfig();
+          $html = $renderer->capture("layout.admin", [
+              "title" => "Публикации",
+              "siteName" => "Тестовый приход",
+              "adminUser" => [
+                  "display_name" => "Редактор",
+                  "username" => "editor",
+              ],
+              "adminSection" => "publications",
+              "canManagePublications" => true,
+              "canModerateComments" => true,
+              "pendingComments" => 3,
+              "content" => "<p>shell-smoke</p>",
+          ]);
+
+          foreach ([
+              "admin-frame",
+              "aria-current=\"page\"",
+              "Публикации",
+              "Комментарии",
+              "Редактор",
+              "shell-smoke",
+          ] as $expected) {
+              if (!str_contains($html, $expected)) {
+                  fwrite(STDERR, "Admin Shell не содержит ожидаемый фрагмент: {$expected}\n");
+                  exit(1);
+              }
+          }
+
+          echo "Admin Shell smoke OK\n";
+          '
