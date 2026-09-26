@@ -18,4 +18,7 @@ return [
         'username' => 'churchcms',
         'password' => '',
     ],
+    'theme' => [
+        'active' => 'default',
+    ],
 ];
