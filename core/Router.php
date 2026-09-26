@@ -59,10 +59,51 @@ final class Router
             if ($route['method'] === $method && $route['path'] === $path) {
                 throw new RuntimeException("Duplicate route {$method} {$path}");
             }
+            if ($name !== '' && $route['name'] === $name) {
+                throw new RuntimeException("Duplicate route name {$name}");
+            }
         }
 
         $this->routes[] = compact('method','path','controller','middlewares','name');
         return $this;
+    }
+
+    public function url(string $name, array $params = []): string
+    {
+        foreach ($this->routes as $route) {
+            if ($route['name'] !== $name) {
+                continue;
+            }
+
+            $url = $route['path'];
+            $used = [];
+
+            $url = preg_replace_callback(
+                '/\{([A-Za-z_][A-Za-z0-9_]*)\}/',
+                static function (array $matches) use ($params, &$used): string {
+                    $key = $matches[1];
+                    if (!array_key_exists($key, $params)) {
+                        throw new RuntimeException("Missing route parameter: {$key}");
+                    }
+                    $used[$key] = true;
+                    return rawurlencode((string) $params[$key]);
+                },
+                $url,
+            );
+
+            if (!is_string($url)) {
+                throw new RuntimeException("Unable to build route URL: {$name}");
+            }
+
+            $query = array_diff_key($params, $used);
+            if ($query !== []) {
+                $url .= '?' . http_build_query($query, '', '&', PHP_QUERY_RFC3986);
+            }
+
+            return $url;
+        }
+
+        throw new RuntimeException("Unknown route name: {$name}");
     }
 
     public function dispatch(): never
