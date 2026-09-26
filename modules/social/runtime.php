@@ -2,8 +2,10 @@
 
 declare(strict_types=1);
 
+use ChurchCMS\App\Services\AdminTaskRegistry;
 use ChurchCMS\Core\ModuleRuntimeProvider;
 use ChurchCMS\Modules\Social\ExternalChannelsCapability;
+use ChurchCMS\Modules\Social\SocialAdminTaskProvider;
 
 $moduleRoot = __DIR__;
 foreach ([
@@ -25,6 +27,7 @@ foreach ([
     'ChannelSyncStateRepository.php',
     'ChannelSyncService.php',
     'ExternalChannelsCapability.php',
+    'SocialAdminTaskProvider.php',
 ] as $file) {
     require_once $moduleRoot . '/' . $file;
 }
@@ -52,8 +55,12 @@ return new class implements ModuleRuntimeProvider {
     {
         $this->capability = new ExternalChannelsCapability();
 
-        // Concrete providers register their adapters here or from another module.
-        // The storage/schema stays provider-agnostic, so new networks/video hosts
-        // do not require ChurchCMS core/database redesign.
+        // Конкретные провайдеры регистрируют адаптеры здесь или из другого модуля.
+        // Хранилище остаётся независимым от провайдера, поэтому новые сети
+        // и видеохостинги не требуют переработки ядра или схемы БД.
+
+        AdminTaskRegistry::register(
+            new SocialAdminTaskProvider(),
+        );
     }
 };
