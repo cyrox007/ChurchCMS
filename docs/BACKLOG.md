@@ -153,7 +153,7 @@ Priority is ordered within each section.
 - [x] cache sitemap/feed output or materialize periodically;
 - [x] database-backed runtime smoke test;
 - [x] representative dataset benchmark;
-- [ ] HTTP load-test scenario for publication list/detail and home page;
+- [x] HTTP load-test scenario for publication list/detail and home page;
 - [ ] define reference hardware and release thresholds;
 - [ ] verify reverse-proxy Nginx configuration;
 - [ ] query-plan/index audit with production-scale fixture data.
