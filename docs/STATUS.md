@@ -177,6 +177,8 @@ Implemented:
 - dependency-free generated-output cache for sitemap and syndication feeds;
 - sitemap/feed cache shares O(1) publication invalidation with the public page cache;
 - query/API result bounds;
+- референсный Nginx/PHP-FPM front-controller профиль с запретом прямого доступа к внутренним каталогам;
+- Nginx CI проверяет синтаксис, закрытые URL и ACME challenge;
 - third-party channel sync isolated from public requests.
 
 Pending before 1.0:
@@ -185,7 +187,6 @@ Pending before 1.0:
 - HTTP load tests;
 - query-plan/index audit;
 - reference hardware thresholds;
-- Nginx/reverse-proxy deployment profile.
 
 ## External channels / social / video
 
@@ -262,5 +263,6 @@ Next administration milestone:
 - `docs/COMMENTS.md`
 - `docs/INSTALLATION.md`
 - `docs/BACKUPS.md`
+- `docs/NGINX.md`
 
 Update this file at the end of every substantial implementation increment.
