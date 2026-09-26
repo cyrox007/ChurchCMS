@@ -14,6 +14,9 @@ require_once $autoloader;
 
 $required = [
     '/core/Config.php',
+    '/core/SessionSecurity.php',
+    '/core/Csrf.php',
+    '/core/SecurityHeaders.php',
     '/core/Request.php',
     '/core/Response.php',
     '/core/RouteTemplate.php',
@@ -48,6 +51,7 @@ foreach ($required as $file) {
 }
 
 \ChurchCMS\Core\Config::load(CHURCHCMS_ROOT . '/config/app.php');
+\ChurchCMS\Core\SessionSecurity::configure();
 
 $registry = \ChurchCMS\Core\ModuleRegistry::boot(CHURCHCMS_ROOT . '/modules');
 \ChurchCMS\Core\ModuleRuntimeLoader::boot($registry);
