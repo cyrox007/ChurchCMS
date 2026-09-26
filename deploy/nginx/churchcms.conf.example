@@ -1,0 +1,46 @@
+server {
+    listen 80;
+    server_name churchcms.local;
+
+    root /var/www/churchcms;
+    index index.php;
+    charset utf-8;
+
+    server_tokens off;
+    client_max_body_size 32m;
+
+    # ACME challenge разрешается обслуживать напрямую до включения HTTPS.
+    location ^~ /.well-known/acme-challenge/ {
+        try_files $uri =404;
+    }
+
+    # Скрытые файлы не должны отдаваться напрямую.
+    location ~ /\.(?!well-known/) {
+        deny all;
+    }
+
+    # Внутренние каталоги ChurchCMS доступны только через PHP runtime.
+    location ~ ^/(?:app|bin|config|core|database|docs|modules|storage|themes|tools)(?:/|$) {
+        deny all;
+    }
+
+    # Инсталлятор остаётся отдельной точкой входа и блокирует себя после установки.
+    location = /install.php {
+        include fastcgi_params;
+        fastcgi_param SCRIPT_FILENAME $document_root/install.php;
+        fastcgi_param SCRIPT_NAME /install.php;
+        fastcgi_param HTTP_PROXY "";
+        fastcgi_pass unix:/run/php/php8.3-fpm.sock;
+        fastcgi_hide_header X-Powered-By;
+    }
+
+    # Все обычные URL идут в единый front controller.
+    location / {
+        include fastcgi_params;
+        fastcgi_param SCRIPT_FILENAME $document_root/index.php;
+        fastcgi_param SCRIPT_NAME /index.php;
+        fastcgi_param HTTP_PROXY "";
+        fastcgi_pass unix:/run/php/php8.3-fpm.sock;
+        fastcgi_hide_header X-Powered-By;
+    }
+}
