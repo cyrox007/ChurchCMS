@@ -62,6 +62,9 @@ Implemented:
 
 Pending:
 
+- unified Admin Shell replacing the current dashboard-card prototype;
+- common admin navigation/header/search/notifications;
+- shared admin states and responsive shell;
 - roles/users management UI;
 - password reset;
 - optional 2FA;
@@ -202,6 +205,23 @@ Next:
 - Telegram/VK/MAX adapters;
 - YouTube/Rutube adapters;
 - webhook contract.
+
+## Administration UX direction
+
+The current `/admin`, publication editor and comment moderation screens are functional prototypes.
+
+They are not considered the final ChurchCMS administration interface.
+
+Next administration milestone:
+
+- build one shared Admin Shell;
+- move existing Publications and Comments screens into it;
+- add persistent/collapsible navigation;
+- add site/user context header;
+- add pending-work notifications;
+- reserve a common global-search surface;
+- expose future Media, People, Worship, Events, External Channels, Users/Roles, Themes, Settings, Backups and System Health through the same shell;
+- preserve the requirement that routine operator work takes minimal actions and avoids technical terminology.
 
 ## Durable project memory
 
