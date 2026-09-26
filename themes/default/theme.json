@@ -23,6 +23,7 @@
     "admin.comments": "admin/comments",
     "admin.publications.index": "admin/publications/index",
     "admin.publications.editor": "admin/publications/editor",
-    "layout.admin": "layouts/admin"
+    "layout.admin": "layouts/admin",
+    "admin.state": "admin/state"
   }
 }
