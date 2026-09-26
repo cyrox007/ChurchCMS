@@ -337,6 +337,10 @@ if (($_SERVER['REQUEST_METHOD'] ?? 'GET') === 'POST') {
                 throw new RuntimeException('Сначала настройте сайт и базу данных.');
             }
 
+            if (session_status() === PHP_SESSION_ACTIVE) {
+                session_write_close();
+            }
+
             require_once $root . '/core.php';
 
             $username = trim((string) ($_POST['admin_username'] ?? 'admin'));
