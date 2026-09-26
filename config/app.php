@@ -21,4 +21,16 @@ return [
     'theme' => [
         'active' => 'default',
     ],
+    'api' => [
+        'enabled' => true,
+        'version' => 'v1',
+        'public_cache_seconds' => 60,
+        'allowed_origins' => [],
+        'rate_limit' => [
+            'public_per_minute' => 120,
+            'partner_per_minute' => 600,
+        ],
+        // Secrets belong in config/local.php. Store only SHA-256 token hashes.
+        'partner_tokens' => [],
+    ],
 ];
