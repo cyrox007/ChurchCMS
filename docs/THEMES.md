@@ -418,3 +418,30 @@ $theme->route('publication_show', ['slug' => $publication->slug])
 Extra values that are not route placeholders are encoded as an RFC 3986 query string.
 
 This keeps themes compatible when URL structures change.
+
+
+## 18. Validating themes
+
+ChurchCMS includes a dependency-free theme checker:
+
+```bash
+php bin/theme-check.php
+```
+
+Validate one theme:
+
+```bash
+php bin/theme-check.php my-parish
+```
+
+The command checks:
+
+- manifest syntax;
+- theme IDs;
+- parent availability;
+- inheritance cycles;
+- logical template mappings;
+- mapped template files;
+- template path containment.
+
+It exits with a non-zero status when validation fails, so it can also be used by CI.
