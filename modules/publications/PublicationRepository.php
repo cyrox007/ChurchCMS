@@ -23,6 +23,46 @@ final class PublicationRepository
     /**
      * @return list<Publication>
      */
+    public function adminList(string $siteKey = 'default', int $limit = 100): array
+    {
+        $limit = max(1, min(200, $limit));
+
+        $statement = $this->pdo->prepare(
+            'SELECT * FROM publications
+             WHERE site_key = :site_key
+             ORDER BY updated_at DESC, id DESC
+             LIMIT :limit'
+        );
+        $statement->bindValue(':site_key', $siteKey);
+        $statement->bindValue(':limit', $limit, PDO::PARAM_INT);
+        $statement->execute();
+
+        return array_map(
+            fn(array $row): Publication => $this->hydrate($row),
+            $statement->fetchAll(),
+        );
+    }
+
+    public function findByPublicId(string $publicId, string $siteKey = 'default'): ?Publication
+    {
+        $statement = $this->pdo->prepare(
+            'SELECT * FROM publications
+             WHERE site_key = :site_key
+               AND public_id = :public_id
+             LIMIT 1'
+        );
+        $statement->execute([
+            'site_key' => $siteKey,
+            'public_id' => $publicId,
+        ]);
+
+        $row = $statement->fetch();
+        return is_array($row) ? $this->hydrate($row) : null;
+    }
+
+    /**
+     * @return list<Publication>
+     */
     public function published(
         string $siteKey = 'default',
         int $limit = 20,
