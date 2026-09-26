@@ -6,4 +6,17 @@ return [
     'database' => [
         'password' => 'change-me',
     ],
+    'api' => [
+        'allowed_origins' => [
+            // 'https://example-diocese.ru',
+        ],
+        'partner_tokens' => [
+            // 'diocese-site' => [
+            //     'hash' => 'sha256-hex-created-by-bin/api-token.php',
+            //     'scopes' => ['content.read', 'events.read', 'worship.read'],
+            //     'origins' => ['https://example-diocese.ru'],
+            //     'enabled' => true,
+            // ],
+        ],
+    ],
 ];
