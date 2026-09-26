@@ -20,6 +20,7 @@ final class AdminShell
         string $section = 'overview',
     ): never {
         $navigation = self::navigation($request);
+        $taskSummary = AdminTaskCenter::summary($request);
         $badges = [];
 
         if (isset($navigation['comments'])) {
@@ -36,6 +37,7 @@ final class AdminShell
             'adminNavigation' => array_values($navigation),
             'adminNavigationBadges' => $badges,
             'adminSearchQuery' => AdminSearchService::query($request),
+            'adminTaskCount' => $taskSummary['count'],
         ];
 
         ThemeRenderer::fromConfig()->page(
