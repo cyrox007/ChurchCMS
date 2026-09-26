@@ -112,3 +112,17 @@ Not yet implemented:
 - `docs/SYNDICATION.md`
 
 Update this file at the end of every substantial implementation increment.
+
+
+## Publication comments switch
+
+Implemented publication-level comment availability:
+
+- `comments_enabled` stored per publication;
+- default is off;
+- domain entity exposes the state;
+- PublicationService can enable/disable comments independently for each publication;
+- public API exposes whether comments are enabled;
+- disabling future comments is designed to close new submissions without deleting existing approved comments.
+
+The actual comments/moderation module and editor toggle UI remain separate backlog items.
