@@ -4,6 +4,8 @@ declare(strict_types=1);
 
 namespace ChurchCMS\Modules\Publications;
 
+use ChurchCMS\Core\Config;
+use ChurchCMS\Core\ModuleRuntimeLoader;
 use ChurchCMS\Core\Request;
 use ChurchCMS\Core\Response;
 use ChurchCMS\Core\ThemeRenderer;
@@ -38,9 +40,32 @@ final class PublicationsController
             Response::text('404 Not Found', 404);
         }
 
+        $commentsAvailable = false;
+        $comments = [];
+
+        if ($publication->commentsEnabled) {
+            $capability = ModuleRuntimeLoader::capability('comments', 'comments.publication');
+            if (
+                $capability !== null
+                && method_exists($capability, 'enabled')
+                && method_exists($capability, 'approvedForPublication')
+                && $capability->enabled() === true
+            ) {
+                $commentsAvailable = true;
+                $comments = $capability->approvedForPublication($publication->id);
+            }
+        }
+
+        $commentFlash = $request->session('comment.flash');
+        $request->unsetSession('comment.flash');
+
         ThemeRenderer::fromConfig()->page('publication.show', [
             'title' => $publication->title,
             'publication' => $publication,
+            'commentsAvailable' => $commentsAvailable,
+            'comments' => $comments,
+            'commentFlash' => is_array($commentFlash) ? $commentFlash : null,
+            'commentsMaxLength' => (int) Config::get('comments.max_length', 4000),
         ], 'layout.article');
     }
 }
