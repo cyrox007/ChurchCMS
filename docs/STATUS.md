@@ -173,6 +173,8 @@ Implemented:
 - version-based O(1) cache invalidation;
 - public max-age + stale-while-revalidate;
 - versioned immutable theme assets;
+- dependency-free generated-output cache for sitemap and syndication feeds;
+- sitemap/feed cache shares O(1) publication invalidation with the public page cache;
 - query/API result bounds;
 - third-party channel sync isolated from public requests.
 
