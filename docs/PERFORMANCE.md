@@ -141,3 +141,41 @@ php tools/performance/benchmark.php --iterations=200
 Для каждой операции выводятся mean, p50, p95, p99 и максимум в миллисекундах вместе с версией PHP и драйвером БД.
 
 Это микробенчмарк БД/репозитория, а не замена HTTP load test. Числовые release-пороги намеренно не зафиксированы до выбора эталонного оборудования и запуска HTTP-сценариев.
+
+
+## HTTP load-сценарий
+
+Dependency-free runner находится в `tools/performance/http-load.php`. Он использует стандартные PHP streams и не добавляет зависимость в runtime ChurchCMS.
+
+Сценарий распределяет запросы между:
+
+- кешированной главной страницей;
+- кешированным архивом публикаций;
+- кешированной страницей материала;
+- намеренно некешируемой страницей материала с query string.
+
+Пример для локального Nginx/PHP-FPM стенда:
+
+```bash
+php tools/performance/http-load.php \
+  --base=http://127.0.0.1:8080 \
+  --requests=10000 \
+  --concurrency=50 \
+  --warmup=100 \
+  --slug=benchmark-000001
+```
+
+Runner намеренно разрешает только localhost, loopback и приватные IPv4-адреса, чтобы инструмент релизной проверки нельзя было случайно направить на чужой публичный сайт.
+
+Для HTTP-сценария нужен набор в `site_key=default`, потому что текущие публичные контроллеры обслуживают default-site. Создавать его разрешается только на disposable стенде с усиленным подтверждением:
+
+```bash
+php tools/performance/seed.php \
+  --site=default \
+  --publications=10000 \
+  --comments=30000 \
+  --reset \
+  --confirm=benchmark-fixture-default
+```
+
+В CI механизм проверяется на PHP built-in server с небольшой нагрузкой только как функциональный smoke. Производительные цифры built-in server не используются для release thresholds: реальные p50/p95/p99/RPS фиксируются позже на выбранном Nginx/PHP-FPM эталонном стенде.
