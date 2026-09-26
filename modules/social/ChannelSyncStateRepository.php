@@ -18,6 +18,17 @@ final class ChannelSyncStateRepository
         return new self(DatabaseManager::getInstance()->connection());
     }
 
+    public function failedCount(): int
+    {
+        $statement = $this->pdo->query(
+            "SELECT COUNT(*) FROM external_channel_sync_state
+             WHERE last_error IS NOT NULL
+               AND last_error <> ''"
+        );
+
+        return (int) $statement->fetchColumn();
+    }
+
     public function cursor(int $connectionId): ?string
     {
         $statement = $this->pdo->prepare(
