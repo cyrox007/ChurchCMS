@@ -24,7 +24,7 @@ final class PageCache
 
     public function key(Request $request): string
     {
-        $version = $this->version();
+        $version = self::versionToken();
         $theme = (string) Config::get('theme.active', 'default');
         $query = trim((string) $request->server('QUERY_STRING', ''));
 
@@ -89,9 +89,9 @@ final class PageCache
         }
     }
 
-    private function version(): string
+    public static function versionToken(): string
     {
-        $file = $this->directory . '/.version';
+        $file = CHURCHCMS_ROOT . '/storage/cache/pages/.version';
         if (!is_file($file)) {
             return 'initial';
         }
