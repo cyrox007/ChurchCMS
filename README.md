@@ -23,12 +23,34 @@ Project initialization / legacy audit.
 ## Repository structure
 
 ```
-docs/
-  legacy/
-  references/
-legacy/
-  README.md
+app/          HTTP/application layer
+core/         dependency-free PHP 8.3+ runtime
+modules/      isolated CMS/domain modules
+themes/       replaceable presentation packages
+config/       runtime configuration
+docs/         architecture and integration documentation
+legacy/       migration/reference notes
 ```
+
+## Implemented foundations
+
+- standalone PHP 8.3+ runtime without mandatory Composer/vendor dependencies;
+- router, request/response and PDO database infrastructure;
+- isolated module manifests/runtime providers;
+- inheritable theme/template system;
+- modernized legacy-inspired responsive default theme;
+- versioned external API foundation for diocesan/partner integrations;
+- scoped Bearer API keys stored by hash;
+- generic publication syndication engine;
+- RSS 2.0 and Rambler/News feed renderers.
+
+Documentation:
+
+- `docs/ARCHITECTURE.md`
+- `docs/THEMES.md`
+- `docs/DESIGN_SYSTEM.md`
+- `docs/API.md`
+- `docs/SYNDICATION.md`
 
 The historical dump is kept as a migration/reference artifact and must not be deployed as production code.
 
