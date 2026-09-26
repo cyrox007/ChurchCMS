@@ -61,6 +61,19 @@ final class MigrationRunner
     }
 
     /**
+     * Validate all discoverable migration files without connecting to the database.
+     *
+     * @return list<string> migration ids in execution order
+     */
+    public function validate(): array
+    {
+        return array_map(
+            static fn(Migration $migration): string => $migration->id(),
+            $this->discover(),
+        );
+    }
+
+    /**
      * @return list<Migration>
      */
     private function discover(): array
