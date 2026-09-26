@@ -110,14 +110,14 @@ Priority is ordered within each section.
 
 ## P2 — Comments
 
-- optional comments module;
+- [x] optional comments module foundation;
 - [x] per-publication comments_enabled storage/domain/service switch;
 - [ ] editor toggle for comments in publication form;
-- premoderation by default;
-- moderation queue;
-- public comment rate limiting;
-- plain-text comments only initially;
-- spam/reject/approve workflow;
+- [x] premoderation by default;
+- [x] moderation queue;
+- [x] public comment rate limiting;
+- [x] plain-text comments only initially;
+- [x] spam/reject/approve workflow;
 - close discussion without deleting comments;
-- audit moderation actions;
+- [x] audit moderation actions;
 - public API disabled by default for comments.
