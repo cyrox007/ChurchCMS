@@ -6,6 +6,7 @@ namespace ChurchCMS\Modules\Publications;
 
 use ChurchCMS\Core\DatabaseManager;
 use ChurchCMS\Core\HtmlSanitizer;
+use ChurchCMS\Core\PageCache;
 use ChurchCMS\Core\Slugger;
 use ChurchCMS\Core\Uuid;
 use DateTimeImmutable;
@@ -148,6 +149,7 @@ final class PublicationService
                 'public_id' => $publicId,
                 'site_key' => $data['site_key'],
             ]);
+            PageCache::bumpVersion();
         } catch (PDOException $e) {
             if (self::isUniqueViolation($e)) {
                 throw new InvalidArgumentException('Publication URL is already used.', 0, $e);
@@ -172,6 +174,8 @@ final class PublicationService
             'updated_at' => gmdate('Y-m-d H:i:s'),
             'public_id' => $publicId,
         ]);
+
+        PageCache::bumpVersion();
     }
 
     public function withdraw(string $publicId): void
@@ -188,6 +192,8 @@ final class PublicationService
             'updated_at' => gmdate('Y-m-d H:i:s'),
             'public_id' => $publicId,
         ]);
+
+        PageCache::bumpVersion();
     }
 
     /** @param list<string> $targets */
@@ -206,6 +212,8 @@ final class PublicationService
             'updated_at' => gmdate('Y-m-d H:i:s'),
             'public_id' => $publicId,
         ]);
+
+        PageCache::bumpVersion();
     }
 
     public function setCommentsEnabled(string $publicId, bool $enabled): void
@@ -222,6 +230,8 @@ final class PublicationService
             'updated_at' => gmdate('Y-m-d H:i:s'),
             'public_id' => $publicId,
         ]);
+
+        PageCache::bumpVersion();
     }
 
     /**
