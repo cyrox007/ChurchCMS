@@ -44,7 +44,7 @@ Priority is ordered within each section.
 - [ ] global admin search foundation;
 - [ ] task/notification center for pending moderation, failed sync and editorial work;
 - [x] responsive admin shell for tablet/mobile;
-- [ ] module navigation registration contract;
+- [x] module navigation registration contract;
 - [ ] unified empty/error/success/loading states across admin screens;
 - [ ] keyboard/focus/accessibility audit for administration.
 
