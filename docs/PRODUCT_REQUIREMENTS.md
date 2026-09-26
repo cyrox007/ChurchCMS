@@ -295,7 +295,8 @@ Comments are an optional module, not hard-wired into Publications.
 Requirements:
 
 - comments can be globally disabled;
-- comments can be enabled/disabled per publication;
+- comments can be enabled/disabled per publication with a simple editor toggle;
+- disabling comments on an existing publication closes new submissions but keeps already approved comments visible unless moderators explicitly hide/remove them;
 - moderation modes: disabled / premoderated / open-for-approved-users in future;
 - public comments must never accept arbitrary HTML;
 - commenter display name, text, timestamps and moderation status;
