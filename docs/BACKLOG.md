@@ -158,6 +158,7 @@ Priority is ordered within each section.
 - [x] representative dataset benchmark;
 - [x] HTTP load-test scenario for publication list/detail and home page;
 - [ ] define reference hardware and release thresholds;
+  - blocker: выбрать и зафиксировать эталонный Nginx/PHP-FPM + PostgreSQL/MySQL стенд, затем снять реальные HTTP p50/p95/p99/RPS/ошибки; GitHub Actions используется только для smoke и не является эталонным железом;
 - [x] verify reverse-proxy Nginx configuration;
 - [ ] query-plan/index audit with production-scale fixture data.
 
