@@ -19,26 +19,22 @@ final class AdminShell
         array $data = [],
         string $section = 'overview',
     ): never {
-        $canManagePublications = AdminAuthorization::can(
-            $request,
-            'publications.read',
-        );
-        $canModerateComments = AdminAuthorization::can(
-            $request,
-            'comments.moderate',
-        );
+        $navigation = self::navigation($request);
+        $badges = [];
 
-        $pendingComments = $canModerateComments
-            ? self::pendingComments()
-            : 0;
+        if (isset($navigation['comments'])) {
+            $pendingComments = self::pendingComments();
+            if ($pendingComments > 0) {
+                $badges['comments'] = $pendingComments;
+            }
+        }
 
         $shared = [
             'siteName' => 'ChurchCMS',
             'adminUser' => $request->attribute('admin.user'),
             'adminSection' => $section,
-            'canManagePublications' => $canManagePublications,
-            'canModerateComments' => $canModerateComments,
-            'pendingComments' => $pendingComments,
+            'adminNavigation' => array_values($navigation),
+            'adminNavigationBadges' => $badges,
         ];
 
         ThemeRenderer::fromConfig()->page(
@@ -46,6 +42,30 @@ final class AdminShell
             array_replace($shared, $data),
             'layout.admin',
         );
+    }
+
+    /**
+     * @return array<string,array{
+     *     id:string,
+     *     label:string,
+     *     route:string,
+     *     permission:string,
+     *     priority:int
+     * }>
+     */
+    private static function navigation(Request $request): array
+    {
+        $visible = [];
+
+        foreach (AdminNavigationRegistry::entries() as $entry) {
+            if (!AdminAuthorization::can($request, $entry['permission'])) {
+                continue;
+            }
+
+            $visible[$entry['id']] = $entry;
+        }
+
+        return $visible;
     }
 
     private static function pendingComments(): int

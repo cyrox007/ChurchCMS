@@ -27,17 +27,21 @@ $current = static fn(string $section): string =>
 
         <nav class="admin-nav" aria-label="Разделы">
             <a href="<?= $theme->e($theme->route('admin_dashboard')) ?>"<?= $current('overview') ?>>Обзор</a>
-            <?php if (!empty($canManagePublications)): ?>
-                <a href="<?= $theme->e($theme->route('admin_publications')) ?>"<?= $current('publications') ?>>Публикации</a>
-            <?php endif; ?>
-            <?php if (!empty($canModerateComments)): ?>
-                <a href="<?= $theme->e($theme->route('admin_comments')) ?>"<?= $current('comments') ?>>
-                    Комментарии
-                    <?php if ((int) ($pendingComments ?? 0) > 0): ?>
-                        <span class="admin-nav__badge"><?= $theme->e((int) $pendingComments) ?></span>
+            <?php foreach (($adminNavigation ?? []) as $entry): ?>
+                <?php
+                $entryId = (string) ($entry['id'] ?? '');
+                $badge = (int) (($adminNavigationBadges[$entryId] ?? 0));
+                ?>
+                <a
+                    href="<?= $theme->e($theme->route((string) $entry['route'])) ?>"
+                    <?= $current($entryId) ?>
+                >
+                    <?= $theme->e((string) $entry['label']) ?>
+                    <?php if ($badge > 0): ?>
+                        <span class="admin-nav__badge"><?= $theme->e($badge) ?></span>
                     <?php endif; ?>
                 </a>
-            <?php endif; ?>
+            <?php endforeach; ?>
         </nav>
 
         <div class="admin-sidebar__footer">

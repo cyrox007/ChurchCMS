@@ -5,6 +5,7 @@ declare(strict_types=1);
 use ChurchCMS\App\Middlewares\CsrfMiddleware;
 use ChurchCMS\App\Middlewares\PublicOriginMiddleware;
 use ChurchCMS\App\Middlewares\RequireAdminMiddleware;
+use ChurchCMS\App\Services\AdminNavigationRegistry;
 use ChurchCMS\Core\ModuleRuntimeProvider;
 use ChurchCMS\Core\Router;
 use ChurchCMS\Modules\Comments\CommentRateLimitMiddleware;
@@ -45,6 +46,14 @@ return new class implements ModuleRuntimeProvider {
     public function boot(): void
     {
         $this->capability = new CommentsCapability();
+
+        AdminNavigationRegistry::register(
+            id: 'comments',
+            label: 'Комментарии',
+            route: 'admin_comments',
+            permission: 'comments.moderate',
+            priority: 30,
+        );
 
         $router = Router::getInstance();
 
