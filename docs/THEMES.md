@@ -397,3 +397,24 @@ Never:
 - place secrets in `theme.json` or assets.
 
 Templates receive only the data explicitly supplied by the application.
+
+
+## 17. Named routes in templates
+
+Templates should not hard-code internal application URLs.
+
+Use:
+
+```php
+<a href="<?= $theme->e($theme->route('home')) ?>">Главная</a>
+```
+
+Route parameters:
+
+```php
+$theme->route('publication_show', ['slug' => $publication->slug])
+```
+
+Extra values that are not route placeholders are encoded as an RFC 3986 query string.
+
+This keeps themes compatible when URL structures change.
