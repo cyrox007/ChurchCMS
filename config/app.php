@@ -9,6 +9,15 @@ return [
         'php_min' => '8.3',
         'timezone' => 'Europe/Moscow',
         'locale' => 'ru',
+        'url' => 'http://localhost',
+    ],
+    'session' => [
+        'name' => 'churchcms_session',
+        'lifetime_seconds' => 28800,
+        'same_site' => 'Lax',
+    ],
+    'security' => [
+        'csp_report_only' => false,
     ],
     'database' => [
         'driver' => 'pgsql',
