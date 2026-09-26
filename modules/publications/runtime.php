@@ -10,10 +10,12 @@ use ChurchCMS\App\Middlewares\PartnerApiMiddleware;
 use ChurchCMS\App\Middlewares\CsrfMiddleware;
 use ChurchCMS\App\Middlewares\RequireAdminMiddleware;
 use ChurchCMS\App\Services\AdminNavigationRegistry;
+use ChurchCMS\App\Services\AdminSearchRegistry;
 use ChurchCMS\Core\ModuleRuntimeProvider;
 use ChurchCMS\Core\Router;
 use ChurchCMS\Core\SyndicationRegistry;
 use ChurchCMS\Modules\Publications\PublicationSyndicationProvider;
+use ChurchCMS\Modules\Publications\PublicationAdminSearchProvider;
 use ChurchCMS\Modules\Publications\PublicationsApiController;
 use ChurchCMS\Modules\Publications\PublicationsCapability;
 use ChurchCMS\Modules\Publications\PublicationsController;
@@ -28,6 +30,7 @@ foreach ([
     'PublicationService.php',
     'PublicationApiResource.php',
     'PublicationSyndicationProvider.php',
+    'PublicationAdminSearchProvider.php',
     'PublicationsCapability.php',
     'PublicationsController.php',
     'PublicationsApiController.php',
@@ -58,7 +61,7 @@ return new class implements ModuleRuntimeProvider {
     {
         $this->capability = new PublicationsCapability();
 
-        // Registration is lazy: no DB connection is made during module boot.
+        // Регистрация остаётся ленивой: boot модуля не открывает соединение с БД.
         SyndicationRegistry::register(
             'publications',
             new PublicationSyndicationProvider(),
@@ -70,6 +73,10 @@ return new class implements ModuleRuntimeProvider {
             route: 'admin_publications',
             permission: 'publications.read',
             priority: 20,
+        );
+
+        AdminSearchRegistry::register(
+            new PublicationAdminSearchProvider(),
         );
 
         $router = Router::getInstance();
