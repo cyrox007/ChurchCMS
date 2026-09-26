@@ -1,0 +1,7 @@
+{
+  "id": "core",
+  "name": "ChurchCMS Core Module",
+  "version": "0.1.0",
+  "runtime": "runtime.php",
+  "capabilities": []
+}
