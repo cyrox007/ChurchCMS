@@ -1,7 +1,11 @@
 <?php declare(strict_types=1); ?>
 <article class="card">
+    <?php if (!empty($props['eyebrow'])): ?>
+        <p class="card__eyebrow"><?= $theme->e($props['eyebrow']) ?></p>
+    <?php endif; ?>
+
     <?php if (!empty($props['title'])): ?>
-        <h2><?= $theme->e($props['title']) ?></h2>
+        <h3><?= $theme->e($props['title']) ?></h3>
     <?php endif; ?>
 
     <?php if (!empty($props['text'])): ?>
