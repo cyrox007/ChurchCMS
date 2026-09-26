@@ -18,7 +18,9 @@ Status: in progress.
 - [x] Security/session/CSRF foundation.
 - [x] Administrator authentication and RBAC foundation.
 - [ ] Audit/security event log.
-- [ ] Installation/update workflow.
+- [ ] Friendly four-step web installer.
+- [ ] Installation healthcheck.
+- [ ] Update/backup workflow.
 
 ## Phase 1 — Parish MVP
 
@@ -35,6 +37,7 @@ Status: in progress.
 - [ ] SEO.
 - [ ] Redirect manager.
 - [ ] Revisions/history.
+- [ ] Optional moderated comments module.
 
 ## Phase 2 — Cathedral profile
 
