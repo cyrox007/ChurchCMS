@@ -3,6 +3,8 @@
 declare(strict_types=1);
 
 use ChurchCMS\App\Controllers\HealthController;
+use ChurchCMS\App\Controllers\AdminAuthController;
+use ChurchCMS\App\Controllers\AdminController;
 use ChurchCMS\App\Controllers\ThemeAssetController;
 use ChurchCMS\App\Controllers\Api\V1\ExternalApiController;
 use ChurchCMS\App\Controllers\SyndicationController;
@@ -11,9 +13,14 @@ use ChurchCMS\App\Middlewares\ApiEnabledMiddleware;
 use ChurchCMS\App\Middlewares\ApiPublicRateLimitMiddleware;
 use ChurchCMS\App\Middlewares\PartnerApiMiddleware;
 use ChurchCMS\App\Middlewares\ApiPartnerRateLimitMiddleware;
+use ChurchCMS\App\Middlewares\AuthRateLimitMiddleware;
+use ChurchCMS\App\Middlewares\CsrfMiddleware;
+use ChurchCMS\App\Middlewares\RequireAdminMiddleware;
+use ChurchCMS\App\Middlewares\SecurityHeadersMiddleware;
 use ChurchCMS\Core\Router;
 
 $router = Router::getInstance();
+$router->addGlobalMiddleware(SecurityHeadersMiddleware::class);
 
 $router->add('GET', '/', [HealthController::class, 'index'], [], 'home');
 $router->add('GET', '/health', [HealthController::class, 'health'], [], 'health');
@@ -27,4 +34,12 @@ $router->group('/api/v1')
     ->add('OPTIONS', '/meta', [ExternalApiController::class, 'preflight'], [ApiEnabledMiddleware::class, ApiCorsMiddleware::class], 'api_v1_meta_options')
     ->add('GET', '/partner/ping', [ExternalApiController::class, 'partnerPing'], [ApiEnabledMiddleware::class, ApiCorsMiddleware::class, PartnerApiMiddleware::class, ApiPartnerRateLimitMiddleware::class], 'api_v1_partner_ping')
     ->add('OPTIONS', '/partner/ping', [ExternalApiController::class, 'preflight'], [ApiEnabledMiddleware::class, ApiCorsMiddleware::class], 'api_v1_partner_ping_options')
+    ->endGroup();
+
+
+$router->group('/admin')
+    ->add('GET', '/login', [AdminAuthController::class, 'login'], [], 'admin_login')
+    ->add('POST', '/login', [AdminAuthController::class, 'authenticate'], [AuthRateLimitMiddleware::class, CsrfMiddleware::class], 'admin_login_submit')
+    ->add('POST', '/logout', [AdminAuthController::class, 'logout'], [RequireAdminMiddleware::class, CsrfMiddleware::class], 'admin_logout')
+    ->add('GET', '', [AdminController::class, 'dashboard'], [RequireAdminMiddleware::class], 'admin_dashboard')
     ->endGroup();
