@@ -310,12 +310,21 @@ jobs:
           foreach ([
               "/admin/tasks",
               "admin-task-center-link__badge",
-              ">3<",
           ] as $expected) {
               if (!str_contains($layout, $expected)) {
                   fwrite(STDERR, "Admin Shell task link не содержит: {$expected}\n");
                   exit(1);
               }
+          }
+
+          if (
+              preg_match(
+                  "/admin-task-center-link__badge[^>]*>\\s*3\\s*</s",
+                  $layout,
+              ) !== 1
+          ) {
+              fwrite(STDERR, "Счётчик задач в Admin Shell отрисован некорректно.\n");
+              exit(1);
           }
 
           echo "Admin task center render smoke OK\n";
