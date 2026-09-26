@@ -1671,3 +1671,94 @@ svg {
         padding: 1rem;
     }
 }
+
+
+/* Единые состояния административной панели */
+.admin-state {
+    display: grid;
+    grid-template-columns: 2.75rem minmax(0, 1fr);
+    gap: 1rem;
+    margin-top: 1.25rem;
+    padding: 1.15rem 1.25rem;
+    border: 1px solid var(--line);
+    border-radius: var(--radius-md);
+    background: var(--paper);
+}
+
+.admin-state__mark {
+    width: 2.5rem;
+    height: 2.5rem;
+    display: grid;
+    place-items: center;
+    border-radius: 999px;
+    color: var(--navy-900);
+    background: #edf2f7;
+    font-weight: 850;
+}
+
+.admin-state__body {
+    min-width: 0;
+}
+
+.admin-state h2 {
+    margin: 0;
+    color: var(--navy-950);
+    font-family: var(--font-display);
+    font-size: 1.2rem;
+}
+
+.admin-state p {
+    margin: .35rem 0 0;
+    color: var(--ink-700);
+}
+
+.admin-state__action {
+    padding-top: .35rem;
+}
+
+.admin-state--success {
+    border-color: #b8d8c1;
+    background: #f1f9f3;
+}
+
+.admin-state--success .admin-state__mark {
+    color: #245e36;
+    background: #dcefe2;
+}
+
+.admin-state--error {
+    border-color: #e4b8c0;
+    background: #fff3f4;
+}
+
+.admin-state--error .admin-state__mark {
+    color: #721c2d;
+    background: #f6d8de;
+}
+
+.admin-state--loading .admin-state__mark {
+    animation: admin-state-pulse 1.2s ease-in-out infinite;
+}
+
+@keyframes admin-state-pulse {
+    0%,
+    100% {
+        opacity: .45;
+    }
+
+    50% {
+        opacity: 1;
+    }
+}
+
+@media (prefers-reduced-motion: reduce) {
+    .admin-state--loading .admin-state__mark {
+        animation: none;
+    }
+}
+
+@media (max-width: 36rem) {
+    .admin-state {
+        grid-template-columns: 1fr;
+    }
+}
