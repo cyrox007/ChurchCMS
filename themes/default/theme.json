@@ -1,0 +1,13 @@
+{
+  "id": "default",
+  "name": "ChurchCMS Default",
+  "version": "0.1.0",
+  "profiles": ["small-parish", "parish", "cathedral", "education"],
+  "templates": {
+    "layout.main": "layouts/main",
+    "page.home": "pages/home",
+    "partial.header": "partials/header",
+    "partial.footer": "partials/footer",
+    "component.card": "components/card"
+  }
+}
