@@ -25,6 +25,7 @@ final class PublicationApiResource implements ApiResource
             'excerpt' => $this->publication->excerpt,
             'body_html' => $this->publication->bodyHtml,
             'author' => $this->publication->authorName,
+            'comments_enabled' => $this->publication->commentsEnabled,
             'published_at' => $this->publication->publishedAt?->setTimezone(new \DateTimeZone('UTC'))->format(DATE_ATOM),
             'updated_at' => $this->publication->updatedAt->setTimezone(new \DateTimeZone('UTC'))->format(DATE_ATOM),
             'url' => $base !== '' ? $base . '/publications/' . rawurlencode($this->publication->slug) : null,
