@@ -21,6 +21,8 @@ Status: in progress.
 - [x] Friendly four-step web installer.
 - [ ] Installation healthcheck.
 - [ ] Update/backup workflow.
+- [x] Anonymous full-page caching foundation.
+- [ ] Load-test release gate.
 
 ## Phase 1 — Parish MVP
 
@@ -34,10 +36,10 @@ Status: in progress.
 - [ ] Galleries.
 - [ ] Documents.
 - [ ] Search.
-- [ ] SEO.
+- [x] SEO foundation: metadata, canonical, OG/social cards, robots, sitemap, sharing.
 - [ ] Redirect manager.
 - [ ] Revisions/history.
-- [ ] Optional moderated comments module.
+- [x] Optional moderated comments module foundation.
 
 ## Phase 2 — Cathedral profile
 
@@ -78,3 +80,16 @@ Status: in progress.
 - [ ] Discuss theological-school pilot with TDS.
 - [ ] Collect editorial UX feedback.
 - [ ] Harden deployment/update path.
+
+
+## Cross-cutting — External channels
+
+- [x] Provider-agnostic adapter architecture.
+- [x] Bidirectional inbox/outbox persistence foundation.
+- [x] Encrypted integration credentials.
+- [ ] Admin connection wizard.
+- [ ] Outbound worker and retry/dead-letter processing.
+- [ ] Inbound review/import workflow.
+- [ ] Built-in Telegram/VK/MAX adapters.
+- [ ] Built-in YouTube/Rutube adapters.
+- [ ] Adapter SDK documentation for other/future platforms.
