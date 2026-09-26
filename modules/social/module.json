@@ -1,9 +1,12 @@
 {
   "id": "social",
-  "name": "Social Publishing",
-  "version": "0.1.0",
+  "name": "External Channels",
+  "version": "0.2.0",
   "runtime": "runtime.php",
   "capabilities": [
+    "channels.connections",
+    "channels.publish",
+    "channels.import",
     "social.connections",
     "social.publication"
   ]
