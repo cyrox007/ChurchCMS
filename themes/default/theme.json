@@ -1,7 +1,7 @@
 {
   "id": "default",
   "name": "ChurchCMS Default",
-  "version": "0.3.0",
+  "version": "0.4.0",
   "profiles": [
     "small-parish",
     "parish",
@@ -16,6 +16,8 @@
     "component.card": "components/card",
     "layout.article": "layouts/main",
     "publication.index": "publications/index",
-    "publication.show": "publications/show"
+    "publication.show": "publications/show",
+    "auth.login": "auth/login",
+    "admin.dashboard": "admin/dashboard"
   }
 }
