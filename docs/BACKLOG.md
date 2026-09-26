@@ -39,7 +39,7 @@ Priority is ordered within each section.
   - [ ] обязательная резервная копия перед миграциями/заменой файлов и сценарий отката;
   - [ ] мастер обновления/резервного копирования в Admin Shell;
 - [x] replace dashboard-card prototype with unified Admin Shell;
-- [ ] persistent/collapsible admin navigation;
+- [x] persistent/collapsible admin navigation;
 - [x] shared admin header with site context and current user;
 - [ ] global admin search foundation;
 - [ ] task/notification center for pending moderation, failed sync and editorial work;

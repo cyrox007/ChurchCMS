@@ -18,8 +18,8 @@ $current = static fn(string $section): string =>
 </head>
 <body class="admin-app">
 <a class="skip-link" href="#admin-content">Перейти к содержанию</a>
-<div class="admin-frame">
-    <aside class="admin-sidebar" aria-label="Управление сайтом">
+<div class="admin-frame" data-admin-frame>
+    <aside class="admin-sidebar" id="admin-sidebar" aria-label="Управление сайтом">
         <a class="admin-brand" href="<?= $theme->e($theme->route('admin_dashboard')) ?>">
             <span class="admin-brand__mark" aria-hidden="true">CMS</span>
             <span><strong><?= $theme->e($siteName ?? 'ChurchCMS') ?></strong><small>Управление сайтом</small></span>
@@ -55,7 +55,19 @@ $current = static fn(string $section): string =>
 
     <div class="admin-workspace">
         <header class="admin-topbar">
-            <div>
+            <button
+                class="admin-sidebar-toggle"
+                type="button"
+                hidden
+                aria-controls="admin-sidebar"
+                aria-expanded="true"
+                data-admin-sidebar-toggle
+            >
+                <span aria-hidden="true">☰</span>
+                <span data-admin-sidebar-toggle-label>Скрыть меню</span>
+            </button>
+
+            <div class="admin-topbar__context">
                 <strong><?= $theme->e($title ?? 'Управление') ?></strong>
                 <?php if ($displayName !== ''): ?>
                     <span><?= $theme->e($displayName) ?></span>
@@ -68,5 +80,6 @@ $current = static fn(string $section): string =>
         </main>
     </div>
 </div>
+<script src="<?= $theme->e($theme->asset('js/admin-shell.js')) ?>" defer></script>
 </body>
 </html>
