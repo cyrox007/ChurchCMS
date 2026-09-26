@@ -125,3 +125,14 @@ Themes must render canonical/search/social metadata exposed by the content layer
 Accepted.
 
 Public share buttons use ordinary share URLs and the browser Web Share/Clipboard APIs from a local versioned script. Third-party tracking/widget JavaScript is not required.
+
+
+## D-021 — Administration uses one shared Admin Shell
+
+Accepted.
+
+The existing dashboard/cards and individual admin templates are an implementation prototype, not the final administrative UX.
+
+All administrative modules must render inside a shared Admin Shell with common navigation, site/user context, task notifications, consistent actions/states and responsive behavior. Modules may contribute navigation/actions through contracts, but may not create independent incompatible administration layouts.
+
+The shell is optimized for non-technical parish and theological-school operators: domain language, minimal decisions per screen, progressive disclosure and obvious recovery paths take priority over exposing CMS internals.
