@@ -12,7 +12,7 @@ Priority is ordered within each section.
 - [x] Publication syndication provider.
 - [x] Publication distribution target storage/service; admin UI pending Auth/RBAC.
 - [x] Migration CLI validation.
-- [x] PHP 8.3 lint/theme validation CI added; runtime DB-backed smoke test pending test database.
+- [x] PHP 8.3 lint/theme validation CI and PostgreSQL-backed runtime smoke test.
 
 ## P0 — Installation and operator UX
 
@@ -151,7 +151,7 @@ Priority is ordered within each section.
 - [x] public Cache-Control / stale-while-revalidate headers;
 - [x] immutable versioned theme assets;
 - [x] cache sitemap/feed output or materialize periodically;
-- [ ] database-backed runtime smoke test;
+- [x] database-backed runtime smoke test;
 - [ ] representative dataset benchmark;
 - [ ] HTTP load-test scenario for publication list/detail and home page;
 - [ ] define reference hardware and release thresholds;
