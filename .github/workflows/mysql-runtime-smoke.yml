@@ -97,7 +97,7 @@ jobs:
         run: |
           php -r '
           require "core.php";
-          $database = ChurchCMSCoreDatabaseManager::getInstance();
+          $database = \ChurchCMS\Core\DatabaseManager::getInstance();
           $pdo = $database->connection();
 
           if ((string) $pdo->getAttribute(PDO::ATTR_DRIVER_NAME) !== "mysql") {
@@ -105,7 +105,7 @@ jobs:
               exit(1);
           }
 
-          $expected = (new ChurchCMSCoreMigrationRunner($database, CHURCHCMS_ROOT))->validate();
+          $expected = (new \ChurchCMS\Core\MigrationRunner($database, CHURCHCMS_ROOT))->validate();
           $applied = $pdo->query(
               "SELECT migration_id FROM churchcms_migrations ORDER BY migration_id"
           )->fetchAll(PDO::FETCH_COLUMN);
@@ -120,7 +120,7 @@ jobs:
               exit(1);
           }
 
-          $health = (new ChurchCMSCoreInstallationHealthCheck(
+          $health = (new \ChurchCMS\Core\InstallationHealthCheck(
               $database,
               CHURCHCMS_ROOT,
           ))->check();
