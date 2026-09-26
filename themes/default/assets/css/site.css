@@ -1966,3 +1966,115 @@ svg {
         padding-inline: .65rem;
     }
 }
+
+
+/* Центр задач Admin Shell */
+.admin-task-center-link {
+    flex: 0 0 auto;
+    display: inline-flex;
+    align-items: center;
+    gap: .4rem;
+    min-height: 2.6rem;
+    padding: .5rem .7rem;
+    border: 1px solid var(--line);
+    border-radius: .65rem;
+    color: var(--navy-900);
+    background: #fff;
+    font-weight: 750;
+    text-decoration: none;
+}
+
+.admin-task-center-link:hover,
+.admin-task-center-link:focus-visible {
+    border-color: var(--navy-800);
+    background: #f7f9fb;
+}
+
+.admin-task-center-link__badge {
+    min-width: 1.55rem;
+    min-height: 1.55rem;
+    display: grid;
+    place-items: center;
+    padding: 0 .35rem;
+    border-radius: 999px;
+    color: #fff;
+    background: var(--wine-800);
+    font-size: .72rem;
+    line-height: 1;
+}
+
+.admin-task-list {
+    display: grid;
+    gap: .75rem;
+}
+
+.admin-task {
+    display: grid;
+    grid-template-columns: 2.75rem minmax(0, 1fr);
+    align-items: start;
+    gap: .9rem;
+    padding: 1rem 1.1rem;
+    border: 1px solid var(--line);
+    border-left-width: .3rem;
+    border-radius: .75rem;
+    color: inherit;
+    background: var(--paper);
+    text-decoration: none;
+}
+
+a.admin-task:hover,
+a.admin-task:focus-visible {
+    border-color: var(--navy-800);
+    box-shadow: var(--shadow-soft);
+}
+
+.admin-task--error {
+    border-left-color: #9a2f43;
+}
+
+.admin-task--warning {
+    border-left-color: #a06d20;
+}
+
+.admin-task--info {
+    border-left-color: var(--navy-700);
+}
+
+.admin-task__count {
+    min-width: 2.4rem;
+    min-height: 2.4rem;
+    display: grid;
+    place-items: center;
+    border-radius: 999px;
+    color: var(--navy-950);
+    background: #edf2f7;
+    font-weight: 850;
+}
+
+.admin-task__body {
+    min-width: 0;
+    display: grid;
+    gap: .2rem;
+}
+
+.admin-task__body strong {
+    color: var(--navy-950);
+}
+
+.admin-task__body > span {
+    color: var(--ink-700);
+    font-size: .9rem;
+    line-height: 1.45;
+}
+
+@media (max-width: 36rem) {
+    .admin-task-center-link {
+        min-height: 2.45rem;
+        padding-inline: .6rem;
+    }
+
+    .admin-task {
+        grid-template-columns: 2.4rem minmax(0, 1fr);
+        padding: .9rem;
+    }
+}
