@@ -61,7 +61,6 @@ Pending:
 Остаётся:
 
 - восстановление из резервной копии, включая корректное восстановление sequence/auto_increment;
-- staging и проверка пакета обновления;
 - связка «проверенная копия → обновление файлов → миграции → healthcheck → откат при ошибке»;
 - простой интерфейс в Admin Shell без необходимости знать пути и команды.
 
@@ -264,5 +263,6 @@ Next administration milestone:
 - `docs/COMMENTS.md`
 - `docs/INSTALLATION.md`
 - `docs/BACKUPS.md`
+- `docs/UPDATES.md`
 
 Update this file at the end of every substantial implementation increment.

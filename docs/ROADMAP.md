@@ -20,7 +20,7 @@ Status: in progress.
 - [x] Audit/security event log foundation.
 - [x] Friendly four-step web installer.
 - [x] Installation healthcheck.
-- [ ] Update/backup workflow (verified backup foundation implemented; restore/update orchestration pending).
+- [ ] Update/backup workflow (verified backup, restore foundation and package staging implemented; apply/rollback orchestration pending).
 - [x] Anonymous full-page caching foundation.
 - [ ] Load-test release gate.
 
