@@ -6,6 +6,7 @@ namespace ChurchCMS\Modules\Comments;
 
 use ChurchCMS\Core\Config;
 use ChurchCMS\Core\DatabaseManager;
+use ChurchCMS\Core\PageCache;
 use ChurchCMS\Core\Uuid;
 use ChurchCMS\Modules\Publications\Publication;
 use InvalidArgumentException;
@@ -84,6 +85,10 @@ final class CommentService
             'created_at' => gmdate('Y-m-d H:i:s'),
         ]);
 
+        if ($status === CommentStatus::Approved) {
+            PageCache::bumpVersion();
+        }
+
         return $publicId;
     }
 
@@ -111,6 +116,8 @@ final class CommentService
             'moderator_user_id' => $moderatorUserId,
             'public_id' => $publicId,
         ]);
+
+        PageCache::bumpVersion();
     }
 
     private static function normalizePlainText(string $text): string
