@@ -10,10 +10,8 @@ use ChurchCMS\Core\SyndicationProvider;
 
 final class PublicationSyndicationProvider implements SyndicationProvider
 {
-    public function __construct(
-        private readonly PublicationRepository $repository,
-        private readonly string $siteKey = 'default',
-    ) {
+    public function __construct(private readonly string $siteKey = 'default')
+    {
     }
 
     public function entries(): iterable
@@ -24,7 +22,9 @@ final class PublicationSyndicationProvider implements SyndicationProvider
         }
 
         $result = [];
-        foreach ($this->repository->published($this->siteKey, 100, 0) as $publication) {
+        $repository = PublicationRepository::fromDatabase();
+
+        foreach ($repository->published($this->siteKey, 100, 0) as $publication) {
             if ($publication->syndicationTargets === [] || $publication->publishedAt === null) {
                 continue;
             }
