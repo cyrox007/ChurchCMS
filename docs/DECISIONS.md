@@ -73,3 +73,22 @@ Moodle remains LMS. OJS remains journal/publishing workflow. ChurchCMS provides 
 Accepted.
 
 Core/domain design should avoid assumptions that one process can only represent one website. Per-site theme and configuration are planned.
+
+
+## D-013 — Web installer is the primary fresh-install experience
+
+Accepted.
+
+ChurchCMS must be installable without Composer or shell access. The installer should auto-detect everything it safely can, create/migrate the database, create the first administrator and then lock itself.
+
+## D-014 — Administration is designed for non-technical operators
+
+Accepted.
+
+Routine editorial work should use plain language, sensible defaults, progressive disclosure and minimal steps. Technical concepts must not leak into normal editorial screens.
+
+## D-015 — Comments are optional and moderated by default
+
+Accepted.
+
+Comments are a separate module attached to publications. They can be disabled globally/per-publication. Initial public submission is plain text and premoderated; external syndication never includes comments by default.
