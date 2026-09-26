@@ -2,17 +2,10 @@
 <section class="admin-shell">
     <header class="admin-heading">
         <div>
-            <p class="eyebrow">ChurchCMS</p>
-            <h1>Панель управления</h1>
-            <p>
-                <?= $theme->e(is_array($adminUser) ? ($adminUser['display_name'] ?? $adminUser['username'] ?? '') : '') ?>
-            </p>
+            <p class="eyebrow">Обзор</p>
+            <h1>Что требует внимания</h1>
+            <p>Быстрый доступ к текущей редакционной работе и состоянию сайта.</p>
         </div>
-
-        <form method="post" action="<?= $theme->e($theme->route('admin_logout')) ?>">
-            <?= $theme->csrfInput() ?>
-            <button class="button button--quiet" type="submit">Выйти</button>
-        </form>
     </header>
 
     <div class="admin-grid">
