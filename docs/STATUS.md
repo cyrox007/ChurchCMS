@@ -19,7 +19,8 @@ Implemented:
 - database-free migration CLI validation (`php bin/migrate.php validate`);
 - module manifests/runtime providers/capabilities;
 - theme manifests and inheritance;
-- PHP 8.3 lint + migration validation + theme validation CI.
+- PHP 8.3 lint + migration validation + theme validation CI;
+- PostgreSQL-backed runtime smoke verifies PDO connectivity, readiness and full migration application.
 
 ## Installation
 
@@ -180,7 +181,6 @@ Implemented:
 
 Pending before 1.0:
 
-- database-backed smoke environment in CI;
 - large fixture dataset;
 - HTTP load tests;
 - query-plan/index audit;
