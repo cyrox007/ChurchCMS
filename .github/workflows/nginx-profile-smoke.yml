@@ -1,0 +1,70 @@
+name: Проверка Nginx профиля
+
+on:
+  push:
+    branches:
+      - develop
+      - main
+    paths:
+      - 'deploy/nginx/**'
+      - '.github/workflows/nginx-profile-smoke.yml'
+  pull_request:
+    branches:
+      - develop
+      - main
+    paths:
+      - 'deploy/nginx/**'
+      - '.github/workflows/nginx-profile-smoke.yml'
+
+permissions:
+  contents: read
+
+jobs:
+  nginx-profile:
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Получить исходный код
+        uses: actions/checkout@v4
+
+      - name: Установить Nginx для проверки конфигурации
+        shell: bash
+        run: |
+          set -euo pipefail
+          sudo apt-get update
+          sudo apt-get install -y nginx-light
+
+      - name: Проверить синтаксис профиля
+        shell: bash
+        run: |
+          set -euo pipefail
+          sudo rm -f /etc/nginx/sites-enabled/default
+          sudo cp deploy/nginx/churchcms.conf.example /etc/nginx/conf.d/churchcms.conf
+          sudo mkdir -p /var/www/churchcms/.well-known/acme-challenge
+          printf 'acme-ok\n' | sudo tee /var/www/churchcms/.well-known/acme-challenge/probe >/dev/null
+          sudo nginx -t
+
+      - name: Проверить защиту внутренних путей
+        shell: bash
+        run: |
+          set -euo pipefail
+
+          if pgrep -x nginx >/dev/null; then
+            sudo nginx -s reload
+          else
+            sudo nginx
+          fi
+
+          code="$(curl -sS -o /dev/null -w '%{http_code}' -H 'Host: churchcms.local' http://127.0.0.1/config/app.php)"
+          test "$code" = "403"
+
+          code="$(curl -sS -o /dev/null -w '%{http_code}' -H 'Host: churchcms.local' http://127.0.0.1/storage/uploads/private.txt)"
+          test "$code" = "403"
+
+          code="$(curl -sS -o /dev/null -w '%{http_code}' -H 'Host: churchcms.local' http://127.0.0.1/.git/config)"
+          test "$code" = "403"
+
+          body="$(curl -sS -H 'Host: churchcms.local' http://127.0.0.1/.well-known/acme-challenge/probe)"
+          test "$body" = "acme-ok"
+
+          echo "Nginx profile smoke OK"
