@@ -60,6 +60,18 @@ final class ThemeContext
         return PublicFormToken::issue($scope);
     }
 
+    /** @param array<string,mixed> $seo */
+    public function seoTags(array $seo, ?string $fallbackTitle = null): string
+    {
+        return SeoRenderer::render($seo, $fallbackTitle);
+    }
+
+    /** @return list<array{provider:string,label:string,url:string}> */
+    public function shareLinks(string $url, string $title): array
+    {
+        return ShareLinks::forPage($url, $title);
+    }
+
     public function themeId(): string
     {
         return $this->themeId;
