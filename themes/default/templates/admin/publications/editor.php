@@ -23,8 +23,21 @@ $formAction = $isEdit
         <a class="button button--quiet" href="<?= $theme->e($theme->route('admin_publications')) ?>">← К публикациям</a>
     </header>
 
-    <?php if (!empty($error)): ?><div class="form-alert" role="alert"><?= $theme->e($error) ?></div><?php endif; ?>
-    <?php if (!empty($success)): ?><div class="comment-notice comment-notice--success" role="status"><?= $theme->e($success) ?></div><?php endif; ?>
+    <?php if (!empty($error)): ?>
+        <?= $theme->component('admin.state', [
+            'kind' => 'error',
+            'title' => 'Не удалось сохранить',
+            'message' => (string) $error,
+        ]) ?>
+    <?php endif; ?>
+
+    <?php if (!empty($success)): ?>
+        <?= $theme->component('admin.state', [
+            'kind' => 'success',
+            'title' => 'Сохранено',
+            'message' => (string) $success,
+        ]) ?>
+    <?php endif; ?>
 
     <form class="publication-editor" method="post" action="<?= $theme->e($formAction) ?>">
         <?= $theme->csrfInput() ?>
