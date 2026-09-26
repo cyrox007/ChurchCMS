@@ -1,0 +1,113 @@
+name: Проверка performance-инструментов
+
+on:
+  push:
+    branches:
+      - develop
+      - main
+    paths:
+      - 'tools/performance/**'
+      - '.github/workflows/performance-smoke.yml'
+      - 'modules/publications/**'
+      - 'modules/comments/**'
+      - 'database/migrations/**'
+      - 'core/DatabaseManager.php'
+      - 'core/MigrationRunner.php'
+  pull_request:
+    branches:
+      - develop
+      - main
+    paths:
+      - 'tools/performance/**'
+      - '.github/workflows/performance-smoke.yml'
+      - 'modules/publications/**'
+      - 'modules/comments/**'
+      - 'database/migrations/**'
+      - 'core/DatabaseManager.php'
+      - 'core/MigrationRunner.php'
+
+permissions:
+  contents: read
+
+jobs:
+  performance-smoke:
+    runs-on: ubuntu-latest
+
+    services:
+      postgres:
+        image: postgres:16
+        env:
+          POSTGRES_DB: churchcms
+          POSTGRES_USER: churchcms
+          POSTGRES_PASSWORD: churchcms
+        ports:
+          - 5432:5432
+        options: >-
+          --health-cmd pg_isready
+          --health-interval 10s
+          --health-timeout 5s
+          --health-retries 5
+
+    steps:
+      - name: Получить исходный код
+        uses: actions/checkout@v4
+
+      - name: Подготовить PHP 8.3
+        uses: shivammathur/setup-php@v2
+        with:
+          php-version: '8.3'
+          extensions: pdo, pdo_pgsql
+          coverage: none
+
+      - name: Подготовить тестовую установку
+        shell: bash
+        run: |
+          set -euo pipefail
+          mkdir -p storage/cache storage/logs storage/sessions storage/rate-limits storage/uploads
+          cat > config/local.php <<'PHP'
+          <?php
+
+          declare(strict_types=1);
+
+          return [
+              'installation' => [
+                  'completed' => true,
+              ],
+              'security' => [
+                  'secret_key' => base64_encode(str_repeat('p', 32)),
+              ],
+              'database' => [
+                  'driver' => 'pgsql',
+                  'host' => '127.0.0.1',
+                  'port' => 5432,
+                  'database' => 'churchcms',
+                  'username' => 'churchcms',
+                  'password' => 'churchcms',
+              ],
+          ];
+          PHP
+          php bin/migrate.php
+
+      - name: Создать небольшой benchmark-набор
+        run: php tools/performance/seed.php --publications=100 --comments=300 --confirm=benchmark-fixture
+
+      - name: Выполнить CLI benchmark
+        shell: bash
+        run: |
+          set -euo pipefail
+          output="$RUNNER_TEMP/performance-benchmark.json"
+          php tools/performance/benchmark.php --iterations=20 > "$output"
+          php -r '
+          $data = json_decode(file_get_contents($argv[1]), true, 32, JSON_THROW_ON_ERROR);
+          if (
+              ($data["publications"] ?? null) !== 100
+              || !isset($data["measurements"]["archive_first_page"]["p95_ms"])
+              || !isset($data["measurements"]["archive_deep_page"]["p95_ms"])
+              || !isset($data["measurements"]["publication_detail"]["p95_ms"])
+              || !isset($data["measurements"]["approved_comments"]["p95_ms"])
+          ) {
+              fwrite(STDERR, "Некорректный результат performance benchmark.\n");
+              exit(1);
+          }
+          echo "Performance benchmark smoke OK\n";
+          ' "$output"
