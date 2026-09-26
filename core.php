@@ -19,6 +19,8 @@ $required = [
     '/core/RouteTemplate.php',
     '/core/Router.php',
     '/core/DatabaseManager.php',
+    '/core/Migration.php',
+    '/core/MigrationRunner.php',
     '/core/ApiResponse.php',
     '/core/ApiAccess.php',
     '/core/ApiResource.php',
