@@ -22,7 +22,7 @@ Status: in progress.
 - [x] Installation healthcheck.
 - [ ] Update/backup workflow (verified backup, database/file restore and package staging implemented; apply/rollback orchestration pending).
 - [x] Anonymous full-page caching foundation.
-- [ ] Load-test release gate.
+- [ ] Load-test release gate (repeatable HTTP scenario and query-plan audit implemented; reference hardware measurements and thresholds pending).
 
 ## Phase 1 — Parish MVP
 
