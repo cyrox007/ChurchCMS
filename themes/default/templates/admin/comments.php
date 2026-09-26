@@ -9,10 +9,11 @@
     </header>
 
     <?php if (empty($comments)): ?>
-        <section class="empty-state">
-            <h2>Всё проверено</h2>
-            <p>Новых комментариев сейчас нет.</p>
-        </section>
+        <?= $theme->component('admin.state', [
+            'kind' => 'empty',
+            'title' => 'Всё проверено',
+            'message' => 'Новых комментариев сейчас нет.',
+        ]) ?>
     <?php else: ?>
         <div class="moderation-list">
             <?php foreach ($comments as $comment): ?>
