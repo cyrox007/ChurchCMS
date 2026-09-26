@@ -1,0 +1,10 @@
+{
+  "id": "publications",
+  "name": "Publications",
+  "version": "0.1.0",
+  "runtime": "runtime.php",
+  "capabilities": [
+    "publications.read",
+    "syndication.publications"
+  ]
+}
