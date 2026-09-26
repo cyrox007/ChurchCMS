@@ -55,6 +55,11 @@ final class ThemeContext
         return Csrf::input();
     }
 
+    public function publicFormToken(string $scope): string
+    {
+        return PublicFormToken::issue($scope);
+    }
+
     public function themeId(): string
     {
         return $this->themeId;
