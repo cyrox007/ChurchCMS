@@ -50,6 +50,11 @@ final class ThemeContext
         return Router::getInstance()->url($name, $params);
     }
 
+    public function csrfInput(): string
+    {
+        return Csrf::input();
+    }
+
     public function themeId(): string
     {
         return $this->themeId;
