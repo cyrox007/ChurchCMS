@@ -1,0 +1,320 @@
+name: Проверка центра задач Admin Shell
+
+on:
+  push:
+    branches:
+      - develop
+      - main
+    paths:
+      - 'app/services/AdminTask*.php'
+      - 'app/services/AdminAuthorization.php'
+      - 'app/services/AdminShell.php'
+      - 'app/controllers/AdminController.php'
+      - 'config/routes.php'
+      - 'modules/publications/PublicationAdminTaskProvider.php'
+      - 'modules/publications/PublicationRepository.php'
+      - 'modules/publications/runtime.php'
+      - 'modules/comments/CommentsAdminTaskProvider.php'
+      - 'modules/comments/runtime.php'
+      - 'modules/social/SocialAdminTaskProvider.php'
+      - 'modules/social/SocialPostRepository.php'
+      - 'modules/social/ChannelSyncStateRepository.php'
+      - 'modules/social/runtime.php'
+      - 'themes/default/templates/admin/tasks.php'
+      - 'themes/default/templates/layouts/admin.php'
+      - 'themes/default/assets/css/site.css'
+      - 'themes/default/theme.json'
+      - '.github/workflows/admin-task-center-smoke.yml'
+  pull_request:
+    branches:
+      - develop
+      - main
+    paths:
+      - 'app/services/AdminTask*.php'
+      - 'app/services/AdminAuthorization.php'
+      - 'app/services/AdminShell.php'
+      - 'app/controllers/AdminController.php'
+      - 'config/routes.php'
+      - 'modules/publications/PublicationAdminTaskProvider.php'
+      - 'modules/publications/PublicationRepository.php'
+      - 'modules/publications/runtime.php'
+      - 'modules/comments/CommentsAdminTaskProvider.php'
+      - 'modules/comments/runtime.php'
+      - 'modules/social/SocialAdminTaskProvider.php'
+      - 'modules/social/SocialPostRepository.php'
+      - 'modules/social/ChannelSyncStateRepository.php'
+      - 'modules/social/runtime.php'
+      - 'themes/default/templates/admin/tasks.php'
+      - 'themes/default/templates/layouts/admin.php'
+      - 'themes/default/assets/css/site.css'
+      - 'themes/default/theme.json'
+      - '.github/workflows/admin-task-center-smoke.yml'
+
+permissions:
+  contents: read
+
+jobs:
+  admin-task-center:
+    runs-on: ubuntu-latest
+
+    services:
+      postgres:
+        image: postgres:16
+        env:
+          POSTGRES_DB: churchcms
+          POSTGRES_USER: churchcms
+          POSTGRES_PASSWORD: churchcms
+        ports:
+          - 5432:5432
+        options: >-
+          --health-cmd pg_isready
+          --health-interval 10s
+          --health-timeout 5s
+          --health-retries 5
+
+    steps:
+      - name: Получить исходный код
+        uses: actions/checkout@v4
+
+      - name: Подготовить PHP 8.3
+        uses: shivammathur/setup-php@v2
+        with:
+          php-version: '8.3'
+          extensions: pdo, pdo_pgsql
+          coverage: none
+
+      - name: Проверить PHP и тему
+        shell: bash
+        run: |
+          set -euo pipefail
+          php -l app/services/AdminTaskProvider.php
+          php -l app/services/AdminTaskRegistry.php
+          php -l app/services/AdminTaskCenter.php
+          php -l app/services/AdminAuthorization.php
+          php -l modules/publications/PublicationAdminTaskProvider.php
+          php -l modules/comments/CommentsAdminTaskProvider.php
+          php -l modules/social/SocialAdminTaskProvider.php
+          php -l themes/default/templates/admin/tasks.php
+          php bin/theme-check.php
+
+      - name: Подготовить тестовую установку
+        shell: bash
+        run: |
+          set -euo pipefail
+          mkdir -p storage/cache storage/logs storage/sessions storage/rate-limits storage/uploads
+          cat > config/local.php <<'PHP'
+          <?php
+
+          declare(strict_types=1);
+
+          return [
+              'installation' => [
+                  'completed' => true,
+              ],
+              'security' => [
+                  'secret_key' => base64_encode(str_repeat('t', 32)),
+              ],
+              'database' => [
+                  'driver' => 'pgsql',
+                  'host' => '127.0.0.1',
+                  'port' => 5432,
+                  'database' => 'churchcms',
+                  'username' => 'churchcms',
+                  'password' => 'churchcms',
+              ],
+          ];
+          PHP
+          php bin/migrate.php
+
+      - name: Проверить реальные задачи и RBAC
+        shell: bash
+        run: |
+          php -r '
+          require "core.php";
+
+          $pdo = \ChurchCMS\Core\DatabaseManager::getInstance()->connection();
+          $now = gmdate("Y-m-d H:i:s");
+
+          $user = $pdo->prepare(
+              "INSERT INTO admin_users (
+                  public_id, username, password_hash, display_name, status, created_at, updated_at
+               ) VALUES (
+                  :public_id, :username, :password_hash, :display_name, :status, :created_at, :updated_at
+               ) RETURNING id"
+          );
+          $user->execute([
+              "public_id" => "30000000-0000-4000-8000-000000000001",
+              "username" => "tasks-smoke",
+              "password_hash" => password_hash("smoke-password", PASSWORD_DEFAULT),
+              "display_name" => "Оператор задач",
+              "status" => "active",
+              "created_at" => $now,
+              "updated_at" => $now,
+          ]);
+          $userId = (int) $user->fetchColumn();
+          $roleId = (int) $pdo->query(
+              "SELECT id FROM roles WHERE role_key = '''superadmin'''"
+          )->fetchColumn();
+          $assign = $pdo->prepare(
+              "INSERT INTO admin_user_roles (user_id, role_id) VALUES (:user_id, :role_id)"
+          );
+          $assign->execute(["user_id" => $userId, "role_id" => $roleId]);
+
+          $publicId = \ChurchCMS\Modules\Publications\PublicationService::fromDatabase()
+              ->createDraft("Редакционный черновик");
+          $publicationIdStatement = $pdo->prepare(
+              "SELECT id FROM publications WHERE public_id = :public_id"
+          );
+          $publicationIdStatement->execute(["public_id" => $publicId]);
+          $publicationId = (int) $publicationIdStatement->fetchColumn();
+
+          $comment = $pdo->prepare(
+              "INSERT INTO publication_comments (
+                  public_id, publication_id, status, display_name, body_text, created_at
+               ) VALUES (
+                  :public_id, :publication_id, :status, :display_name, :body_text, :created_at
+               )"
+          );
+          $comment->execute([
+              "public_id" => "30000000-0000-4000-8000-000000000002",
+              "publication_id" => $publicationId,
+              "status" => "pending",
+              "display_name" => "Посетитель",
+              "body_text" => "Комментарий ждёт модерации",
+              "created_at" => $now,
+          ]);
+
+          $connection = $pdo->prepare(
+              "INSERT INTO social_connections (
+                  public_id, provider, name, target_ref, token_encrypted,
+                  settings_json, enabled, created_at, updated_at
+               ) VALUES (
+                  :public_id, :provider, :name, :target_ref, :token_encrypted,
+                  :settings_json, :enabled, :created_at, :updated_at
+               ) RETURNING id"
+          );
+          $connection->execute([
+              "public_id" => "30000000-0000-4000-8000-000000000003",
+              "provider" => "smoke",
+              "name" => "Тестовый канал",
+              "target_ref" => "smoke-target",
+              "token_encrypted" => "smoke-token",
+              "settings_json" => "{}",
+              "enabled" => 1,
+              "created_at" => $now,
+              "updated_at" => $now,
+          ]);
+          $connectionId = (int) $connection->fetchColumn();
+
+          $failed = $pdo->prepare(
+              "INSERT INTO publication_social_posts (
+                  public_id, publication_id, connection_id, enabled, status,
+                  attempts, last_error, queued_at, created_at, updated_at
+               ) VALUES (
+                  :public_id, :publication_id, :connection_id, :enabled, :status,
+                  :attempts, :last_error, :queued_at, :created_at, :updated_at
+               )"
+          );
+          $failed->execute([
+              "public_id" => "30000000-0000-4000-8000-000000000004",
+              "publication_id" => $publicationId,
+              "connection_id" => $connectionId,
+              "enabled" => 1,
+              "status" => "failed",
+              "attempts" => 3,
+              "last_error" => "smoke failure",
+              "queued_at" => $now,
+              "created_at" => $now,
+              "updated_at" => $now,
+          ]);
+
+          $request = new \ChurchCMS\Core\Request();
+          $request->setAttribute("admin.user", [
+              "id" => $userId,
+              "username" => "tasks-smoke",
+              "display_name" => "Оператор задач",
+          ]);
+
+          $summary = \ChurchCMS\App\Services\AdminTaskCenter::summary($request);
+          $providers = array_column($summary["tasks"], "provider");
+
+          if (
+              ($summary["count"] ?? 0) !== 3
+              || $providers !== ["social", "comments", "publications"]
+          ) {
+              fwrite(
+                  STDERR,
+                  "Центр задач вернул неожиданный результат: "
+                  . json_encode($summary, JSON_UNESCAPED_UNICODE | JSON_UNESCAPED_SLASHES)
+                  . "\n",
+              );
+              exit(1);
+          }
+
+          $denied = new \ChurchCMS\Core\Request();
+          $denied->setAttribute("admin.user", ["id" => 999999]);
+          $empty = \ChurchCMS\App\Services\AdminTaskCenter::summary($denied);
+
+          if (($empty["count"] ?? -1) !== 0 || ($empty["tasks"] ?? null) !== []) {
+              fwrite(STDERR, "RBAC не скрыл недоступные задачи.\n");
+              exit(1);
+          }
+
+          echo "Admin task center RBAC smoke OK\n";
+          '
+
+      - name: Проверить экран и счётчик задач
+        shell: bash
+        run: |
+          php -r '
+          require "core.php";
+          $renderer = \ChurchCMS\Core\ThemeRenderer::fromConfig();
+          $tasks = [[
+              "provider" => "comments",
+              "id" => "moderation",
+              "title" => "Комментарии ждут проверки",
+              "description" => "Один комментарий",
+              "count" => 1,
+              "severity" => "warning",
+              "route" => "admin_comments",
+              "route_params" => [],
+          ]];
+
+          $content = $renderer->capture("admin.tasks", [
+              "tasks" => $tasks,
+              "taskCount" => 1,
+          ]);
+
+          if (
+              !str_contains($content, "Комментарии ждут проверки")
+              || !str_contains($content, "/admin/comments")
+          ) {
+              fwrite(STDERR, "Экран центра задач не отрисовал задачу.\n");
+              exit(1);
+          }
+
+          $layout = $renderer->capture("layout.admin", [
+              "title" => "Задачи",
+              "siteName" => "Тестовый приход",
+              "adminUser" => ["display_name" => "Оператор"],
+              "adminSection" => "tasks",
+              "adminNavigation" => [],
+              "adminNavigationBadges" => [],
+              "adminSearchQuery" => "",
+              "adminTaskCount" => 3,
+              "content" => $content,
+          ]);
+
+          foreach ([
+              "/admin/tasks",
+              "admin-task-center-link__badge",
+              ">3<",
+          ] as $expected) {
+              if (!str_contains($layout, $expected)) {
+                  fwrite(STDERR, "Admin Shell task link не содержит: {$expected}\n");
+                  exit(1);
+              }
+          }
+
+          echo "Admin task center render smoke OK\n";
+          '
