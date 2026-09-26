@@ -68,3 +68,75 @@ jobs:
 
       - name: Validate themes
         run: php bin/theme-check.php
+
+
+  backup-smoke:
+    needs: lint
+    runs-on: ubuntu-latest
+
+    services:
+      postgres:
+        image: postgres:16
+        env:
+          POSTGRES_DB: churchcms
+          POSTGRES_USER: churchcms
+          POSTGRES_PASSWORD: churchcms
+        ports:
+          - 5432:5432
+        options: >-
+          --health-cmd pg_isready
+          --health-interval 10s
+          --health-timeout 5s
+          --health-retries 5
+
+    steps:
+      - name: Получить исходный код
+        uses: actions/checkout@v4
+
+      - name: Подготовить PHP 8.3
+        uses: shivammathur/setup-php@v2
+        with:
+          php-version: '8.3'
+          extensions: pdo, pdo_pgsql
+          coverage: none
+
+      - name: Подготовить тестовую установку
+        shell: bash
+        run: |
+          set -euo pipefail
+          mkdir -p storage/cache storage/logs storage/sessions storage/rate-limits storage/uploads
+          printf 'backup-smoke\n' > storage/uploads/smoke.txt
+          cat > config/local.php <<'PHP'
+          <?php
+
+          declare(strict_types=1);
+
+          return [
+              'installation' => [
+                  'completed' => true,
+              ],
+              'security' => [
+                  'secret_key' => base64_encode(str_repeat('b', 32)),
+              ],
+              'database' => [
+                  'driver' => 'pgsql',
+                  'host' => '127.0.0.1',
+                  'port' => 5432,
+                  'database' => 'churchcms',
+                  'username' => 'churchcms',
+                  'password' => 'churchcms',
+              ],
+          ];
+          PHP
+          php bin/migrate.php
+
+      - name: Создать и проверить резервную копию
+        shell: bash
+        run: |
+          set -euo pipefail
+          backup_root="$RUNNER_TEMP/churchcms-backups"
+          php bin/backup.php create --path="$backup_root"
+          manifest="$(find "$backup_root" -mindepth 2 -maxdepth 2 -name manifest.json -type f -print -quit)"
+          test -n "$manifest"
+          backup_id="$(basename "$(dirname "$manifest")")"
+          php bin/backup.php verify "$backup_id" --path="$backup_root"

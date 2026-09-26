@@ -33,6 +33,10 @@ return [
             'stale_while_revalidate_seconds' => 300,
         ],
     ],
+    'operations' => [
+        // По умолчанию резервные копии лежат рядом с каталогом сайта, а не внутри публичного корня.
+        'backup_path' => dirname(__DIR__, 2) . '/' . basename(dirname(__DIR__)) . '-backups',
+    ],
     'database' => [
         'driver' => 'pgsql',
         'host' => '127.0.0.1',

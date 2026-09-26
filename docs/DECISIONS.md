@@ -136,3 +136,14 @@ The existing dashboard/cards and individual admin templates are an implementatio
 All administrative modules must render inside a shared Admin Shell with common navigation, site/user context, task notifications, consistent actions/states and responsive behavior. Modules may contribute navigation/actions through contracts, but may not create independent incompatible administration layouts.
 
 The shell is optimized for non-technical parish and theological-school operators: domain language, minimal decisions per screen, progressive disclosure and obvious recovery paths take priority over exposing CMS internals.
+
+
+## D-022 — Резервная копия предшествует изменению установленной системы
+
+Принято.
+
+ChurchCMS не должна изменять файлы установленной системы или применять новые миграции в рамках штатного обновления, пока не создана и не проверена резервная копия.
+
+Копии по умолчанию хранятся вне публичного web-root. Базовый механизм не зависит от внешних `pg_dump`/`mysqldump`: логический снимок PostgreSQL/MySQL строится через PDO и сопровождается манифестом с SHA-256.
+
+Первый инкремент покрывает создание и проверку снимка конфигурации, загрузок и данных БД. Восстановление, staging пакета обновления и автоматический откат реализуются отдельными безопасными инкрементами до закрытия пункта Update/backup workflow.

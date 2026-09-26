@@ -27,6 +27,14 @@ Priority is ordered within each section.
 - [x] friendly recovery messages;
 - [x] installation healthcheck;
 - [ ] updater/backup workflow after installer MVP;
+  - [x] безопасный каталог резервных копий вне публичного корня;
+  - [x] манифест и SHA-256 проверка целостности;
+  - [x] CLI-снимок config/local.php, uploads и логического дампа PostgreSQL/MySQL через PDO;
+  - [x] PostgreSQL smoke-проверка создания/проверки резервной копии в CI;
+  - [ ] восстановление данных и проверка восстановления;
+  - [ ] staging/проверка пакета обновления;
+  - [ ] обязательная резервная копия перед миграциями/заменой файлов и сценарий отката;
+  - [ ] мастер обновления/резервного копирования в Admin Shell;
 - [ ] replace dashboard-card prototype with unified Admin Shell;
 - [ ] persistent/collapsible admin navigation;
 - [ ] shared admin header with site context and current user;

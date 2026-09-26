@@ -44,6 +44,26 @@ Pending:
 
 - update/backup wizard.
 
+## Обновления и резервные копии
+
+Реализовано:
+
+- каталог резервных копий по умолчанию находится рядом с каталогом сайта, а не внутри публичного web-root;
+- `php bin/backup.php create` создаёт снимок `config/local.php`, `storage/uploads` и данных всех таблиц;
+- дамп БД формируется через PDO без обязательных `pg_dump`/`mysqldump`;
+- значения строк БД сохраняются без потери бинарных данных как base64-or-null;
+- манифест содержит версию формата, версию ChurchCMS, список файлов/таблиц, размеры и SHA-256;
+- создание считается успешным только после внутренней проверки манифеста и контрольных сумм;
+- `php bin/backup.php verify <id>` повторно проверяет готовую копию;
+- PostgreSQL CI smoke создаёт тестовую схему миграциями и проверяет резервную копию.
+
+Остаётся:
+
+- восстановление из резервной копии, включая корректное восстановление sequence/auto_increment;
+- staging и проверка пакета обновления;
+- связка «проверенная копия → обновление файлов → миграции → healthcheck → откат при ошибке»;
+- простой интерфейс в Admin Shell без необходимости знать пути и команды.
+
 ## Security / administration
 
 Implemented:
@@ -239,5 +259,6 @@ Next administration milestone:
 - `docs/SYNDICATION.md`
 - `docs/COMMENTS.md`
 - `docs/INSTALLATION.md`
+- `docs/BACKUPS.md`
 
 Update this file at the end of every substantial implementation increment.
