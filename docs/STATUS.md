@@ -15,10 +15,10 @@ Implemented:
 - native autoloader;
 - router/request/response;
 - PDO PostgreSQL/MySQL infrastructure;
-- migration runner;
+- migration runner;\n- database-free migration CLI validation (`php bin/migrate.php validate`);
 - module manifests/runtime providers/capabilities;
 - theme manifests and inheritance;
-- PHP 8.3 lint + theme validation CI.
+- PHP 8.3 lint + migration validation + theme validation CI.
 
 ## Installation
 
