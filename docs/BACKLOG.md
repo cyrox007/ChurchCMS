@@ -111,7 +111,8 @@ Priority is ordered within each section.
 ## P2 — Comments
 
 - optional comments module;
-- per-publication comments switch;
+- [x] per-publication comments_enabled storage/domain/service switch;
+- [ ] editor toggle for comments in publication form;
 - premoderation by default;
 - moderation queue;
 - public comment rate limiting;
