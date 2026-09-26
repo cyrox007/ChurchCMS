@@ -10,13 +10,9 @@ use ChurchCMS\Core\ThemeRenderer;
 
 final class PublicationsController
 {
-    public function __construct(
-        private readonly PublicationRepository $repository,
-    ) {
-    }
-
     public function index(Request $request): never
     {
+        $repository = PublicationRepository::fromDatabase();
         $page = max(1, (int) $request->get('page', 1));
         $perPage = 12;
         $offset = ($page - 1) * $perPage;
@@ -24,10 +20,10 @@ final class PublicationsController
         ThemeRenderer::fromConfig()->page('publication.index', [
             'title' => 'Публикации',
             'heading' => 'Публикации',
-            'publications' => $this->repository->published('default', $perPage, $offset),
+            'publications' => $repository->published('default', $perPage, $offset),
             'page' => $page,
             'perPage' => $perPage,
-            'total' => $this->repository->countPublished('default'),
+            'total' => $repository->countPublished('default'),
         ]);
     }
 
@@ -37,7 +33,7 @@ final class PublicationsController
             Response::text('404 Not Found', 404);
         }
 
-        $publication = $this->repository->findPublishedBySlug($slug);
+        $publication = PublicationRepository::fromDatabase()->findPublishedBySlug($slug);
         if ($publication === null) {
             Response::text('404 Not Found', 404);
         }
