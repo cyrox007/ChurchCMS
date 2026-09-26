@@ -1,0 +1,139 @@
+name: Проверка состояний Admin Shell
+
+on:
+  push:
+    branches:
+      - develop
+      - main
+    paths:
+      - 'themes/default/templates/admin/state.php'
+      - 'themes/default/templates/admin/**'
+      - 'themes/default/assets/css/site.css'
+      - 'themes/default/theme.json'
+      - '.github/workflows/admin-states-smoke.yml'
+  pull_request:
+    branches:
+      - develop
+      - main
+    paths:
+      - 'themes/default/templates/admin/state.php'
+      - 'themes/default/templates/admin/**'
+      - 'themes/default/assets/css/site.css'
+      - 'themes/default/theme.json'
+      - '.github/workflows/admin-states-smoke.yml'
+
+permissions:
+  contents: read
+
+jobs:
+  admin-states:
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Получить исходный код
+        uses: actions/checkout@v4
+
+      - name: Подготовить PHP 8.3
+        uses: shivammathur/setup-php@v2
+        with:
+          php-version: '8.3'
+          coverage: none
+
+      - name: Проверить PHP и тему
+        shell: bash
+        run: |
+          set -euo pipefail
+          php -l themes/default/templates/admin/state.php
+          php -l themes/default/templates/admin/comments.php
+          php -l themes/default/templates/admin/publications/index.php
+          php -l themes/default/templates/admin/publications/editor.php
+          php bin/theme-check.php
+
+      - name: Проверить варианты состояния
+        shell: bash
+        run: |
+          set -euo pipefail
+          mkdir -p storage/sessions storage/cache storage/logs storage/rate-limits storage/uploads
+          php -r '
+          require "core.php";
+          $renderer = \ChurchCMS\Core\ThemeRenderer::fromConfig();
+
+          $cases = [
+              "empty" => [
+                  "title" => "Пусто",
+                  "message" => "Нечего показывать.",
+                  "role" => null,
+                  "busy" => false,
+              ],
+              "success" => [
+                  "title" => "Готово",
+                  "message" => "Изменения сохранены.",
+                  "role" => "status",
+                  "busy" => false,
+              ],
+              "error" => [
+                  "title" => "Ошибка",
+                  "message" => "Операция не выполнена.",
+                  "role" => "alert",
+                  "busy" => false,
+              ],
+              "loading" => [
+                  "title" => "Загрузка",
+                  "message" => "Подождите.",
+                  "role" => "status",
+                  "busy" => true,
+              ],
+          ];
+
+          foreach ($cases as $kind => $case) {
+              $html = $renderer->capture("admin.state", [
+                  "props" => [
+                      "kind" => $kind,
+                      "title" => $case["title"],
+                      "message" => $case["message"],
+                      "action_href" => $kind === "empty" ? "/admin/example" : "",
+                      "action_label" => $kind === "empty" ? "Продолжить" : "",
+                  ],
+                  "slots" => [],
+              ]);
+
+              foreach ([
+                  "admin-state--{$kind}",
+                  $case["title"],
+                  $case["message"],
+              ] as $expected) {
+                  if (!str_contains($html, $expected)) {
+                      fwrite(STDERR, "Состояние {$kind} не содержит: {$expected}\n");
+                      exit(1);
+                  }
+              }
+
+              if (
+                  $case["role"] !== null
+                  && !str_contains($html, "role=\"" . $case["role"] . "\"")
+              ) {
+                  fwrite(STDERR, "Состояние {$kind} имеет неверную семантику role.\n");
+                  exit(1);
+              }
+
+              if ($case["busy"] && !str_contains($html, "aria-busy=\"true\"")) {
+                  fwrite(STDERR, "Loading state не помечен aria-busy.\n");
+                  exit(1);
+              }
+          }
+
+          echo "Admin states smoke OK\n";
+          '
+
+      - name: Проверить использование общего компонента
+        shell: bash
+        run: |
+          set -euo pipefail
+          grep -q "component('admin.state'" themes/default/templates/admin/comments.php
+          grep -q "component('admin.state'" themes/default/templates/admin/publications/index.php
+          grep -q "component('admin.state'" themes/default/templates/admin/publications/editor.php
+
+          if grep -q 'class="empty-state"'             themes/default/templates/admin/comments.php             themes/default/templates/admin/publications/index.php; then
+            echo "В admin-шаблонах осталось старое пустое состояние." >&2
+            exit 1
+          fi
