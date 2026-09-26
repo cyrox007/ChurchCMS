@@ -1,0 +1,101 @@
+name: Проверка staging обновлений
+
+on:
+  push:
+    branches:
+      - develop
+      - main
+    paths:
+      - 'core/UpdatePackageStager.php'
+      - 'bin/update.php'
+      - 'config/app.php'
+      - '.github/workflows/update-staging-smoke.yml'
+  pull_request:
+    branches:
+      - develop
+      - main
+    paths:
+      - 'core/UpdatePackageStager.php'
+      - 'bin/update.php'
+      - 'config/app.php'
+      - '.github/workflows/update-staging-smoke.yml'
+
+permissions:
+  contents: read
+
+jobs:
+  update-staging-smoke:
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Получить исходный код
+        uses: actions/checkout@v4
+
+      - name: Подготовить PHP 8.3
+        uses: shivammathur/setup-php@v2
+        with:
+          php-version: '8.3'
+          coverage: none
+
+      - name: Подготовить тестовый пакет
+        shell: bash
+        run: |
+          set -euo pipefail
+          package="$RUNNER_TEMP/churchcms-update-package"
+          mkdir -p "$package/core"
+          cp core/Uuid.php "$package/core/Uuid.php"
+
+          php -r '
+          $config = require "config/app.php";
+          $package = $argv[1];
+          $file = $package . "/core/Uuid.php";
+          $manifest = [
+              "format" => "churchcms-update-v1",
+              "from_version" => (string) $config["app"]["version"],
+              "version" => "999.0.0-ci",
+              "php_min" => "8.3",
+              "files" => [[
+                  "path" => "core/Uuid.php",
+                  "bytes" => filesize($file),
+                  "sha256" => hash_file("sha256", $file),
+              ]],
+              "deleted_files" => [],
+          ];
+          file_put_contents(
+              $package . "/manifest.json",
+              json_encode(
+                  $manifest,
+                  JSON_THROW_ON_ERROR | JSON_PRETTY_PRINT | JSON_UNESCAPED_SLASHES
+              ) . PHP_EOL
+          );
+          ' "$package"
+
+      - name: Проверить staging валидного пакета
+        shell: bash
+        run: |
+          set -euo pipefail
+          package="$RUNNER_TEMP/churchcms-update-package"
+          staging="$RUNNER_TEMP/churchcms-update-staging"
+
+          php bin/update.php stage "$package" --path="$staging"
+
+          manifest="$(find "$staging" -mindepth 2 -maxdepth 2 -name manifest.json -type f -print -quit)"
+          test -n "$manifest"
+          stage_dir="$(dirname "$manifest")"
+          test -f "$stage_dir/payload/core/Uuid.php"
+          cmp "$package/core/Uuid.php" "$stage_dir/payload/core/Uuid.php"
+
+      - name: Отклонить повреждённый пакет
+        shell: bash
+        run: |
+          set -euo pipefail
+          package="$RUNNER_TEMP/churchcms-update-package"
+          staging="$RUNNER_TEMP/churchcms-update-staging"
+          printf '\n// повреждение после формирования manifest\n' >> "$package/core/Uuid.php"
+
+          if php bin/update.php stage "$package" --path="$staging"; then
+            echo "Повреждённый пакет ошибочно прошёл staging." >&2
+            exit 1
+          fi
+
+          echo "Повреждённый пакет корректно отклонён"
