@@ -7,6 +7,7 @@ namespace ChurchCMS\Modules\Seo;
 use ChurchCMS\Core\Config;
 use ChurchCMS\Core\DatabaseManager;
 use ChurchCMS\Core\SeoRenderer;
+use ChurchCMS\Core\PageCache;
 use ChurchCMS\Modules\Publications\Publication;
 use PDO;
 
@@ -107,6 +108,8 @@ final class PublicationSeoRepository
             'robots_follow' => $data['robots_follow'] ? 1 : 0,
             'updated_at' => $now,
         ]);
+
+        PageCache::bumpVersion();
     }
 
     /** @return array<string,mixed> */
