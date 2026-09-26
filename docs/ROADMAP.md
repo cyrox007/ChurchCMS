@@ -17,8 +17,8 @@ Status: in progress.
 - [x] Native migration runner.
 - [x] Security/session/CSRF foundation.
 - [x] Administrator authentication and RBAC foundation.
-- [ ] Audit/security event log.
-- [ ] Friendly four-step web installer.
+- [x] Audit/security event log foundation.
+- [x] Friendly four-step web installer.
 - [ ] Installation healthcheck.
 - [ ] Update/backup workflow.
 
