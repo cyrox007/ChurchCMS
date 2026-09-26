@@ -11,7 +11,7 @@ Priority is ordered within each section.
 - [x] Publication partner API/scopes (incremental updated_since sync).
 - [x] Publication syndication provider.
 - [x] Publication distribution target storage/service; admin UI pending Auth/RBAC.
-- [ ] Migration CLI validation.
+- [x] Migration CLI validation.
 - [x] PHP 8.3 lint/theme validation CI added; runtime DB-backed smoke test pending test database.
 
 ## P0 — Installation and operator UX
