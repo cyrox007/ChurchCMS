@@ -150,6 +150,40 @@ jobs:
           PHP
           php bin/migrate.php
 
+      - name: Проверить runtime с реальной БД
+        shell: bash
+        run: |
+          php -r '
+          require "core.php";
+          $database = \ChurchCMS\Core\DatabaseManager::getInstance();
+          $pdo = $database->connection();
+
+          if ((string) $pdo->getAttribute(PDO::ATTR_DRIVER_NAME) !== "pgsql") {
+              fwrite(STDERR, "Unexpected database driver.\n");
+              exit(1);
+          }
+
+          $health = (new \ChurchCMS\Core\InstallationHealthCheck(
+              $database,
+              CHURCHCMS_ROOT,
+          ))->check();
+
+          if (($health["ready"] ?? false) !== true) {
+              fwrite(STDERR, "Installed runtime is not ready: " . json_encode($health, JSON_UNESCAPED_SLASHES) . "\n");
+              exit(1);
+          }
+
+          $expected = (new \ChurchCMS\Core\MigrationRunner($database, CHURCHCMS_ROOT))->validate();
+          $applied = $pdo->query("SELECT migration_id FROM churchcms_migrations ORDER BY migration_id")->fetchAll(PDO::FETCH_COLUMN);
+
+          if ($applied !== $expected) {
+              fwrite(STDERR, "Applied migrations do not match discovered migrations.\n");
+              exit(1);
+          }
+
+          echo "Database-backed runtime smoke OK\n";
+          '
+
       - name: Создать и проверить резервную копию
         shell: bash
         run: |
