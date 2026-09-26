@@ -387,6 +387,10 @@ final class BackupManager
             return null;
         }
 
+        if (is_bool($value)) {
+            return base64_encode($value ? '1' : '0');
+        }
+
         if (is_resource($value)) {
             $bytes = stream_get_contents($value);
             if (!is_string($bytes)) {
