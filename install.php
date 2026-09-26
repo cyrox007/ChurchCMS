@@ -209,6 +209,7 @@ function requirements(string $root): array
         'PostgreSQL или MySQL' => extension_loaded('pdo_pgsql') || extension_loaded('pdo_mysql'),
         'DOM' => extension_loaded('dom'),
         'Fileinfo' => extension_loaded('fileinfo'),
+        'OpenSSL для безопасного хранения токенов интеграций' => extension_loaded('openssl'),
         'Безопасный генератор случайных данных' => function_exists('random_bytes'),
         'Безопасное хранение паролей' => function_exists('password_hash') && function_exists('password_verify'),
         'Можно записать настройки' => is_dir($root . '/config') && is_writable($root . '/config'),
@@ -284,6 +285,9 @@ if (($_SERVER['REQUEST_METHOD'] ?? 'GET') === 'POST') {
                 ],
                 'app' => [
                     'url' => $siteUrl,
+                ],
+                'security' => [
+                    'secret_key' => base64_encode(random_bytes(32)),
                 ],
                 'site' => [
                     'name' => $siteName,
