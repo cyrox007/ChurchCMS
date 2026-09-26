@@ -59,7 +59,14 @@ jobs:
           grep -q 'churchcms.admin.sidebar.collapsed' themes/default/assets/js/admin-shell.js
           grep -q 'admin-frame--collapsed' themes/default/assets/js/admin-shell.js
           grep -q 'prefers-reduced-motion' themes/default/assets/css/site.css
-          grep -q '"version": "0.8.2"' themes/default/theme.json
+          php -r '
+          $theme = json_decode(file_get_contents("themes/default/theme.json"), true, 16, JSON_THROW_ON_ERROR);
+          $version = (string) ($theme["version"] ?? "");
+          if (preg_match("/^[0-9]+\\.[0-9]+\\.[0-9]+$/D", $version) !== 1) {
+              fwrite(STDERR, "Версия темы имеет некорректный формат.\\n");
+              exit(1);
+          }
+          '
 
       - name: Отрисовать layout с toggle
         shell: bash
