@@ -45,5 +45,26 @@ jobs:
       - name: Validate migrations
         run: php bin/migrate.php validate
 
+      - name: Smoke installation healthcheck
+        shell: bash
+        run: |
+          php -r '
+          require "core.php";
+          $health = (new \\ChurchCMS\\Core\\InstallationHealthCheck(
+              \\ChurchCMS\\Core\\DatabaseManager::getInstance(),
+              CHURCHCMS_ROOT,
+          ))->check();
+          if (
+              ($health["ready"] ?? null) !== false
+              || ($health["checks"]["installation"] ?? null) !== false
+              || ($health["checks"]["database"] ?? null) !== false
+              || ($health["checks"]["migrations"] ?? null) !== true
+          ) {
+              fwrite(STDERR, "Unexpected fresh-checkout health state.\n");
+              exit(1);
+          }
+          echo "Installation healthcheck smoke OK\n";
+          '
+
       - name: Validate themes
         run: php bin/theme-check.php
