@@ -17,6 +17,8 @@ final class SeoRenderer
         $canonical = self::absoluteUrl((string) ($seo['canonical'] ?? ''));
         $image = self::absoluteUrl((string) ($seo['image'] ?? Config::get('seo.default_image', '')));
         $type = trim((string) ($seo['og_type'] ?? 'website'));
+        $ogTitle = trim((string) ($seo['og_title'] ?? $title));
+        $ogDescription = trim((string) ($seo['og_description'] ?? $description));
         $robots = (($seo['index'] ?? true) === false ? 'noindex' : 'index')
             . ', '
             . (($seo['follow'] ?? true) === false ? 'nofollow' : 'follow');
@@ -38,7 +40,7 @@ final class SeoRenderer
             $tags[] = '<link rel="canonical" href="' . self::e($canonical) . '">';
         }
 
-        $tags[] = self::meta('property', 'og:title', $title);
+        $tags[] = self::meta('property', 'og:title', $ogTitle);
         $tags[] = self::meta('property', 'og:type', $type);
         $tags[] = self::meta('property', 'og:site_name', $siteName);
         $tags[] = self::meta('property', 'og:locale', (string) ($seo['locale'] ?? 'ru_RU'));
@@ -46,8 +48,8 @@ final class SeoRenderer
         if ($canonical !== '') {
             $tags[] = self::meta('property', 'og:url', $canonical);
         }
-        if ($description !== '') {
-            $tags[] = self::meta('property', 'og:description', $description);
+        if ($ogDescription !== '') {
+            $tags[] = self::meta('property', 'og:description', $ogDescription);
         }
         if ($image !== '') {
             $tags[] = self::meta('property', 'og:image', $image);
@@ -57,9 +59,9 @@ final class SeoRenderer
             $tags[] = self::meta('name', 'twitter:card', 'summary');
         }
 
-        $tags[] = self::meta('name', 'twitter:title', $title);
-        if ($description !== '') {
-            $tags[] = self::meta('name', 'twitter:description', $description);
+        $tags[] = self::meta('name', 'twitter:title', $ogTitle);
+        if ($ogDescription !== '') {
+            $tags[] = self::meta('name', 'twitter:description', $ogDescription);
         }
 
         foreach ([
