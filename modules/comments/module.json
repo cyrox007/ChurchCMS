@@ -1,0 +1,10 @@
+{
+  "id": "comments",
+  "name": "Publication Comments",
+  "version": "0.1.0",
+  "runtime": "runtime.php",
+  "capabilities": [
+    "comments.publication",
+    "comments.moderation"
+  ]
+}
