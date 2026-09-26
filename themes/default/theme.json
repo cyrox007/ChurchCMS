@@ -1,7 +1,7 @@
 {
   "id": "default",
   "name": "ChurchCMS Default",
-  "version": "0.6.0",
+  "version": "0.7.0",
   "profiles": [
     "small-parish",
     "parish",
