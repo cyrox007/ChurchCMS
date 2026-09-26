@@ -21,6 +21,7 @@ $required = [
     '/core/DatabaseManager.php',
     '/core/ApiResponse.php',
     '/core/ApiAccess.php',
+    '/core/ApiResource.php',
     '/core/ApiTokenAuthenticator.php',
     '/core/RateLimiter.php',
     '/core/ModuleManifest.php',
