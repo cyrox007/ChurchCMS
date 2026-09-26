@@ -17,10 +17,12 @@ use ChurchCMS\App\Middlewares\AuthRateLimitMiddleware;
 use ChurchCMS\App\Middlewares\CsrfMiddleware;
 use ChurchCMS\App\Middlewares\RequireAdminMiddleware;
 use ChurchCMS\App\Middlewares\SecurityHeadersMiddleware;
+use ChurchCMS\App\Middlewares\PublicPageCacheMiddleware;
 use ChurchCMS\Core\Router;
 
 $router = Router::getInstance();
 $router->addGlobalMiddleware(SecurityHeadersMiddleware::class);
+$router->addGlobalMiddleware(PublicPageCacheMiddleware::class);
 
 $router->add('GET', '/', [HealthController::class, 'index'], [], 'home');
 $router->add('GET', '/health', [HealthController::class, 'health'], [], 'health');
