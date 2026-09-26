@@ -26,7 +26,16 @@ Priority is ordered within each section.
 - [x] installer lock after success;
 - [x] friendly recovery messages;
 - [ ] installation healthcheck;
-- [ ] updater/backup workflow after installer MVP.
+- [ ] updater/backup workflow after installer MVP;
+- [ ] replace dashboard-card prototype with unified Admin Shell;
+- [ ] persistent/collapsible admin navigation;
+- [ ] shared admin header with site context and current user;
+- [ ] global admin search foundation;
+- [ ] task/notification center for pending moderation, failed sync and editorial work;
+- [ ] responsive admin shell for tablet/mobile;
+- [ ] module navigation registration contract;
+- [ ] unified empty/error/success/loading states across admin screens;
+- [ ] keyboard/focus/accessibility audit for administration.
 
 ## P1 — Core security
 
