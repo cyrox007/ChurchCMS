@@ -26,6 +26,13 @@ return [
         'dispatch_batch_size' => 20,
         'max_attempts' => 5,
     ],
+    'performance' => [
+        'page_cache' => [
+            'enabled' => true,
+            'ttl_seconds' => 60,
+            'stale_while_revalidate_seconds' => 300,
+        ],
+    ],
     'database' => [
         'driver' => 'pgsql',
         'host' => '127.0.0.1',
