@@ -1099,3 +1099,221 @@ svg {
         width: 100%;
     }
 }
+
+
+/* Publication administration */
+.admin-heading__actions,
+.editor-actions,
+.publication-state-actions {
+    display: flex;
+    flex-wrap: wrap;
+    gap: .7rem;
+}
+
+.editorial-list {
+    display: grid;
+    gap: .75rem;
+}
+
+.editorial-item {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 1.25rem;
+    padding: 1.25rem;
+    border: 1px solid var(--line);
+    border-radius: var(--radius-md);
+    background: var(--paper);
+}
+
+.editorial-item__main {
+    min-width: 0;
+}
+
+.editorial-item__meta {
+    display: flex;
+    flex-wrap: wrap;
+    align-items: center;
+    gap: .4rem .8rem;
+    color: var(--ink-500);
+    font-size: .8rem;
+}
+
+.editorial-item h2 {
+    margin: .55rem 0 0;
+    color: var(--navy-950);
+    font-family: var(--font-display);
+    font-size: 1.35rem;
+}
+
+.editorial-item p {
+    margin: .45rem 0 0;
+    color: var(--ink-700);
+}
+
+.status-pill {
+    display: inline-flex;
+    padding: .25rem .55rem;
+    border-radius: 999px;
+    font-size: .74rem;
+    font-weight: 800;
+}
+
+.status-pill--published {
+    color: #255f37;
+    background: #e9f5ed;
+}
+
+.status-pill--draft,
+.status-pill--review,
+.status-pill--scheduled {
+    color: #6d501f;
+    background: #fff5dd;
+}
+
+.status-pill--withdrawn {
+    color: #6f2835;
+    background: #fbecef;
+}
+
+.publication-editor {
+    display: grid;
+    gap: 1rem;
+}
+
+.editor-card {
+    padding: clamp(1.2rem, 3vw, 1.7rem);
+    border: 1px solid var(--line);
+    border-radius: var(--radius-md);
+    background: var(--paper);
+}
+
+.editor-card--primary {
+    padding: clamp(1.4rem, 4vw, 2.2rem);
+}
+
+.editor-card h2 {
+    margin: 0;
+    color: var(--navy-950);
+    font-family: var(--font-display);
+    font-size: 1.35rem;
+}
+
+.editor-card__hint {
+    margin: .4rem 0 1rem;
+    color: var(--ink-700);
+}
+
+.editor-grid {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 1rem;
+}
+
+.field--title input {
+    min-height: 3.4rem;
+    font-family: var(--font-display);
+    font-size: clamp(1.25rem, 2vw, 1.6rem);
+}
+
+.editor-body {
+    min-height: 24rem !important;
+    line-height: 1.65;
+}
+
+.setting-row {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 2rem;
+}
+
+.setting-row p {
+    margin: .4rem 0 0;
+    max-width: 42rem;
+    color: var(--ink-700);
+}
+
+.switch {
+    flex: 0 0 auto;
+    display: flex;
+    align-items: center;
+    gap: .65rem;
+    padding: .75rem .9rem;
+    border: 1px solid var(--line);
+    border-radius: .8rem;
+    cursor: pointer;
+}
+
+.switch input {
+    width: 1.2rem;
+    height: 1.2rem;
+    accent-color: var(--wine-800);
+}
+
+.choice-list {
+    display: grid;
+    gap: .6rem;
+}
+
+.choice {
+    display: flex;
+    align-items: flex-start;
+    gap: .8rem;
+    padding: .9rem;
+    border: 1px solid var(--line);
+    border-radius: .8rem;
+    cursor: pointer;
+}
+
+.choice input {
+    flex: 0 0 auto;
+    width: 1.1rem;
+    height: 1.1rem;
+    margin-top: .18rem;
+    accent-color: var(--wine-800);
+}
+
+.choice span {
+    display: grid;
+    gap: .15rem;
+}
+
+.choice small {
+    color: var(--ink-700);
+}
+
+.editor-advanced summary {
+    cursor: pointer;
+    color: var(--navy-900);
+    font-weight: 750;
+}
+
+.editor-advanced[open] summary {
+    margin-bottom: 1rem;
+}
+
+.publication-state-actions {
+    padding-top: 1rem;
+    border-top: 1px solid var(--line);
+}
+
+@media (max-width: 44rem) {
+    .editorial-item,
+    .setting-row {
+        align-items: stretch;
+        flex-direction: column;
+    }
+
+    .editor-grid {
+        grid-template-columns: 1fr;
+    }
+
+    .admin-heading__actions,
+    .editor-actions,
+    .publication-state-actions,
+    .editor-actions .button,
+    .publication-state-actions .button {
+        width: 100%;
+    }
+}
