@@ -60,17 +60,44 @@ Not yet exposed:
 
 Reason: write endpoints are intentionally blocked until Auth + RBAC + CSRF + audit log exist.
 
+## Administrator security — current implementation
+
+Implemented:
+
+- hardened PHP session cookie configuration;
+- lazy session start;
+- session id rotation on login;
+- CSRF token service and middleware;
+- baseline CSP/security headers;
+- administrator login rate limiting;
+- admin user table;
+- roles and permissions tables;
+- user-role and role-permission relations;
+- role scope storage for future site/section restrictions;
+- password_hash/password_verify login;
+- automatic password rehash when PHP defaults change;
+- protected /admin dashboard;
+- CSRF-protected logout;
+- first-superadmin CLI provisioning.
+
+Not yet implemented:
+
+- audit/security event log;
+- permission management UI;
+- role assignment UI;
+- scope enforcement in individual domain modules;
+- password reset flow;
+- optional 2FA.
+
 ## Immediate next work
 
-1. Validate PHP 8.3 CI and fix lint/runtime issues.
+1. Validate current PHP 8.3 CI and fix issues.
 2. Harden migrations and add database-backed smoke test.
-3. Core session/security headers/CSRF.
-4. Administrator authentication.
-5. RBAC and section-scoped permissions.
-6. Audit log.
-7. Publications admin/editor UI using the above security layer.
-8. Publication categories/tags/revisions/scheduling.
-9. Media module and publication cover relation.
+3. Add audit/security event log.
+4. Add permission guard for publication administration.
+5. Build Publications admin/editor UI.
+6. Add categories/tags/revisions/scheduling.
+7. Build Media module and publication cover relation.
 
 ## Durable planning documents
 
