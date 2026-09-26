@@ -237,22 +237,28 @@ Next:
 - YouTube/Rutube adapters;
 - webhook contract.
 
-## Administration UX direction
+## Administration UX
 
-The current `/admin`, publication editor and comment moderation screens are functional prototypes.
+Реализовано:
 
-They are not considered the final ChurchCMS administration interface.
+- общий `layout.admin`, отдельный от публичного layout сайта;
+- единый сервис `AdminShell` добавляет пользовательский контекст, доступные разделы, активный раздел и счётчик ожидающих комментариев;
+- обзор, Publications и Comments используют одну административную оболочку;
+- общий header содержит текущий раздел, пользователя и ссылку на публичный сайт;
+- desktop использует постоянную боковую навигацию, на узких экранах она перестраивается в компактную горизонтальную панель;
+- активный раздел отмечается через `aria-current`;
+- выход из системы вынесен в общую оболочку;
+- отдельный CI-smoke проверяет регистрацию layout, использование shell контроллерами и базовую отрисовку.
 
-Next administration milestone:
+Остаётся:
 
-- build one shared Admin Shell;
-- move existing Publications and Comments screens into it;
-- add persistent/collapsible navigation;
-- add site/user context header;
-- add pending-work notifications;
-- reserve a common global-search surface;
-- expose future Media, People, Worship, Events, External Channels, Users/Roles, Themes, Settings, Backups and System Health through the same shell;
-- preserve the requirement that routine operator work takes minimal actions and avoids technical terminology.
+- контракт регистрации навигации модулями вместо текущего списка известных разделов;
+- сворачиваемая desktop-навигация;
+- глобальный поиск;
+- общий центр задач/уведомлений;
+- единые loading/error/success/empty состояния;
+- полный keyboard/focus/accessibility audit;
+- подключение будущих Media, People, Worship, Events, External Channels, Users/Roles, Themes, Settings, Backups и System Health.
 
 ## Durable project memory
 
