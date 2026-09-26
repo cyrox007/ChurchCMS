@@ -19,6 +19,8 @@ final class Comment
         public readonly DateTimeImmutable $createdAt,
         public readonly ?DateTimeImmutable $moderatedAt,
         public readonly ?int $moderatorUserId,
+        public readonly ?string $publicationTitle = null,
+        public readonly ?string $publicationSlug = null,
     ) {
     }
 }
