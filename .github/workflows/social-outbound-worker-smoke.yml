@@ -1,0 +1,362 @@
+name: Проверка outbound worker внешних каналов
+
+on:
+  push:
+    branches:
+      - develop
+      - main
+    paths:
+      - 'bin/channel-dispatch.php'
+      - 'modules/social/**'
+      - 'modules/publications/PublicationRepository.php'
+      - '.github/workflows/social-outbound-worker-smoke.yml'
+  pull_request:
+    branches:
+      - develop
+      - main
+    paths:
+      - 'bin/channel-dispatch.php'
+      - 'modules/social/**'
+      - 'modules/publications/PublicationRepository.php'
+      - '.github/workflows/social-outbound-worker-smoke.yml'
+
+permissions:
+  contents: read
+
+jobs:
+  social-outbound:
+    runs-on: ubuntu-latest
+
+    services:
+      postgres:
+        image: postgres:16
+        env:
+          POSTGRES_DB: churchcms
+          POSTGRES_USER: churchcms
+          POSTGRES_PASSWORD: churchcms
+        ports:
+          - 5432:5432
+        options: >-
+          --health-cmd pg_isready
+          --health-interval 10s
+          --health-timeout 5s
+          --health-retries 5
+
+    steps:
+      - name: Получить исходный код
+        uses: actions/checkout@v4
+
+      - name: Подготовить PHP 8.3
+        uses: shivammathur/setup-php@v2
+        with:
+          php-version: '8.3'
+          extensions: pdo, pdo_pgsql, openssl
+          coverage: none
+
+      - name: Проверить PHP
+        shell: bash
+        run: |
+          set -euo pipefail
+          php -l modules/social/SocialPostRepository.php
+          php -l modules/social/ChannelOutboundDispatcher.php
+          php -l modules/social/runtime.php
+          php -l modules/publications/PublicationRepository.php
+          php -l bin/channel-dispatch.php
+          php bin/migrate.php validate
+
+      - name: Подготовить тестовую установку
+        shell: bash
+        run: |
+          set -euo pipefail
+          mkdir -p storage/cache storage/logs storage/sessions storage/rate-limits storage/uploads
+          cat > config/local.php <<'PHP'
+          <?php
+
+          declare(strict_types=1);
+
+          return [
+              'installation' => [
+                  'completed' => true,
+              ],
+              'security' => [
+                  'secret_key' => base64_encode(str_repeat('w', 32)),
+              ],
+              'database' => [
+                  'driver' => 'pgsql',
+                  'host' => '127.0.0.1',
+                  'port' => 5432,
+                  'database' => 'churchcms',
+                  'username' => 'churchcms',
+                  'password' => 'churchcms',
+              ],
+              'syndication' => [
+                  'site_url' => 'https://example.test',
+              ],
+              'social' => [
+                  'enabled' => true,
+                  'dispatch_batch_size' => 20,
+                  'max_attempts' => 2,
+              ],
+          ];
+          PHP
+          php bin/migrate.php
+
+      - name: Проверить success retry dead-letter
+        shell: bash
+        run: |
+          php -r '
+          require "core.php";
+
+          $pdo = ChurchCMSCoreDatabaseManager::getInstance()->connection();
+
+          $publicationId = ChurchCMSModulesPublicationsPublicationService::fromDatabase()
+              ->createDraft(
+                  title: "Материал для внешних каналов",
+                  slug: "external-worker-smoke",
+                  excerpt: "Короткое описание",
+                  bodyHtml: "Текст",
+              );
+          ChurchCMSModulesPublicationsPublicationService::fromDatabase()
+              ->publish($publicationId);
+
+          $publication = ChurchCMSModulesPublicationsPublicationRepository::fromDatabase()
+              ->findByPublicId($publicationId);
+
+          if ($publication === null) {
+              fwrite(STDERR, "Публикация worker smoke не найдена.\n");
+              exit(1);
+          }
+
+          $adapter = new class implements ChurchCMSModulesSocialChannelAdapter {
+              public function providerId(): string
+              {
+                  return "smoke";
+              }
+
+              public function label(): string
+              {
+                  return "Smoke";
+              }
+
+              public function capabilities(): array
+              {
+                  return [
+                      ChurchCMSModulesSocialChannelCapability::PUBLISH_TEXT,
+                      ChurchCMSModulesSocialChannelCapability::PUBLISH_LINK,
+                  ];
+              }
+
+              public function publish(
+                  ChurchCMSModulesSocialSocialConnection $connection,
+                  string $credentials,
+                  ChurchCMSModulesSocialChannelOutboundItem $item,
+              ): ChurchCMSModulesSocialChannelPublishResult {
+                  if ($credentials !== "secret-token") {
+                      return new ChurchCMSModulesSocialChannelPublishResult(
+                          false,
+                          error: "credential mismatch",
+                      );
+                  }
+
+                  if (
+                      $item->sourceId === ""
+                      || $item->canonicalUrl
+                          !== "https://example.test/publications/external-worker-smoke"
+                  ) {
+                      return new ChurchCMSModulesSocialChannelPublishResult(
+                          false,
+                          error: "outbound item mismatch",
+                      );
+                  }
+
+                  if ($connection->targetRef === "success") {
+                      return new ChurchCMSModulesSocialChannelPublishResult(
+                          true,
+                          remoteId: "remote-success-1",
+                          remoteUrl: "https://remote.test/1",
+                      );
+                  }
+
+                  return new ChurchCMSModulesSocialChannelPublishResult(
+                      false,
+                      error: "temporary smoke failure",
+                  );
+              }
+
+              public function pull(
+                  ChurchCMSModulesSocialSocialConnection $connection,
+                  string $credentials,
+                  ?string $cursor,
+                  int $limit = 50,
+              ): ChurchCMSModulesSocialChannelPullBatch {
+                  return new ChurchCMSModulesSocialChannelPullBatch(
+                      [],
+                      $cursor,
+                  );
+              }
+          };
+
+          ChurchCMSModulesSocialChannelAdapterRegistry::register(
+              $adapter,
+          );
+
+          $token = ChurchCMSCoreSecretVault::encrypt(
+              "secret-token",
+          );
+          $now = gmdate("Y-m-d H:i:s");
+
+          $insertConnection = $pdo->prepare(
+              "INSERT INTO social_connections (
+                  public_id, provider, name, target_ref, token_encrypted,
+                  settings_json, enabled, connection_kind,
+                  outbound_enabled, inbound_enabled, inbound_policy,
+                  created_at, updated_at
+               ) VALUES (
+                  :public_id, :provider, :name, :target_ref, :token_encrypted,
+                  :settings_json, :enabled, :connection_kind,
+                  :outbound_enabled, :inbound_enabled, :inbound_policy,
+                  :created_at, :updated_at
+               ) RETURNING id"
+          );
+
+          $connectionIds = [];
+          foreach (["success", "retry", "dead"] as $target) {
+              $insertConnection->execute([
+                  "public_id" => ChurchCMSCoreUuid::v4(),
+                  "provider" => "smoke",
+                  "name" => "Smoke {$target}",
+                  "target_ref" => $target,
+                  "token_encrypted" => $token,
+                  "settings_json" => "{}",
+                  "enabled" => 1,
+                  "connection_kind" => "social",
+                  "outbound_enabled" => 1,
+                  "inbound_enabled" => 0,
+                  "inbound_policy" => "review",
+                  "created_at" => $now,
+                  "updated_at" => $now,
+              ]);
+              $connectionIds[$target] = (int) $insertConnection->fetchColumn();
+          }
+
+          $insertPost = $pdo->prepare(
+              "INSERT INTO publication_social_posts (
+                  public_id, publication_id, connection_id, enabled,
+                  custom_text, status, attempts, queued_at,
+                  created_at, updated_at
+               ) VALUES (
+                  :public_id, :publication_id, :connection_id, :enabled,
+                  :custom_text, :status, :attempts, :queued_at,
+                  :created_at, :updated_at
+               )"
+          );
+
+          foreach ([
+              ["target" => "success", "attempts" => 0, "text" => "Свой текст"],
+              ["target" => "retry", "attempts" => 0, "text" => null],
+              ["target" => "dead", "attempts" => 1, "text" => null],
+          ] as $row) {
+              $insertPost->execute([
+                  "public_id" => ChurchCMSCoreUuid::v4(),
+                  "publication_id" => $publication->id,
+                  "connection_id" => $connectionIds[$row["target"]],
+                  "enabled" => 1,
+                  "custom_text" => $row["text"],
+                  "status" => "pending",
+                  "attempts" => $row["attempts"],
+                  "queued_at" => $now,
+                  "created_at" => $now,
+                  "updated_at" => $now,
+              ]);
+          }
+
+          $summary = ChurchCMSModulesSocialChannelOutboundDispatcher::fromDatabase()
+              ->dispatch(
+                  limit: 20,
+                  maxAttempts: 2,
+              );
+
+          if (
+              $summary !== [
+                  "claimed" => 3,
+                  "sent" => 1,
+                  "retried" => 1,
+                  "dead_letter" => 1,
+                  "skipped" => 0,
+              ]
+          ) {
+              fwrite(
+                  STDERR,
+                  "Неожиданный summary worker: "
+                  . json_encode($summary, JSON_UNESCAPED_SLASHES)
+                  . "\n",
+              );
+              exit(1);
+          }
+
+          $rows = $pdo->query(
+              "SELECT c.target_ref, p.status, p.attempts,
+                      p.remote_post_id, p.last_error
+               FROM publication_social_posts p
+               INNER JOIN social_connections c
+                  ON c.id = p.connection_id
+               ORDER BY c.target_ref"
+          )->fetchAll();
+
+          $byTarget = [];
+          foreach ($rows as $row) {
+              $byTarget[$row["target_ref"]] = $row;
+          }
+
+          if (
+              ($byTarget["success"]["status"] ?? null) !== "sent"
+              || ($byTarget["success"]["remote_post_id"] ?? null)
+                  !== "remote-success-1"
+              || (int) ($byTarget["success"]["attempts"] ?? -1) !== 0
+              || ($byTarget["retry"]["status"] ?? null) !== "pending"
+              || (int) ($byTarget["retry"]["attempts"] ?? -1) !== 1
+              || ($byTarget["dead"]["status"] ?? null) !== "failed"
+              || (int) ($byTarget["dead"]["attempts"] ?? -1) !== 2
+          ) {
+              fwrite(
+                  STDERR,
+                  "Outbox состояния после worker некорректны: "
+                  . json_encode($byTarget, JSON_UNESCAPED_SLASHES)
+                  . "\n",
+              );
+              exit(1);
+          }
+
+          echo "Social outbound worker smoke OK\n";
+          '
+
+      - name: Проверить recovery зависшего processing
+        shell: bash
+        run: |
+          php -r '
+          require "core.php";
+
+          $pdo = ChurchCMSCoreDatabaseManager::getInstance()->connection();
+          $pdo->exec(
+              "UPDATE publication_social_posts
+               SET status = '''processing''',
+                   updated_at = '''2000-01-01 00:00:00'''
+               WHERE status = '''pending'''"
+          );
+
+          $claimed = ChurchCMSModulesSocialSocialPostRepository::fromDatabase()
+              ->claimPending(
+                  limit: 1,
+                  staleSeconds: 60,
+              );
+
+          if (
+              count($claimed) !== 1
+              || $claimed[0]->status !== "processing"
+          ) {
+              fwrite(STDERR, "Зависший processing не вернулся в очередь/claim.\n");
+              exit(1);
+          }
+
+          echo "Social processing recovery smoke OK\n";
+          '
