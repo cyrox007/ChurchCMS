@@ -251,9 +251,16 @@ final class PublicationTaxonomyRepository
         string $name,
     ): int {
         [$termTable] = self::tables($kind);
-        $slug = Slugger::fromText($name);
+        $slug = rtrim(
+            substr(
+                Slugger::fromText($name),
+                0,
+                120,
+            ),
+            '-',
+        );
 
-        if ($slug === '' || strlen($slug) > 120) {
+        if ($slug === '') {
             throw new RuntimeException(
                 'Не удалось сформировать безопасный адрес категории или тега.'
             );
