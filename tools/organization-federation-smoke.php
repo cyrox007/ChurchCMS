@@ -5,6 +5,7 @@ declare(strict_types=1);
 use ChurchCMS\Core\Config;
 use ChurchCMS\Core\DatabaseManager;
 use ChurchCMS\Core\SiteProfileCatalog;
+use ChurchCMS\Core\Slugger;
 use ChurchCMS\Modules\Organizations\FederationRepository;
 use ChurchCMS\Modules\Organizations\FederationService;
 use ChurchCMS\Modules\Organizations\OrganizationRepository;
@@ -58,11 +59,15 @@ $deanery = $repository->findByPublicId(
     $deaneryId,
 );
 
+$expectedDeaneryPath = '/'
+    . Slugger::fromText('Тестовая епархия')
+    . '/'
+    . Slugger::fromText('Центральное благочиние');
+
 if (
     $deanery === null
     || $deanery->parentId !== $root->id
-    || $deanery->path
-        !== '/testovaya-eparhiya/centralnoe-blagochinie'
+    || $deanery->path !== $expectedDeaneryPath
 ) {
     fwrite(
         STDERR,
