@@ -1,0 +1,174 @@
+name: Проверка схемы дерева страниц
+
+on:
+  push:
+    branches:
+      - develop
+      - main
+    paths:
+      - 'modules/pages/**'
+      - '.github/workflows/pages-schema-smoke.yml'
+  pull_request:
+    branches:
+      - develop
+      - main
+    paths:
+      - 'modules/pages/**'
+      - '.github/workflows/pages-schema-smoke.yml'
+
+permissions:
+  contents: read
+
+jobs:
+  pages-schema:
+    runs-on: ubuntu-latest
+
+    services:
+      postgres:
+        image: postgres:16
+        env:
+          POSTGRES_DB: churchcms
+          POSTGRES_USER: churchcms
+          POSTGRES_PASSWORD: churchcms
+        ports:
+          - 5432:5432
+        options: >-
+          --health-cmd pg_isready
+          --health-interval 10s
+          --health-timeout 5s
+          --health-retries 5
+
+    steps:
+      - name: Получить исходный код
+        uses: actions/checkout@v4
+
+      - name: Подготовить PHP 8.3
+        uses: shivammathur/setup-php@v2
+        with:
+          php-version: '8.3'
+          extensions: pdo, pdo_pgsql
+          coverage: none
+
+      - name: Проверить PHP, миграции и модуль
+        run: |
+          php -l modules/pages/runtime.php
+          php -l modules/pages/migrations/20260927_090000_create_pages.php
+          php bin/migrate.php validate
+          php -r '
+          require "core.php";
+          if (\ChurchCMS\Core\ModuleRuntimeLoader::provider("pages") === null) {
+              fwrite(STDERR, "Модуль Pages не загрузился.\n");
+              exit(1);
+          }
+          '
+
+      - name: Подготовить тестовую установку
+        shell: bash
+        run: |
+          set -euo pipefail
+          mkdir -p storage/cache storage/logs storage/sessions storage/rate-limits storage/uploads
+          cat > config/local.php <<'PHP'
+          <?php
+
+          declare(strict_types=1);
+
+          return [
+              'installation' => ['completed' => true],
+              'security' => [
+                  'secret_key' => base64_encode(str_repeat('p', 32)),
+              ],
+              'database' => [
+                  'driver' => 'pgsql',
+                  'host' => '127.0.0.1',
+                  'port' => 5432,
+                  'database' => 'churchcms',
+                  'username' => 'churchcms',
+                  'password' => 'churchcms',
+              ],
+          ];
+          PHP
+          php bin/migrate.php
+
+      - name: Проверить ограничения дерева
+        shell: bash
+        run: |
+          php -r '
+          require "core.php";
+
+          $pdo = ChurchCMS\Core\DatabaseManager::getInstance()->connection();
+          $now = gmdate("Y-m-d H:i:s");
+          $insert = $pdo->prepare(
+              "INSERT INTO pages (
+                  public_id, site_key, parent_id, status, slug, path,
+                  title, navigation_title, body_html, sort_order,
+                  published_at, created_at, updated_at
+               ) VALUES (
+                  :public_id, :site_key, :parent_id, :status, :slug, :path,
+                  :title, NULL, :body_html, :sort_order,
+                  NULL, :created_at, :updated_at
+               ) RETURNING id"
+          );
+          $insert->execute([
+              "public_id" => "00000000-0000-4000-8000-000000000001",
+              "site_key" => "default",
+              "parent_id" => null,
+              "status" => "draft",
+              "slug" => "o-hrame",
+              "path" => "o-hrame",
+              "title" => "О храме",
+              "body_html" => "",
+              "sort_order" => 10,
+              "created_at" => $now,
+              "updated_at" => $now,
+          ]);
+          $rootId = (int) $insert->fetchColumn();
+
+          $insert->execute([
+              "public_id" => "00000000-0000-4000-8000-000000000002",
+              "site_key" => "default",
+              "parent_id" => $rootId,
+              "status" => "draft",
+              "slug" => "istoriya",
+              "path" => "o-hrame/istoriya",
+              "title" => "История",
+              "body_html" => "",
+              "sort_order" => 20,
+              "created_at" => $now,
+              "updated_at" => $now,
+          ]);
+
+          try {
+              $insert->execute([
+                  "public_id" => "00000000-0000-4000-8000-000000000003",
+                  "site_key" => "default",
+                  "parent_id" => null,
+                  "status" => "draft",
+                  "slug" => "duplicate",
+                  "path" => "o-hrame",
+                  "title" => "Дубликат",
+                  "body_html" => "",
+                  "sort_order" => 30,
+                  "created_at" => $now,
+                  "updated_at" => $now,
+              ]);
+              fwrite(STDERR, "Повторный путь страницы не был отклонён.\n");
+              exit(1);
+          } catch (PDOException $error) {
+              if (($error->errorInfo[0] ?? $error->getCode()) !== "23505") {
+                  throw $error;
+              }
+          }
+
+          $countStatement = $pdo->prepare(
+              "SELECT COUNT(*) FROM pages WHERE site_key = :site_key"
+          );
+          $countStatement->execute(["site_key" => "default"]);
+          $count = (int) $countStatement->fetchColumn();
+
+          if ($count !== 2) {
+              fwrite(STDERR, "Дерево страниц сохранено некорректно.\n");
+              exit(1);
+          }
+
+          echo "Pages schema smoke OK\n";
+          '
