@@ -52,12 +52,11 @@ try {
 
     echo sprintf(
         "Внешняя очередь: получено %d; отправлено %d; "
-        . "повтор %d; dead-letter %d; пропущено %d\n",
+        . "повтор %d; dead-letter %d\n",
         $summary['claimed'],
         $summary['sent'],
         $summary['retried'],
         $summary['dead_letter'],
-        $summary['skipped'],
     );
     exit(0);
 } catch (Throwable $error) {
