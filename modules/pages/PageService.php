@@ -9,6 +9,7 @@ use ChurchCMS\Core\HtmlSanitizer;
 use ChurchCMS\Core\PageCache;
 use ChurchCMS\Core\Slugger;
 use ChurchCMS\Core\Uuid;
+use ChurchCMS\Modules\Organizations\OrganizationRepository;
 use InvalidArgumentException;
 use PDO;
 use PDOException;
@@ -41,6 +42,7 @@ final class PageService
         ?string $parentPublicId = null,
         int $sortOrder = 0,
         string $siteKey = 'default',
+        ?string $ownerOrganizationPublicId = null,
     ): string {
         $title = self::title($title);
         $slug = self::slug($slug, $title);
@@ -49,6 +51,10 @@ final class PageService
         );
         $sortOrder = self::sortOrder($sortOrder);
         $siteKey = self::siteKey($siteKey);
+        $ownerOrganizationPublicId = $this->organizationOwner(
+            $ownerOrganizationPublicId,
+            $siteKey,
+        );
 
         $parent = $this->parent(
             $parentPublicId,
@@ -70,6 +76,7 @@ final class PageService
                 'INSERT INTO pages (
                     public_id,
                     site_key,
+                    owner_organization_public_id,
                     parent_id,
                     status,
                     slug,
@@ -84,6 +91,7 @@ final class PageService
                  ) VALUES (
                     :public_id,
                     :site_key,
+                    :owner_organization_public_id,
                     :parent_id,
                     :status,
                     :slug,
@@ -100,6 +108,8 @@ final class PageService
             $statement->execute([
                 'public_id' => $publicId,
                 'site_key' => $siteKey,
+                'owner_organization_public_id' =>
+                    $ownerOrganizationPublicId,
                 'parent_id' => $parent?->id,
                 'status' => PageStatus::Draft->value,
                 'slug' => $slug,
@@ -121,6 +131,40 @@ final class PageService
         PageCache::bumpVersion();
 
         return $publicId;
+    }
+
+    public function assignOrganizationOwner(
+        string $publicId,
+        string $organizationPublicId,
+        string $siteKey = 'default',
+    ): void {
+        self::assertUuid($publicId);
+        $siteKey = self::siteKey($siteKey);
+        $organizationPublicId = $this->organizationOwner(
+            $organizationPublicId,
+            $siteKey,
+        );
+
+        if ($organizationPublicId === null) {
+            throw new InvalidArgumentException(
+                'Организация-владелец не найдена.'
+            );
+        }
+
+        $page = $this->requiredPage($publicId, $siteKey);
+        $statement = $this->pdo->prepare(
+            'UPDATE pages
+             SET owner_organization_public_id = :owner,
+                 updated_at = :updated_at
+             WHERE id = :id'
+        );
+        $statement->execute([
+            'owner' => $organizationPublicId,
+            'updated_at' => gmdate('Y-m-d H:i:s'),
+            'id' => $page->id,
+        ]);
+
+        PageCache::bumpVersion();
     }
 
     public function updateContent(
@@ -400,6 +444,50 @@ final class PageService
             $publicId,
             $siteKey,
         );
+    }
+
+    private function organizationOwner(
+        ?string $publicId,
+        string $siteKey,
+    ): ?string {
+        $repository = new OrganizationRepository($this->pdo);
+        $publicId = $publicId !== null
+            ? trim($publicId)
+            : '';
+
+        if ($publicId === '') {
+            return $repository->siteRoot($siteKey)?->publicId;
+        }
+
+        if (
+            preg_match(
+                '/^[a-f0-9]{8}-[a-f0-9]{4}-4[a-f0-9]{3}-[89ab][a-f0-9]{3}-[a-f0-9]{12}$/Di',
+                $publicId,
+            ) !== 1
+        ) {
+            throw new InvalidArgumentException(
+                'Некорректный public ID организации-владельца.'
+            );
+        }
+
+        $organization = $repository->findByPublicId(
+            $publicId,
+            $siteKey,
+        );
+
+        if ($organization === null) {
+            throw new InvalidArgumentException(
+                'Организация-владелец не найдена на этом сайте.'
+            );
+        }
+
+        if ($organization->status !== 'active') {
+            throw new InvalidArgumentException(
+                'Архивная организация не может владеть страницей.'
+            );
+        }
+
+        return $organization->publicId;
     }
 
     private static function buildPath(

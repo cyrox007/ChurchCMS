@@ -12,6 +12,7 @@ final readonly class Page
         public int $id,
         public string $publicId,
         public string $siteKey,
+        public ?string $ownerOrganizationPublicId,
         public ?int $parentId,
         public PageStatus $status,
         public string $slug,

@@ -7,6 +7,8 @@ on:
       - main
     paths:
       - 'modules/pages/**'
+      - 'modules/organizations/**'
+      - 'tools/page-organization-owner-smoke.php'
       - '.github/workflows/pages-domain-smoke.yml'
   pull_request:
     branches:
@@ -14,6 +16,8 @@ on:
       - main
     paths:
       - 'modules/pages/**'
+      - 'modules/organizations/**'
+      - 'tools/page-organization-owner-smoke.php'
       - '.github/workflows/pages-domain-smoke.yml'
 
 permissions:
@@ -57,7 +61,9 @@ jobs:
           php -l modules/pages/Page.php
           php -l modules/pages/PageRepository.php
           php -l modules/pages/PageService.php
+          php -l modules/pages/migrations/20260927_121000_add_page_organization_owner.php
           php -l modules/pages/runtime.php
+          php -l tools/page-organization-owner-smoke.php
           php bin/migrate.php validate
 
       - name: Подготовить тестовую установку
@@ -262,3 +268,6 @@ jobs:
 
           echo "Pages domain validation smoke OK\n";
           '
+
+      - name: Проверить organization owner страницы
+        run: php tools/page-organization-owner-smoke.php

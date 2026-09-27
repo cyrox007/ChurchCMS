@@ -28,7 +28,8 @@ Priority is ordered within each section.
 - [ ] привязка Publications/Pages к organization owner;
   - [x] Publications: nullable migration/backfill, default site-root owner, проверка site boundary и stable public ID в API;
   - [ ] Publications: выбор owner в Admin Shell с organization-scoped RBAC;
-  - [ ] Pages: organization owner в domain/public/admin/API;
+  - [x] Pages: nullable migration/backfill, default site-root owner и проверка site boundary в domain/service;
+  - [ ] Pages: выбор owner в Admin Shell и public/API projection с organization-scoped RBAC;
 - [ ] привязка People/назначений, Worship, Events, Media и Documents к organization unit;
 - [ ] incremental federation sync с canonical owner и tombstones;
 - [ ] агрегированные ленты вышестоящих узлов без потери источника;
