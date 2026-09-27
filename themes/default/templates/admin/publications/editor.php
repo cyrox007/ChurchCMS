@@ -66,6 +66,30 @@ $formAction = $isEdit
                 </label>
             </div>
 
+            <div class="editor-grid">
+                <label class="field">
+                    <span>Категории <small>через запятую</small></span>
+                    <input
+                        name="categories"
+                        value="<?= $theme->e($form['categories'] ?? '') ?>"
+                        maxlength="1000"
+                        placeholder="Например: Новости прихода, Богослужение"
+                    >
+                    <small>До 8 категорий. Уже существующие категории будут переиспользованы.</small>
+                </label>
+
+                <label class="field">
+                    <span>Теги <small>через запятую</small></span>
+                    <input
+                        name="tags"
+                        value="<?= $theme->e($form['tags'] ?? '') ?>"
+                        maxlength="2000"
+                        placeholder="Например: Пасха, молодёжь, благотворительность"
+                    >
+                    <small>До 20 тегов. Дубликаты удаляются автоматически.</small>
+                </label>
+            </div>
+
             <label class="field">
                 <span>Короткое описание <small>показывается в списках и используется SEO по умолчанию</small></span>
                 <textarea name="excerpt" rows="3"><?= $theme->e($form['excerpt'] ?? '') ?></textarea>
