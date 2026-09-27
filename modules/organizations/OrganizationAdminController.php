@@ -188,6 +188,11 @@ final class OrganizationAdminController
             Response::text('404 Not Found', 404);
         }
 
+        self::requireUnitAccess(
+            $request,
+            $unit,
+        );
+
         $this->editor(
             $request,
             $unit,
@@ -212,9 +217,23 @@ final class OrganizationAdminController
             Response::text('404 Not Found', 404);
         }
 
+        $access = self::requireUnitAccess(
+            $request,
+            $unit,
+        );
+        $userId = self::requiredUserId($request);
         $form = self::form($request);
 
         try {
+            $parent = self::resolveUpdateParent(
+                $repository,
+                $access,
+                $userId,
+                $unit,
+                $form['parent_public_id'],
+            );
+            $form['parent_public_id'] = $parent?->publicId;
+
             OrganizationService::fromDatabase()->update(
                 publicId: $publicId,
                 name: $form['name'],
@@ -296,6 +315,18 @@ final class OrganizationAdminController
         AdminAuthorization::requirePermission(
             $request,
             'organizations.manage',
+        );
+
+        $repository = OrganizationRepository::fromDatabase();
+        $unit = $repository->findByPublicId($publicId);
+
+        if ($unit === null) {
+            Response::text('404 Not Found', 404);
+        }
+
+        self::requireUnitAccess(
+            $request,
+            $unit,
         );
 
         try {
