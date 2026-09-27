@@ -16,8 +16,9 @@ final class PublicationTaxonomyService
 
     private PublicationTaxonomyRepository $repository;
 
-    public function __construct(PDO $pdo)
-    {
+    public function __construct(
+        private readonly PDO $pdo,
+    ) {
         $this->repository = new PublicationTaxonomyRepository(
             $pdo,
         );
@@ -94,12 +95,30 @@ final class PublicationTaxonomyService
         array $categories,
         array $tags,
     ): void {
-        $this->repository->replaceForPublication(
-            $publicationId,
-            $siteKey,
-            $categories,
-            $tags,
-        );
+        $ownsTransaction = !$this->pdo->inTransaction();
+
+        if ($ownsTransaction) {
+            $this->pdo->beginTransaction();
+        }
+
+        try {
+            $this->repository->replaceForPublication(
+                $publicationId,
+                $siteKey,
+                $categories,
+                $tags,
+            );
+
+            if ($ownsTransaction) {
+                $this->pdo->commit();
+            }
+        } catch (\Throwable $error) {
+            if ($ownsTransaction && $this->pdo->inTransaction()) {
+                $this->pdo->rollBack();
+            }
+
+            throw $error;
+        }
     }
 
     /**
