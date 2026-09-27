@@ -29,6 +29,22 @@
                     </a>
                 </h2>
 
+                <?php
+                $publicationTaxonomy = is_array($taxonomy[$publication->id] ?? null)
+                    ? $taxonomy[$publication->id]
+                    : ['categories' => [], 'tags' => []];
+                ?>
+
+                <?php if (!empty($publicationTaxonomy['categories'])): ?>
+                    <div class="publication-taxonomy" aria-label="Категории">
+                        <?php foreach ($publicationTaxonomy['categories'] as $category): ?>
+                            <span class="publication-taxonomy__item publication-taxonomy__item--category">
+                                <?= $theme->e((string) ($category['name'] ?? '')) ?>
+                            </span>
+                        <?php endforeach; ?>
+                    </div>
+                <?php endif; ?>
+
                 <?php if ($publication->excerpt !== ''): ?>
                     <p><?= $theme->e($publication->excerpt) ?></p>
                 <?php endif; ?>
