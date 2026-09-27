@@ -137,12 +137,17 @@ Implemented:
 - public API;
 - partner API with incremental sync;
 - RSS/Rambler syndication provider;
+- отложенная публикация через статус `scheduled` и UTC-время в `published_at`;
+- Admin Shell позволяет выбрать локальную дату/время установки, опубликовать сейчас или отменить планирование;
+- bounded CLI worker `php bin/publication-schedule.php` atomically публикует только наступившие материалы;
+- параллельные/повторные запуски worker безопасны за счёт conditional UPDATE по статусу;
+- автоматическая публикация записывается в audit log и инвалидирует публичный cache;
+- CI проверяет due/future/cancelled, запрет прошедшего времени, idempotent rerun и элементы редактора;
 - audit/cache invalidation on changes.
 
 Next:
 
 - revisions;
-- scheduled publication execution;
 - Media/cover relation.
 
 ## Pages / content tree
@@ -334,5 +339,6 @@ Next:
 - `docs/ACCESSIBILITY.md`
 - `docs/ERROR_HANDLING.md`
 - `docs/AUTHENTICATION.md`
+- `docs/PUBLICATION_SCHEDULING.md`
 
 Update this file at the end of every substantial implementation increment.
