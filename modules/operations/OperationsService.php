@@ -41,18 +41,36 @@ final class OperationsService
      *     packages:list<array{
      *         id:string,version:string,files:int,deleted_files:int,
      *         code_only:bool,ready:bool
-     *     }>
+     *     }>,
+     *     warnings:list<string>
      * }
      */
     public function overview(): array
     {
+        $warnings = [];
+        $backups = [];
+        $packages = [];
+
+        try {
+            $backups = $this->backupManager()->backups(20);
+        } catch (\Throwable) {
+            $warnings[] = 'Каталог резервных копий сейчас недоступен.';
+        }
+
+        try {
+            $packages = $this->stager()->packages(20);
+        } catch (\Throwable) {
+            $warnings[] = 'Каталог подготовленных обновлений сейчас недоступен.';
+        }
+
         return [
             'health' => (new InstallationHealthCheck(
                 $this->database,
                 $this->root,
             ))->check(),
-            'backups' => $this->backupManager()->backups(20),
-            'packages' => $this->stager()->packages(20),
+            'backups' => $backups,
+            'packages' => $packages,
+            'warnings' => $warnings,
         ];
     }
 
