@@ -1,0 +1,369 @@
+name: Проверка Admin UI церковной структуры
+
+on:
+  push:
+    branches:
+      - develop
+      - main
+    paths:
+      - 'modules/organizations/**'
+      - 'themes/default/templates/admin/organizations/**'
+      - 'themes/default/theme.json'
+      - 'themes/default/assets/css/site.css'
+      - '.github/workflows/organization-admin-smoke.yml'
+  pull_request:
+    branches:
+      - develop
+      - main
+    paths:
+      - 'modules/organizations/**'
+      - 'themes/default/templates/admin/organizations/**'
+      - 'themes/default/theme.json'
+      - 'themes/default/assets/css/site.css'
+      - '.github/workflows/organization-admin-smoke.yml'
+
+permissions:
+  contents: read
+
+jobs:
+  organization-admin:
+    runs-on: ubuntu-latest
+
+    services:
+      postgres:
+        image: postgres:16
+        env:
+          POSTGRES_DB: churchcms
+          POSTGRES_USER: churchcms
+          POSTGRES_PASSWORD: churchcms
+        ports:
+          - 5432:5432
+        options: >-
+          --health-cmd pg_isready
+          --health-interval 10s
+          --health-timeout 5s
+          --health-retries 5
+
+    steps:
+      - name: Получить исходный код
+        uses: actions/checkout@v4
+
+      - name: Подготовить PHP 8.3
+        uses: shivammathur/setup-php@v2
+        with:
+          php-version: '8.3'
+          extensions: pdo, pdo_pgsql, mbstring, dom, openssl
+          coverage: none
+
+      - name: Проверить PHP, миграции и тему
+        shell: bash
+        run: |
+          set -euo pipefail
+          find modules/organizations -type f -name '*.php' -print0             | xargs -0 -n1 php -l
+          php -l themes/default/templates/admin/organizations/index.php
+          php -l themes/default/templates/admin/organizations/editor.php
+          php bin/migrate.php validate
+          php bin/theme-check.php
+
+      - name: Подготовить тестовую установку
+        shell: bash
+        run: |
+          set -euo pipefail
+          mkdir -p storage/cache storage/logs storage/sessions storage/rate-limits storage/uploads
+          cat > config/local.php <<'PHP'
+          <?php
+
+          declare(strict_types=1);
+
+          return [
+              'installation' => [
+                  'completed' => true,
+              ],
+              'security' => [
+                  'secret_key' => base64_encode(str_repeat('g', 32)),
+              ],
+              'site' => [
+                  'name' => 'Тестовая епархия',
+                  'profile' => 'diocese',
+              ],
+              'federation' => [
+                  'enabled' => true,
+                  'instance_id' => '60000000-0000-4000-8000-000000000006',
+              ],
+              'database' => [
+                  'driver' => 'pgsql',
+                  'host' => '127.0.0.1',
+                  'port' => 5432,
+                  'database' => 'churchcms',
+                  'username' => 'churchcms',
+                  'password' => 'churchcms',
+              ],
+          ];
+          PHP
+          php bin/migrate.php
+
+      - name: Проверить управление организационным деревом
+        shell: bash
+        run: |
+          php -r '
+          require "core.php";
+
+          $service = \ChurchCMS\Modules\Organizations\OrganizationService::fromDatabase();
+          $repository = \ChurchCMS\Modules\Organizations\OrganizationRepository::fromDatabase();
+
+          $root = $service->ensureSiteRoot(
+              "Тестовая епархия",
+              "diocese",
+          );
+
+          $deaneryId = $service->create(
+              name: "Северное благочиние",
+              type: "deanery",
+              parentPublicId: $root->publicId,
+              sortOrder: 10,
+          );
+          $deanery = $repository->findByPublicId($deaneryId);
+
+          $parishId = $service->create(
+              name: "Приход святителя Николая",
+              type: "parish",
+              parentPublicId: $deaneryId,
+          );
+          $parish = $repository->findByPublicId($parishId);
+
+          $departmentId = $service->create(
+              name: "Молодёжный отдел",
+              type: "department",
+          );
+          $department = $repository->findByPublicId($departmentId);
+
+          if (
+              $deanery === null
+              || $parish === null
+              || $department === null
+              || $deanery->parentId !== $root->id
+              || $parish->parentId !== $deanery->id
+              || $department->parentId !== $root->id
+          ) {
+              fwrite(STDERR, "Единый root или parent links нарушены.\n");
+              exit(1);
+          }
+
+          $service->update(
+              publicId: $deaneryId,
+              name: "Центральное благочиние",
+              type: "deanery",
+              parentPublicId: $root->publicId,
+              slug: "centralnoe",
+              descriptionInput: "Обновлённое описание",
+              sortOrder: 5,
+          );
+
+          $deanery = $repository->findByPublicId($deaneryId);
+          $parish = $repository->findByPublicId($parishId);
+
+          if (
+              $deanery?->path
+                  !== $root->path . "/centralnoe"
+              || $deanery->sortOrder !== 5
+              || $parish?->path
+                  !== $root->path
+                    . "/centralnoe/"
+                    . $parish->slug
+          ) {
+              fwrite(STDERR, "Изменение узла не пересчитало поддерево.\n");
+              exit(1);
+          }
+
+          try {
+              $service->update(
+                  publicId: $deaneryId,
+                  name: $deanery->name,
+                  type: $deanery->type,
+                  parentPublicId: $parishId,
+                  slug: $deanery->slug,
+                  sortOrder: $deanery->sortOrder,
+              );
+              fwrite(STDERR, "Циклическое перемещение было разрешено.\n");
+              exit(1);
+          } catch (InvalidArgumentException) {
+          }
+
+          $service->archiveSubtree($deaneryId);
+          $deanery = $repository->findByPublicId($deaneryId);
+          $parish = $repository->findByPublicId($parishId);
+
+          if (
+              $deanery?->status !== "archived"
+              || $parish?->status !== "archived"
+          ) {
+              fwrite(STDERR, "Архивирование не охватило поддерево.\n");
+              exit(1);
+          }
+
+          try {
+              $service->create(
+                  name: "Нельзя сюда",
+                  type: "parish",
+                  parentPublicId: $deaneryId,
+              );
+              fwrite(STDERR, "Создание внутри архива ошибочно разрешено.\n");
+              exit(1);
+          } catch (InvalidArgumentException) {
+          }
+
+          $service->restoreSubtree($deaneryId);
+          $deanery = $repository->findByPublicId($deaneryId);
+          $parish = $repository->findByPublicId($parishId);
+
+          if (
+              $deanery?->status !== "active"
+              || $parish?->status !== "active"
+          ) {
+              fwrite(STDERR, "Восстановление не охватило поддерево.\n");
+              exit(1);
+          }
+
+          try {
+              $service->archiveSubtree($root->publicId);
+              fwrite(STDERR, "Корневая организация была архивирована.\n");
+              exit(1);
+          } catch (InvalidArgumentException) {
+          }
+
+          $permissions = \ChurchCMS\Core\DatabaseManager::getInstance()
+              ->connection()
+              ->query(
+                  "SELECT permission_key
+                   FROM permissions
+                   WHERE permission_key IN (
+                       '''organizations.read''',
+                       '''organizations.manage'''
+                   )
+                   ORDER BY permission_key"
+              )
+              ->fetchAll(PDO::FETCH_COLUMN);
+
+          if ($permissions !== [
+              "organizations.manage",
+              "organizations.read",
+          ]) {
+              fwrite(STDERR, "Organization permissions не созданы миграцией.\n");
+              exit(1);
+          }
+
+          echo "Organization admin domain smoke OK\n";
+          '
+
+      - name: Проверить Admin Shell и шаблоны
+        shell: bash
+        run: |
+          php -r '
+          require "core.php";
+
+          $entries = \ChurchCMS\App\Services\AdminNavigationRegistry::entries();
+          $organizationEntry = null;
+
+          foreach ($entries as $entry) {
+              if (($entry["id"] ?? null) === "organizations") {
+                  $organizationEntry = $entry;
+                  break;
+              }
+          }
+
+          if (
+              !is_array($organizationEntry)
+              || ($organizationEntry["route"] ?? null)
+                  !== "admin_organizations"
+              || ($organizationEntry["permission"] ?? null)
+                  !== "organizations.manage"
+          ) {
+              fwrite(STDERR, "Раздел структуры не зарегистрирован в Admin Shell.\n");
+              exit(1);
+          }
+
+          $repository = \ChurchCMS\Modules\Organizations\OrganizationRepository::fromDatabase();
+          $root = $repository->siteRoot();
+          $units = $repository->tree();
+          $renderer = \ChurchCMS\Core\ThemeRenderer::fromConfig();
+
+          $index = $renderer->capture(
+              "admin.organizations.index",
+              [
+                  "units" => $units,
+                  "root" => $root,
+                  "typeLabels" => \ChurchCMS\Modules\Organizations\OrganizationTypeCatalog::all(),
+                  "organizationStatus" => null,
+              ],
+          );
+
+          foreach ([
+              "Организации и подразделения",
+              "/admin/organizations/new",
+              "Редактировать",
+              "Корень сайта",
+          ] as $expected) {
+              if (!str_contains($index, $expected)) {
+                  fwrite(STDERR, "Organization index не содержит: {$expected}\n");
+                  exit(1);
+              }
+          }
+
+          $editor = $renderer->capture(
+              "admin.organizations.editor",
+              [
+                  "unit" => null,
+                  "root" => $root,
+                  "parents" => $units,
+                  "typeLabels" => \ChurchCMS\Modules\Organizations\OrganizationTypeCatalog::all(),
+                  "form" => [
+                      "name" => "",
+                      "type" => "parish",
+                      "parent_public_id" => $root?->publicId,
+                      "slug" => "",
+                      "short_name" => null,
+                      "legal_name" => null,
+                      "description" => "",
+                      "sort_order" => 0,
+                  ],
+                  "error" => null,
+                  "organizationStatus" => null,
+              ],
+          );
+
+          foreach ([
+              "name=\"name\"",
+              "name=\"type\"",
+              "name=\"parent_public_id\"",
+              "name=\"sort_order\"",
+              "Добавить в структуру",
+          ] as $expected) {
+              if (!str_contains($editor, $expected)) {
+                  fwrite(STDERR, "Organization editor не содержит: {$expected}\n");
+                  exit(1);
+              }
+          }
+
+          $theme = json_decode(
+              file_get_contents("themes/default/theme.json"),
+              true,
+              32,
+              JSON_THROW_ON_ERROR,
+          );
+
+          foreach ([
+              "monastery",
+              "deanery",
+              "diocese",
+              "metropolia",
+              "mixed",
+              "organization",
+          ] as $profile) {
+              if (!in_array($profile, $theme["profiles"] ?? [], true)) {
+                  fwrite(STDERR, "Default theme не поддерживает профиль: {$profile}\n");
+                  exit(1);
+              }
+          }
+
+          echo "Organization admin render smoke OK\n";
+          '
