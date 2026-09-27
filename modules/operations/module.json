@@ -1,6 +1,6 @@
 {
   "id": "operations",
-  "name": "System Operations",
+  "name": "Системные операции",
   "version": "0.1.0",
   "runtime": "runtime.php",
   "capabilities": []
