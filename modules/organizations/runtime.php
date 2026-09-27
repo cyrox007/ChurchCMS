@@ -5,9 +5,13 @@ declare(strict_types=1);
 use ChurchCMS\App\Middlewares\ApiCorsMiddleware;
 use ChurchCMS\App\Middlewares\ApiEnabledMiddleware;
 use ChurchCMS\App\Middlewares\ApiPublicRateLimitMiddleware;
+use ChurchCMS\App\Middlewares\CsrfMiddleware;
+use ChurchCMS\App\Middlewares\RequireAdminMiddleware;
+use ChurchCMS\App\Services\AdminNavigationRegistry;
 use ChurchCMS\Core\ModuleRuntimeProvider;
 use ChurchCMS\Core\Router;
 use ChurchCMS\Modules\Organizations\FederationApiController;
+use ChurchCMS\Modules\Organizations\OrganizationAdminController;
 
 $moduleRoot = __DIR__;
 foreach ([
@@ -18,6 +22,7 @@ foreach ([
     'FederationRepository.php',
     'OrganizationService.php',
     'FederationService.php',
+    'OrganizationAdminController.php',
     'FederationApiController.php',
 ] as $file) {
     require_once $moduleRoot . '/' . $file;
@@ -36,7 +41,67 @@ return new class implements ModuleRuntimeProvider {
 
     public function boot(): void
     {
-        Router::getInstance()->add(
+        AdminNavigationRegistry::register(
+            id: 'organizations',
+            label: 'Структура',
+            route: 'admin_organizations',
+            permission: 'organizations.manage',
+            priority: 30,
+        );
+
+        $router = Router::getInstance();
+
+        $router->add(
+            'GET',
+            '/admin/organizations',
+            [OrganizationAdminController::class, 'index'],
+            [RequireAdminMiddleware::class],
+            'admin_organizations',
+        );
+        $router->add(
+            'GET',
+            '/admin/organizations/new',
+            [OrganizationAdminController::class, 'createForm'],
+            [RequireAdminMiddleware::class],
+            'admin_organization_new',
+        );
+        $router->add(
+            'POST',
+            '/admin/organizations',
+            [OrganizationAdminController::class, 'create'],
+            [RequireAdminMiddleware::class, CsrfMiddleware::class],
+            'admin_organization_create',
+        );
+        $router->add(
+            'GET',
+            '/admin/organizations/{publicId}',
+            [OrganizationAdminController::class, 'edit'],
+            [RequireAdminMiddleware::class],
+            'admin_organization_edit',
+        );
+        $router->add(
+            'POST',
+            '/admin/organizations/{publicId}',
+            [OrganizationAdminController::class, 'update'],
+            [RequireAdminMiddleware::class, CsrfMiddleware::class],
+            'admin_organization_update',
+        );
+        $router->add(
+            'POST',
+            '/admin/organizations/{publicId}/archive',
+            [OrganizationAdminController::class, 'archive'],
+            [RequireAdminMiddleware::class, CsrfMiddleware::class],
+            'admin_organization_archive',
+        );
+        $router->add(
+            'POST',
+            '/admin/organizations/{publicId}/restore',
+            [OrganizationAdminController::class, 'restore'],
+            [RequireAdminMiddleware::class, CsrfMiddleware::class],
+            'admin_organization_restore',
+        );
+
+        $router->add(
             'GET',
             '/api/v1/federation/meta',
             [FederationApiController::class, 'meta'],
