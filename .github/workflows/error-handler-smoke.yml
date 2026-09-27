@@ -1,0 +1,141 @@
+name: Проверка production error handler
+
+on:
+  push:
+    branches:
+      - develop
+      - main
+    paths:
+      - 'core/ErrorHandler.php'
+      - 'index.php'
+      - 'config/app.php'
+      - '.github/workflows/error-handler-smoke.yml'
+      - 'docs/ERROR_HANDLING.md'
+  pull_request:
+    branches:
+      - develop
+      - main
+    paths:
+      - 'core/ErrorHandler.php'
+      - 'index.php'
+      - 'config/app.php'
+      - '.github/workflows/error-handler-smoke.yml'
+      - 'docs/ERROR_HANDLING.md'
+
+permissions:
+  contents: read
+
+jobs:
+  error-handler:
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Получить исходный код
+        uses: actions/checkout@v4
+
+      - name: Подготовить PHP 8.3
+        uses: shivammathur/setup-php@v2
+        with:
+          php-version: '8.3'
+          coverage: none
+
+      - name: Проверить синтаксис и порядок bootstrap
+        shell: bash
+        run: |
+          set -euo pipefail
+          php -l core/ErrorHandler.php
+          php -l index.php
+          php -l config/app.php
+
+          error_line="$(grep -n "core/ErrorHandler.php" index.php | cut -d: -f1)"
+          core_line="$(grep -n "core.php" index.php | tail -1 | cut -d: -f1)"
+
+          test -n "$error_line"
+          test -n "$core_line"
+          test "$error_line" -lt "$core_line"
+          grep -q "'debug' => false" config/app.php
+
+      - name: Проверить безопасный HTML-ответ
+        shell: bash
+        run: |
+          set -euo pipefail
+          root="$RUNNER_TEMP/error-handler-html"
+          mkdir -p "$root/storage/logs"
+
+          set +e
+          output="$(
+            php -r '
+            require "core/ErrorHandler.php";
+            $_SERVER["REQUEST_URI"] = "/admin/example";
+            $_SERVER["HTTP_ACCEPT"] = "text/html";
+            \ChurchCMS\Core\ErrorHandler::register($argv[1]);
+
+            $requestId = \ChurchCMS\Core\ErrorHandler::requestId();
+            if (preg_match("/^[a-f0-9]{24}$/D", $requestId) !== 1) {
+                fwrite(STDERR, "Некорректный request ID.\n");
+                exit(2);
+            }
+
+            throw new RuntimeException("SECRET_INTERNAL_DETAIL");
+            ' "$root" 2>/dev/null
+          )"
+          status="$?"
+          set -e
+
+          test "$status" -ne 0
+          printf '%s' "$output" | grep -q "Не удалось открыть страницу"
+          printf '%s' "$output" | grep -q "Код обращения"
+          if printf '%s' "$output" | grep -q "SECRET_INTERNAL_DETAIL"; then
+            echo "Внутренняя ошибка попала в production HTML." >&2
+            exit 1
+          fi
+
+          test -f "$root/storage/logs/error.log"
+          grep -q "SECRET_INTERNAL_DETAIL" "$root/storage/logs/error.log"
+          grep -Eq "request_id=[a-f0-9]{24}" "$root/storage/logs/error.log"
+
+      - name: Проверить безопасный JSON-ответ
+        shell: bash
+        run: |
+          set -euo pipefail
+          root="$RUNNER_TEMP/error-handler-json"
+          mkdir -p "$root/storage/logs"
+
+          set +e
+          output="$(
+            php -r '
+            require "core/ErrorHandler.php";
+            $_SERVER["REQUEST_URI"] = "/api/v1/smoke";
+            $_SERVER["HTTP_ACCEPT"] = "application/json";
+            \ChurchCMS\Core\ErrorHandler::register($argv[1]);
+            throw new RuntimeException("SECRET_API_DETAIL");
+            ' "$root" 2>/dev/null
+          )"
+          status="$?"
+          set -e
+
+          test "$status" -ne 0
+
+          php -r '
+          $payload = json_decode($argv[1], true, 16, JSON_THROW_ON_ERROR);
+
+          if (
+              ($payload["error"] ?? null) !== "internal_server_error"
+              || ($payload["message"] ?? null) !== "Внутренняя ошибка сервера."
+              || preg_match(
+                  "/^[a-f0-9]{24}$/D",
+                  (string) ($payload["request_id"] ?? "")
+              ) !== 1
+              || array_key_exists("debug", $payload)
+          ) {
+              fwrite(STDERR, "Некорректный production JSON error response.\n");
+              exit(1);
+          }
+          ' "$output"
+
+          if printf '%s' "$output" | grep -q "SECRET_API_DETAIL"; then
+            echo "Внутренняя ошибка попала в production JSON." >&2
+            exit 1
+          fi
+
+          grep -q "SECRET_API_DETAIL" "$root/storage/logs/error.log"
