@@ -10,6 +10,8 @@ return [
         'timezone' => 'Europe/Moscow',
         'locale' => 'ru',
         'url' => 'http://localhost',
+        // В production подробности исключений не должны попадать в HTTP-ответ.
+        'debug' => false,
     ],
     'session' => [
         'name' => 'churchcms_session',
