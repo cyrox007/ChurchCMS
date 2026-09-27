@@ -57,6 +57,34 @@ final class PublicationTaxonomyService
     }
 
     /**
+     * @param list<string> $names
+     * @return list<string>
+     */
+    public static function categoriesFromNames(
+        array $names,
+    ): array {
+        return self::normalizeParts(
+            $names,
+            self::CATEGORY_LIMIT,
+            'категорий',
+        );
+    }
+
+    /**
+     * @param list<string> $names
+     * @return list<string>
+     */
+    public static function tagsFromNames(
+        array $names,
+    ): array {
+        return self::normalizeParts(
+            $names,
+            self::TAG_LIMIT,
+            'тегов',
+        );
+    }
+
+    /**
      * @param list<string> $categories
      * @param list<string> $tags
      */
@@ -120,6 +148,22 @@ final class PublicationTaxonomyService
             return [];
         }
 
+        return self::normalizeParts(
+            array_values(array_filter($parts, 'is_string')),
+            $limit,
+            $label,
+        );
+    }
+
+    /**
+     * @param list<string> $parts
+     * @return list<string>
+     */
+    private static function normalizeParts(
+        array $parts,
+        int $limit,
+        string $label,
+    ): array {
         $result = [];
         $seen = [];
 
