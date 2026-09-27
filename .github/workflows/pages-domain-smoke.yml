@@ -95,8 +95,8 @@ jobs:
           php -r '
           require "core.php";
 
-          $service = ChurchCMSModulesPagesPageService::fromDatabase();
-          $repository = ChurchCMSModulesPagesPageRepository::fromDatabase();
+          $service = \\ChurchCMS\\Modules\\Pages\\PageService::fromDatabase();
+          $repository = \\ChurchCMS\\Modules\\Pages\\PageRepository::fromDatabase();
 
           $rootId = $service->createDraft(
               title: "О приходе",
@@ -227,8 +227,8 @@ jobs:
           php -r '
           require "core.php";
 
-          $service = ChurchCMSModulesPagesPageService::fromDatabase();
-          $repository = ChurchCMSModulesPagesPageRepository::fromDatabase();
+          $service = \\ChurchCMS\\Modules\\Pages\\PageService::fromDatabase();
+          $repository = \\ChurchCMS\\Modules\\Pages\\PageRepository::fromDatabase();
 
           $id = $service->createDraft(
               title: "Безопасный HTML",
