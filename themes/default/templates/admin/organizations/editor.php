@@ -10,6 +10,20 @@ $isRoot = $isEdit
     && $root->id === $unit->id;
 $typeLabels = is_array($typeLabels ?? null) ? $typeLabels : [];
 $parents = is_array($parents ?? null) ? $parents : [];
+$parentLocked = ($parentLocked ?? false) === true;
+$lockedParent = isset($lockedParent)
+    && $lockedParent instanceof \ChurchCMS\Modules\Organizations\OrganizationUnit
+    ? $lockedParent
+    : null;
+$currentType = (string) ($form['type'] ?? 'parish');
+
+if (
+    $currentType !== ''
+    && !isset($typeLabels[$currentType])
+) {
+    $typeLabels[$currentType] =
+        $currentType . ' (пользовательский тип)';
+}
 $formAction = $isEdit
     ? $theme->route(
         'admin_organization_update',
@@ -86,11 +100,24 @@ $status = is_array($organizationStatus ?? null)
                         <small>Корень нельзя переместить под другое подразделение.</small>
                     </div>
                     <input type="hidden" name="parent_public_id" value="">
+                <?php elseif ($parentLocked && $lockedParent !== null): ?>
+                    <div class="field">
+                        <span>Родительская организация</span>
+                        <strong><?= $theme->e($lockedParent->name) ?></strong>
+                        <small>Родитель находится выше вашей области доступа, поэтому положение этого узла изменить нельзя.</small>
+                    </div>
+                    <input
+                        type="hidden"
+                        name="parent_public_id"
+                        value="<?= $theme->e($lockedParent->publicId) ?>"
+                    >
                 <?php else: ?>
                     <label class="field">
                         <span>Родительская организация</span>
-                        <select name="parent_public_id">
-                            <option value="">Корневая организация сайта</option>
+                        <select name="parent_public_id" required>
+                            <option value="" <?= empty($form['parent_public_id']) ? 'selected' : '' ?> disabled>
+                                Выберите родительскую организацию
+                            </option>
                             <?php foreach ($parents as $parent): ?>
                                 <?php
                                 $depth = max(
