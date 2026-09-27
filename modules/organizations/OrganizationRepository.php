@@ -116,6 +116,34 @@ final class OrganizationRepository
     /**
      * @return list<OrganizationUnit>
      */
+    public function subtree(
+        OrganizationUnit $root,
+    ): array {
+        $statement = $this->pdo->prepare(
+            'SELECT * FROM organization_units
+             WHERE site_key = :site_key
+               AND (
+                    id = :id
+                    OR path LIKE :path_prefix
+               )
+             ORDER BY path ASC, sort_order ASC, id ASC'
+        );
+        $statement->execute([
+            'site_key' => $root->siteKey,
+            'id' => $root->id,
+            'path_prefix' => $root->path . '/%',
+        ]);
+
+        return array_map(
+            fn(array $row): OrganizationUnit =>
+                $this->hydrate($row),
+            $statement->fetchAll(),
+        );
+    }
+
+    /**
+     * @return list<OrganizationUnit>
+     */
     public function tree(
         string $siteKey = 'default',
     ): array {

@@ -1,12 +1,18 @@
 {
   "id": "default",
   "name": "ChurchCMS Default",
-  "version": "0.8.8",
+  "version": "0.8.9",
   "profiles": [
     "small-parish",
     "parish",
     "cathedral",
-    "education"
+    "monastery",
+    "deanery",
+    "diocese",
+    "metropolia",
+    "education",
+    "mixed",
+    "organization"
   ],
   "templates": {
     "layout.main": "layouts/main",
@@ -28,6 +34,8 @@
     "admin.search": "admin/search",
     "admin.tasks": "admin/tasks",
     "admin.operations": "admin/operations",
-    "admin.account_password": "admin/account-password"
+    "admin.account_password": "admin/account-password",
+    "admin.organizations.index": "admin/organizations/index",
+    "admin.organizations.editor": "admin/organizations/editor"
   }
 }

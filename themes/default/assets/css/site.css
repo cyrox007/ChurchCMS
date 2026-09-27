@@ -2333,3 +2333,90 @@ a.admin-task:focus-visible {
     color: #6b1f2d;
     background: #fbf1f3;
 }
+
+
+/* Церковная структура Admin Shell */
+.organization-tree {
+    display: grid;
+    gap: .6rem;
+    margin-top: 1.1rem;
+}
+
+.organization-tree__item {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 1rem;
+    margin-left: min(
+        calc(var(--organization-depth, 0) * 1.4rem),
+        8.4rem
+    );
+    padding: .85rem 1rem;
+    border: 1px solid var(--line);
+    border-radius: .75rem;
+    background: var(--paper);
+}
+
+.organization-tree__item--archived {
+    opacity: .72;
+    background: #f5f5f5;
+}
+
+.organization-tree__body {
+    min-width: 0;
+    display: grid;
+    gap: .2rem;
+}
+
+.organization-tree__body h2 {
+    margin: 0;
+    color: var(--navy-950);
+    font-family: var(--font-display);
+    font-size: 1.02rem;
+}
+
+.organization-tree__body p,
+.organization-tree__body small {
+    margin: 0;
+    color: var(--ink-700);
+}
+
+.organization-tree__meta {
+    display: flex;
+    flex-wrap: wrap;
+    align-items: center;
+    gap: .45rem;
+    color: var(--ink-600);
+    font-size: .78rem;
+}
+
+.organization-tree__actions {
+    flex: 0 0 auto;
+    display: flex;
+    flex-wrap: wrap;
+    justify-content: flex-end;
+    gap: .45rem;
+}
+
+.organization-editor {
+    width: min(54rem, 100%);
+    display: grid;
+    gap: 1rem;
+    margin-top: 1.25rem;
+}
+
+@media (max-width: 48rem) {
+    .organization-tree__item {
+        align-items: flex-start;
+        flex-direction: column;
+        margin-left: min(
+            calc(var(--organization-depth, 0) * .75rem),
+            3rem
+        );
+    }
+
+    .organization-tree__actions {
+        width: 100%;
+        justify-content: flex-start;
+    }
+}
