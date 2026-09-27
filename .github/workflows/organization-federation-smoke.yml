@@ -1,0 +1,164 @@
+name: Проверка организационной структуры и федерации
+
+on:
+  push:
+    branches:
+      - develop
+      - main
+    paths:
+      - 'core/SiteProfileCatalog.php'
+      - 'config/app.php'
+      - 'install.php'
+      - 'modules/organizations/**'
+      - 'tools/organization-federation-smoke.php'
+      - '.github/workflows/organization-federation-smoke.yml'
+  pull_request:
+    branches:
+      - develop
+      - main
+    paths:
+      - 'core/SiteProfileCatalog.php'
+      - 'config/app.php'
+      - 'install.php'
+      - 'modules/organizations/**'
+      - 'tools/organization-federation-smoke.php'
+      - '.github/workflows/organization-federation-smoke.yml'
+
+permissions:
+  contents: read
+
+jobs:
+  organization-federation:
+    runs-on: ubuntu-latest
+
+    services:
+      postgres:
+        image: postgres:16
+        env:
+          POSTGRES_DB: churchcms
+          POSTGRES_USER: churchcms
+          POSTGRES_PASSWORD: churchcms
+        ports:
+          - 5432:5432
+        options: >-
+          --health-cmd pg_isready
+          --health-interval 10s
+          --health-timeout 5s
+          --health-retries 5
+
+    steps:
+      - name: Получить исходный код
+        uses: actions/checkout@v4
+
+      - name: Подготовить PHP 8.3
+        uses: shivammathur/setup-php@v2
+        with:
+          php-version: '8.3'
+          extensions: pdo, pdo_pgsql, openssl, mbstring
+          coverage: none
+
+      - name: Проверить PHP и installer
+        shell: bash
+        run: |
+          set -euo pipefail
+          php -l core/SiteProfileCatalog.php
+          php -l install.php
+          find modules/organizations -type f -name '*.php' -print0 \
+            | xargs -0 -n1 php -l
+          php -l tools/organization-federation-smoke.php
+          php bin/migrate.php validate
+
+      - name: Подготовить тестовую установку
+        shell: bash
+        run: |
+          set -euo pipefail
+          mkdir -p storage/cache storage/logs storage/sessions storage/rate-limits storage/uploads
+          cat > config/local.php <<'PHP'
+          <?php
+
+          declare(strict_types=1);
+
+          return [
+              'installation' => [
+                  'completed' => true,
+              ],
+              'security' => [
+                  'secret_key' => base64_encode(str_repeat('f', 32)),
+              ],
+              'site' => [
+                  'name' => 'Тестовая епархия',
+                  'profile' => 'diocese',
+              ],
+              'federation' => [
+                  'enabled' => true,
+                  'instance_id' => '50000000-0000-4000-8000-000000000005',
+              ],
+              'database' => [
+                  'driver' => 'pgsql',
+                  'host' => '127.0.0.1',
+                  'port' => 5432,
+                  'database' => 'churchcms',
+                  'username' => 'churchcms',
+                  'password' => 'churchcms',
+              ],
+          ];
+          PHP
+          php bin/migrate.php
+
+      - name: Проверить локальное дерево и federation link
+        run: php tools/organization-federation-smoke.php
+
+      - name: Проверить federation discovery endpoint
+        shell: bash
+        run: |
+          set -euo pipefail
+          php -S 127.0.0.1:8099 index.php >"$RUNNER_TEMP/federation-server.log" 2>&1 &
+          server_pid="$!"
+          trap 'kill "$server_pid" 2>/dev/null || true' EXIT
+          sleep 1
+
+          php -r '
+          $raw = file_get_contents(
+              "http://127.0.0.1:8099/api/v1/federation/meta"
+          );
+          if (!is_string($raw)) {
+              fwrite(STDERR, "Federation meta endpoint недоступен.\n");
+              exit(1);
+          }
+
+          $payload = json_decode(
+              $raw,
+              true,
+              32,
+              JSON_THROW_ON_ERROR,
+          );
+          $data = $payload["data"] ?? [];
+
+          if (
+              ($data["protocol"] ?? null)
+                  !== "churchcms-federation-v1"
+              || ($data["instance_id"] ?? null)
+                  !== "50000000-0000-4000-8000-000000000005"
+              || ($data["profile"] ?? null) !== "diocese"
+              || ($data["organization"]["type"] ?? null)
+                  !== "diocese"
+              || ($data["organization"]["name"] ?? null)
+                  !== "Тестовая епархия"
+              || isset($data["token"])
+              || isset($data["database_id"])
+          ) {
+              fwrite(
+                  STDERR,
+                  "Federation discovery раскрыл лишнее или потерял identity: "
+                  . json_encode(
+                      $payload,
+                      JSON_UNESCAPED_UNICODE
+                      | JSON_UNESCAPED_SLASHES,
+                  )
+                  . "\n",
+              );
+              exit(1);
+          }
+
+          echo "Federation discovery smoke OK\n";
+          '
