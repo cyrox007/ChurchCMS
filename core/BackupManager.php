@@ -101,7 +101,7 @@ final class BackupManager
      *     tables:int
      * }>
      */
-    public function list(int $limit = 20): array
+    public function backups(int $limit = 20): array
     {
         $limit = max(1, min(100, $limit));
         $root = $this->prepareBackupRoot();
