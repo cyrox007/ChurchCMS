@@ -216,6 +216,69 @@ final class PublicationRepository
         );
     }
 
+    /**
+     * Атомарно переводит наступившие scheduled-публикации в published.
+     *
+     * @return list<string> public ID опубликованных материалов
+     */
+    public function publishDueScheduled(
+        string $siteKey = 'default',
+        int $limit = 50,
+        ?DateTimeImmutable $now = null,
+    ): array {
+        $limit = max(1, min(200, $limit));
+        $now ??= new DateTimeImmutable('now');
+        $utc = $now->setTimezone(new \DateTimeZone('UTC'));
+        $timestamp = $utc->format('Y-m-d H:i:s');
+
+        $select = $this->pdo->prepare(
+            'SELECT id, public_id
+             FROM publications
+             WHERE site_key = :site_key
+               AND status = :scheduled
+               AND published_at IS NOT NULL
+               AND published_at <= :now
+             ORDER BY published_at ASC, id ASC
+             LIMIT :limit'
+        );
+        $select->bindValue(':site_key', $siteKey);
+        $select->bindValue(
+            ':scheduled',
+            PublicationStatus::Scheduled->value,
+        );
+        $select->bindValue(':now', $timestamp);
+        $select->bindValue(':limit', $limit, PDO::PARAM_INT);
+        $select->execute();
+
+        $publish = $this->pdo->prepare(
+            'UPDATE publications
+             SET status = :published,
+                 updated_at = :updated_at
+             WHERE id = :id
+               AND status = :scheduled
+               AND published_at IS NOT NULL
+               AND published_at <= :now'
+        );
+
+        $published = [];
+
+        foreach ($select->fetchAll() as $row) {
+            $publish->execute([
+                'published' => PublicationStatus::Published->value,
+                'updated_at' => $timestamp,
+                'id' => (int) $row['id'],
+                'scheduled' => PublicationStatus::Scheduled->value,
+                'now' => $timestamp,
+            ]);
+
+            if ($publish->rowCount() === 1) {
+                $published[] = (string) $row['public_id'];
+            }
+        }
+
+        return $published;
+    }
+
     public function countEditorialWork(string $siteKey = 'default'): int
     {
         $statement = $this->pdo->prepare(

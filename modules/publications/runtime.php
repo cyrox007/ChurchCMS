@@ -32,6 +32,7 @@ foreach ([
     'PublicationTaxonomyRepository.php',
     'PublicationTaxonomyService.php',
     'PublicationService.php',
+    'PublicationScheduleWorker.php',
     'PublicationApiResource.php',
     'PublicationSyndicationProvider.php',
     'PublicationAdminSearchProvider.php',
@@ -146,6 +147,20 @@ return new class implements ModuleRuntimeProvider {
             [PublicationsAdminController::class, 'publish'],
             [RequireAdminMiddleware::class, CsrfMiddleware::class],
             'admin_publication_publish',
+        );
+        $router->add(
+            'POST',
+            '/admin/publications/{publicId}/schedule',
+            [PublicationsAdminController::class, 'schedule'],
+            [RequireAdminMiddleware::class, CsrfMiddleware::class],
+            'admin_publication_schedule',
+        );
+        $router->add(
+            'POST',
+            '/admin/publications/{publicId}/unschedule',
+            [PublicationsAdminController::class, 'unschedule'],
+            [RequireAdminMiddleware::class, CsrfMiddleware::class],
+            'admin_publication_unschedule',
         );
         $router->add(
             'POST',

@@ -247,6 +247,96 @@ final class PublicationService
         }
     }
 
+    public function schedule(
+        string $publicId,
+        DateTimeImmutable $when,
+    ): void {
+        self::assertUuid($publicId);
+
+        $utc = $when->setTimezone(
+            new \DateTimeZone('UTC'),
+        );
+        $now = new DateTimeImmutable(
+            'now',
+            new \DateTimeZone('UTC'),
+        );
+
+        if ($utc <= $now) {
+            throw new InvalidArgumentException(
+                'Время отложенной публикации должно быть в будущем.'
+            );
+        }
+
+        $statusStatement = $this->pdo->prepare(
+            'SELECT status FROM publications
+             WHERE public_id = :public_id
+             LIMIT 1'
+        );
+        $statusStatement->execute([
+            'public_id' => $publicId,
+        ]);
+        $currentStatus = $statusStatement->fetchColumn();
+
+        if ($currentStatus === false) {
+            throw new InvalidArgumentException(
+                'Публикация не найдена.'
+            );
+        }
+
+        if (
+            (string) $currentStatus
+            === PublicationStatus::Published->value
+        ) {
+            throw new InvalidArgumentException(
+                'Опубликованный материал сначала нужно снять с публикации.'
+            );
+        }
+
+        $statement = $this->pdo->prepare(
+            'UPDATE publications
+             SET status = :status,
+                 published_at = :published_at,
+                 updated_at = :updated_at
+             WHERE public_id = :public_id'
+        );
+        $statement->execute([
+            'status' => PublicationStatus::Scheduled->value,
+            'published_at' => $utc->format('Y-m-d H:i:s'),
+            'updated_at' => gmdate('Y-m-d H:i:s'),
+            'public_id' => $publicId,
+        ]);
+
+        PageCache::bumpVersion();
+    }
+
+    public function unschedule(string $publicId): void
+    {
+        self::assertUuid($publicId);
+
+        $statement = $this->pdo->prepare(
+            'UPDATE publications
+             SET status = :draft,
+                 published_at = NULL,
+                 updated_at = :updated_at
+             WHERE public_id = :public_id
+               AND status = :scheduled'
+        );
+        $statement->execute([
+            'draft' => PublicationStatus::Draft->value,
+            'scheduled' => PublicationStatus::Scheduled->value,
+            'updated_at' => gmdate('Y-m-d H:i:s'),
+            'public_id' => $publicId,
+        ]);
+
+        if ($statement->rowCount() !== 1) {
+            throw new InvalidArgumentException(
+                'Запланированная публикация не найдена.'
+            );
+        }
+
+        PageCache::bumpVersion();
+    }
+
     public function publish(string $publicId, ?DateTimeImmutable $when = null): void
     {
         self::assertUuid($publicId);

@@ -1,0 +1,326 @@
+name: Проверка отложенных публикаций
+
+on:
+  push:
+    branches:
+      - develop
+      - main
+    paths:
+      - 'bin/publication-schedule.php'
+      - 'modules/publications/**'
+      - 'themes/default/templates/admin/publications/editor.php'
+      - '.github/workflows/publication-schedule-smoke.yml'
+  pull_request:
+    branches:
+      - develop
+      - main
+    paths:
+      - 'bin/publication-schedule.php'
+      - 'modules/publications/**'
+      - 'themes/default/templates/admin/publications/editor.php'
+      - '.github/workflows/publication-schedule-smoke.yml'
+
+permissions:
+  contents: read
+
+jobs:
+  publication-schedule:
+    runs-on: ubuntu-latest
+
+    services:
+      postgres:
+        image: postgres:16
+        env:
+          POSTGRES_DB: churchcms
+          POSTGRES_USER: churchcms
+          POSTGRES_PASSWORD: churchcms
+        ports:
+          - 5432:5432
+        options: >-
+          --health-cmd pg_isready
+          --health-interval 10s
+          --health-timeout 5s
+          --health-retries 5
+
+    steps:
+      - name: Получить исходный код
+        uses: actions/checkout@v4
+
+      - name: Подготовить PHP 8.3
+        uses: shivammathur/setup-php@v2
+        with:
+          php-version: '8.3'
+          extensions: pdo, pdo_pgsql, mbstring
+          coverage: none
+
+      - name: Проверить PHP и миграции
+        shell: bash
+        run: |
+          set -euo pipefail
+          php -l modules/publications/PublicationRepository.php
+          php -l modules/publications/PublicationService.php
+          php -l modules/publications/PublicationScheduleWorker.php
+          php -l modules/publications/PublicationsAdminController.php
+          php -l modules/publications/runtime.php
+          php -l themes/default/templates/admin/publications/editor.php
+          php -l bin/publication-schedule.php
+          php bin/migrate.php validate
+
+      - name: Подготовить тестовую установку
+        shell: bash
+        run: |
+          set -euo pipefail
+          mkdir -p storage/cache storage/logs storage/sessions storage/rate-limits storage/uploads
+          cat > config/local.php <<'PHP'
+          <?php
+
+          declare(strict_types=1);
+
+          return [
+              'installation' => [
+                  'completed' => true,
+              ],
+              'security' => [
+                  'secret_key' => base64_encode(str_repeat('s', 32)),
+              ],
+              'database' => [
+                  'driver' => 'pgsql',
+                  'host' => '127.0.0.1',
+                  'port' => 5432,
+                  'database' => 'churchcms',
+                  'username' => 'churchcms',
+                  'password' => 'churchcms',
+              ],
+              'app' => [
+                  'timezone' => 'Europe/Moscow',
+              ],
+          ];
+          PHP
+          php bin/migrate.php
+
+      - name: Проверить schedule worker и отмену
+        shell: bash
+        run: |
+          php -r '
+          require "core.php";
+
+          $service = \ChurchCMS\Modules\Publications\PublicationService::fromDatabase();
+          $repository = \ChurchCMS\Modules\Publications\PublicationRepository::fromDatabase();
+          $worker = \ChurchCMS\Modules\Publications\PublicationScheduleWorker::fromDatabase();
+
+          $base = new \DateTimeImmutable(
+              "now",
+              new \DateTimeZone("UTC"),
+          );
+          $dueAt = $base->modify("+2 minutes");
+          $futureAt = $base->modify("+2 hours");
+          $cancelAt = $base->modify("+30 minutes");
+
+          $dueId = $service->createDraft(
+              title: "Отложенная публикация",
+              slug: "scheduled-due",
+              bodyHtml: "Текст",
+          );
+          $futureId = $service->createDraft(
+              title: "Будущая публикация",
+              slug: "scheduled-future",
+              bodyHtml: "Текст",
+          );
+          $cancelId = $service->createDraft(
+              title: "Отменённая публикация",
+              slug: "scheduled-cancel",
+              bodyHtml: "Текст",
+          );
+
+          $service->schedule($dueId, $dueAt);
+          $service->schedule($futureId, $futureAt);
+          $service->schedule($cancelId, $cancelAt);
+          $service->unschedule($cancelId);
+
+          try {
+              $service->schedule(
+                  $cancelId,
+                  $base->modify("-1 minute"),
+              );
+              fwrite(STDERR, "Прошедшее время было принято для schedule.\n");
+              exit(1);
+          } catch (InvalidArgumentException) {
+          }
+
+          $dueBefore = $repository->findByPublicId($dueId);
+          $futureBefore = $repository->findByPublicId($futureId);
+          $cancelBefore = $repository->findByPublicId($cancelId);
+
+          if (
+              $dueBefore?->status
+                  !== \ChurchCMS\Modules\Publications\PublicationStatus::Scheduled
+              || $futureBefore?->status
+                  !== \ChurchCMS\Modules\Publications\PublicationStatus::Scheduled
+              || $cancelBefore?->status
+                  !== \ChurchCMS\Modules\Publications\PublicationStatus::Draft
+              || $cancelBefore->publishedAt !== null
+          ) {
+              fwrite(STDERR, "Начальные состояния schedule некорректны.\n");
+              exit(1);
+          }
+
+          $summary = $worker->run(
+              limit: 50,
+              siteKey: "default",
+              now: $base->modify("+5 minutes"),
+          );
+
+          if (
+              $summary["published"] !== 1
+              || $summary["public_ids"] !== [$dueId]
+          ) {
+              fwrite(
+                  STDERR,
+                  "Worker опубликовал неверный набор: "
+                  . json_encode(
+                      $summary,
+                      JSON_UNESCAPED_UNICODE
+                      | JSON_UNESCAPED_SLASHES,
+                  )
+                  . "\n",
+              );
+              exit(1);
+          }
+
+          $dueAfter = $repository->findByPublicId($dueId);
+          $futureAfter = $repository->findByPublicId($futureId);
+          $cancelAfter = $repository->findByPublicId($cancelId);
+
+          if (
+              $dueAfter?->status
+                  !== \ChurchCMS\Modules\Publications\PublicationStatus::Published
+              || $futureAfter?->status
+                  !== \ChurchCMS\Modules\Publications\PublicationStatus::Scheduled
+              || $cancelAfter?->status
+                  !== \ChurchCMS\Modules\Publications\PublicationStatus::Draft
+          ) {
+              fwrite(STDERR, "Worker нарушил scheduled/future/cancelled состояния.\n");
+              exit(1);
+          }
+
+          $second = $worker->run(
+              limit: 50,
+              siteKey: "default",
+              now: $base->modify("+5 minutes"),
+          );
+
+          if ($second["published"] !== 0) {
+              fwrite(STDERR, "Повторный запуск worker не идемпотентен.\n");
+              exit(1);
+          }
+
+          try {
+              $service->schedule(
+                  $dueId,
+                  $base->modify("+3 hours"),
+              );
+              fwrite(STDERR, "Опубликованный материал был скрыто перепланирован.\n");
+              exit(1);
+          } catch (InvalidArgumentException) {
+          }
+
+          echo "Publication schedule lifecycle smoke OK\n";
+          '
+
+      - name: Проверить элементы планирования в редакторе
+        shell: bash
+        run: |
+          php -r '
+          require "core.php";
+
+          $repository = \ChurchCMS\Modules\Publications\PublicationRepository::fromDatabase();
+          $rows = $repository->adminList();
+          $draftPublication = null;
+          $scheduledPublication = null;
+
+          foreach ($rows as $publication) {
+              if (
+                  $publication->status
+                  === \ChurchCMS\Modules\Publications\PublicationStatus::Draft
+                  && $draftPublication === null
+              ) {
+                  $draftPublication = $publication;
+              }
+
+              if (
+                  $publication->status
+                  === \ChurchCMS\Modules\Publications\PublicationStatus::Scheduled
+                  && $scheduledPublication === null
+              ) {
+                  $scheduledPublication = $publication;
+              }
+          }
+
+          if (
+              $draftPublication === null
+              || $scheduledPublication === null
+          ) {
+              fwrite(STDERR, "Не найдены публикации для render smoke.\n");
+              exit(1);
+          }
+
+          $renderer = \ChurchCMS\Core\ThemeRenderer::fromConfig();
+          $form = [
+              "type" => "news",
+              "title" => "Тест",
+              "excerpt" => "",
+              "body" => "Текст",
+              "author_name" => "",
+              "slug" => "test",
+              "comments_enabled" => false,
+              "categories" => "",
+              "tags" => "",
+          ];
+
+          $draftHtml = $renderer->capture(
+              "admin.publications.editor",
+              [
+                  "publication" => $draftPublication,
+                  "form" => $form,
+                  "error" => null,
+                  "success" => null,
+                  "canPublish" => true,
+                  "canSyndicate" => false,
+                  "scheduleTimezone" => "Europe/Moscow",
+                  "scheduledAtLocal" => "",
+              ],
+          );
+
+          if (
+              !str_contains($draftHtml, "name=\"scheduled_at\"")
+              || !str_contains($draftHtml, "Опубликовать сейчас")
+              || !str_contains($draftHtml, "Запланировать")
+          ) {
+              fwrite(STDERR, "Редактор не содержит управление планированием.\n");
+              exit(1);
+          }
+
+          $scheduledHtml = $renderer->capture(
+              "admin.publications.editor",
+              [
+                  "publication" => $scheduledPublication,
+                  "form" => $form,
+                  "error" => null,
+                  "success" => null,
+                  "canPublish" => true,
+                  "canSyndicate" => false,
+                  "scheduleTimezone" => "Europe/Moscow",
+                  "scheduledAtLocal" => "2030-01-01T12:00",
+              ],
+          );
+
+          if (
+              !str_contains($scheduledHtml, "Публикация запланирована")
+              || !str_contains($scheduledHtml, "Отменить планирование")
+          ) {
+              fwrite(STDERR, "Редактор не показывает scheduled состояние.\n");
+              exit(1);
+          }
+
+          echo "Publication schedule render smoke OK\n";
+          '
