@@ -148,6 +148,81 @@ final class UpdatePackageStager
         ];
     }
 
+    /**
+     * @return list<array{
+     *     id:string,
+     *     version:string,
+     *     files:int,
+     *     deleted_files:int,
+     *     code_only:bool,
+     *     ready:bool
+     * }>
+     */
+    public function packages(int $limit = 20): array
+    {
+        $limit = max(1, min(100, $limit));
+        $root = $this->prepareStagingRoot();
+        $entries = scandir($root);
+
+        if ($entries === false) {
+            throw new RuntimeException('Не удалось прочитать staging-каталог.');
+        }
+
+        rsort($entries, SORT_STRING);
+        $packages = [];
+
+        foreach ($entries as $entry) {
+            if (
+                count($packages) >= $limit
+                || preg_match(self::STAGE_ID_PATTERN, $entry) !== 1
+            ) {
+                continue;
+            }
+
+            try {
+                $stage = $this->inspect($entry);
+                $paths = array_merge(
+                    array_keys($stage['files']),
+                    $stage['deleted_files'],
+                );
+                $codeOnly = true;
+
+                foreach ($paths as $path) {
+                    if (
+                        str_starts_with($path, 'database/migrations/')
+                        || preg_match(
+                            '#^modules/[^/]+/migrations/#D',
+                            $path,
+                        ) === 1
+                    ) {
+                        $codeOnly = false;
+                        break;
+                    }
+                }
+
+                $packages[] = [
+                    'id' => $entry,
+                    'version' => $stage['version'],
+                    'files' => count($stage['files']),
+                    'deleted_files' => count($stage['deleted_files']),
+                    'code_only' => $codeOnly,
+                    'ready' => true,
+                ];
+            } catch (RuntimeException) {
+                $packages[] = [
+                    'id' => $entry,
+                    'version' => '',
+                    'files' => 0,
+                    'deleted_files' => 0,
+                    'code_only' => false,
+                    'ready' => false,
+                ];
+            }
+        }
+
+        return $packages;
+    }
+
     private function sourceDirectory(string $sourceDirectory): string
     {
         if (!$this->isAbsolutePath($sourceDirectory)) {

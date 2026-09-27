@@ -2084,3 +2084,187 @@ a.admin-task:focus-visible {
         padding: .9rem;
     }
 }
+
+
+/* Системные операции Admin Shell */
+.admin-operations-section {
+    display: grid;
+    gap: 1rem;
+    margin-top: 1.4rem;
+    padding: 1.25rem;
+    border: 1px solid var(--line);
+    border-radius: var(--radius-md);
+    background: var(--paper);
+}
+
+.admin-operations-heading {
+    display: flex;
+    align-items: flex-start;
+    justify-content: space-between;
+    gap: 1rem;
+}
+
+.admin-operations-heading h2 {
+    margin: .1rem 0 0;
+    color: var(--navy-950);
+    font-family: var(--font-display);
+    font-size: 1.35rem;
+}
+
+.admin-operations-heading p {
+    margin: .35rem 0 0;
+    color: var(--ink-700);
+}
+
+.admin-health-badge {
+    flex: 0 0 auto;
+    padding: .4rem .65rem;
+    border-radius: 999px;
+    font-size: .78rem;
+    font-weight: 850;
+}
+
+.admin-health-badge--ok {
+    color: #245e36;
+    background: #dcefe2;
+}
+
+.admin-health-badge--error {
+    color: #721c2d;
+    background: #f6d8de;
+}
+
+.admin-health-grid {
+    display: grid;
+    grid-template-columns: repeat(3, minmax(0, 1fr));
+    gap: .65rem;
+}
+
+.admin-health-item {
+    display: grid;
+    grid-template-columns: 2rem minmax(0, 1fr);
+    align-items: center;
+    column-gap: .55rem;
+    padding: .75rem;
+    border: 1px solid var(--line);
+    border-radius: .7rem;
+    background: #f8fafc;
+}
+
+.admin-health-item > span {
+    grid-row: 1 / span 2;
+    width: 1.8rem;
+    height: 1.8rem;
+    display: grid;
+    place-items: center;
+    border-radius: 999px;
+    color: var(--navy-900);
+    background: #e7edf4;
+    font-weight: 850;
+}
+
+.admin-health-item strong {
+    color: var(--navy-950);
+    font-size: .9rem;
+}
+
+.admin-health-item small {
+    color: var(--ink-600);
+}
+
+.admin-operations-list {
+    display: grid;
+    gap: .65rem;
+}
+
+.admin-operations-row {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 1rem;
+    padding: .9rem 1rem;
+    border: 1px solid var(--line);
+    border-radius: .75rem;
+    background: #f8fafc;
+}
+
+.admin-operations-row__body {
+    min-width: 0;
+    display: grid;
+    gap: .18rem;
+}
+
+.admin-operations-row__body strong {
+    overflow-wrap: anywhere;
+    color: var(--navy-950);
+}
+
+.admin-operations-row__body span,
+.admin-operations-row__body small {
+    color: var(--ink-700);
+}
+
+.admin-operations-warning {
+    color: #7b4e0a !important;
+    font-weight: 700;
+}
+
+.admin-update-apply {
+    flex: 0 0 min(25rem, 48%);
+    display: grid;
+    justify-items: end;
+    gap: .65rem;
+}
+
+.admin-update-apply label {
+    display: flex;
+    align-items: flex-start;
+    gap: .5rem;
+    color: var(--ink-700);
+    font-size: .86rem;
+    line-height: 1.35;
+}
+
+.admin-update-apply input[type="checkbox"] {
+    margin-top: .15rem;
+}
+
+.admin-operations-note {
+    margin-top: 1.4rem;
+    padding: 1rem 1.1rem;
+    border-left: .3rem solid var(--navy-700);
+    border-radius: .55rem;
+    background: #eef3f8;
+}
+
+.admin-operations-note p {
+    margin: .35rem 0 0;
+    color: var(--ink-700);
+}
+
+@media (max-width: 56rem) {
+    .admin-health-grid {
+        grid-template-columns: repeat(2, minmax(0, 1fr));
+    }
+
+    .admin-operations-row {
+        align-items: flex-start;
+        flex-direction: column;
+    }
+
+    .admin-update-apply {
+        width: 100%;
+        max-width: none;
+        justify-items: start;
+    }
+}
+
+@media (max-width: 36rem) {
+    .admin-operations-heading {
+        flex-direction: column;
+    }
+
+    .admin-health-grid {
+        grid-template-columns: 1fr;
+    }
+}

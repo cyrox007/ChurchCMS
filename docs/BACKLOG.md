@@ -41,6 +41,11 @@ Priority is ordered within each section.
     - [x] автоматический файловый rollback при ошибке code-only обновления;
     - [ ] schema-changing apply: безопасный возврат старой схемы и данных после миграций; блокер — текущий логический backup не является DDL snapshot;
   - [ ] мастер обновления/резервного копирования в Admin Shell;
+    - [x] экран «Система» с installation healthcheck без ввода серверных путей;
+    - [x] создание, список и повторная проверка резервных копий;
+    - [x] список staging-пакетов и подтверждаемое применение готовых code-only обновлений;
+    - [ ] единый безопасный restore БД + config/uploads из Admin Shell;
+    - [ ] получение и проверка доверенного релизного пакета без ручного staging;
 - [x] replace dashboard-card prototype with unified Admin Shell;
 - [x] persistent/collapsible admin navigation;
 - [x] shared admin header with site context and current user;

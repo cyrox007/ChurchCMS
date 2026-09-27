@@ -1,0 +1,271 @@
+name: Проверка системных операций Admin Shell
+
+on:
+  push:
+    branches:
+      - develop
+      - main
+    paths:
+      - 'core/BackupManager.php'
+      - 'core/UpdatePackageStager.php'
+      - 'core/UpdatePackageApplier.php'
+      - 'modules/operations/**'
+      - 'themes/default/templates/admin/operations.php'
+      - 'themes/default/assets/css/site.css'
+      - 'themes/default/theme.json'
+      - '.github/workflows/admin-operations-smoke.yml'
+  pull_request:
+    branches:
+      - develop
+      - main
+    paths:
+      - 'core/BackupManager.php'
+      - 'core/UpdatePackageStager.php'
+      - 'core/UpdatePackageApplier.php'
+      - 'modules/operations/**'
+      - 'themes/default/templates/admin/operations.php'
+      - 'themes/default/assets/css/site.css'
+      - 'themes/default/theme.json'
+      - '.github/workflows/admin-operations-smoke.yml'
+
+permissions:
+  contents: read
+
+jobs:
+  admin-operations:
+    runs-on: ubuntu-latest
+
+    services:
+      postgres:
+        image: postgres:16
+        env:
+          POSTGRES_DB: churchcms
+          POSTGRES_USER: churchcms
+          POSTGRES_PASSWORD: churchcms
+        ports:
+          - 5432:5432
+        options: >-
+          --health-cmd pg_isready
+          --health-interval 10s
+          --health-timeout 5s
+          --health-retries 5
+
+    steps:
+      - name: Получить исходный код
+        uses: actions/checkout@v4
+
+      - name: Подготовить PHP 8.3
+        uses: shivammathur/setup-php@v2
+        with:
+          php-version: '8.3'
+          extensions: pdo, pdo_pgsql
+          coverage: none
+
+      - name: Проверить PHP и тему
+        shell: bash
+        run: |
+          set -euo pipefail
+          php -l core/BackupManager.php
+          php -l core/UpdatePackageStager.php
+          php -l modules/operations/OperationsService.php
+          php -l modules/operations/OperationsAdminController.php
+          php -l modules/operations/runtime.php
+          php -l themes/default/templates/admin/operations.php
+          php bin/theme-check.php
+
+      - name: Подготовить тестовую установку
+        shell: bash
+        run: |
+          set -euo pipefail
+          mkdir -p storage/cache storage/logs storage/sessions storage/rate-limits storage/uploads
+          printf 'operations-smoke\n' > storage/uploads/operations-smoke.txt
+          cat > config/local.php <<'PHP'
+          <?php
+
+          declare(strict_types=1);
+
+          return [
+              'installation' => [
+                  'completed' => true,
+              ],
+              'security' => [
+                  'secret_key' => base64_encode(str_repeat('o', 32)),
+              ],
+              'operations' => [
+                  'backup_path' => getenv('RUNNER_TEMP') . '/operations-backups',
+                  'update_staging_path' => getenv('RUNNER_TEMP') . '/operations-staging',
+              ],
+              'database' => [
+                  'driver' => 'pgsql',
+                  'host' => '127.0.0.1',
+                  'port' => 5432,
+                  'database' => 'churchcms',
+                  'username' => 'churchcms',
+                  'password' => 'churchcms',
+              ],
+          ];
+          PHP
+          php bin/migrate.php
+
+      - name: Проверить backup через OperationsService
+        shell: bash
+        run: |
+          php -r '
+          require "core.php";
+
+          $service = new \ChurchCMS\Modules\Operations\OperationsService();
+          $created = $service->createBackup();
+          $service->verifyBackup($created["id"]);
+          $overview = $service->overview();
+
+          $first = $overview["backups"][0] ?? null;
+          if (
+              ($overview["health"]["ready"] ?? false) !== true
+              || ($first["id"] ?? null) !== $created["id"]
+              || ($first["files"] ?? 0) < 2
+              || ($first["tables"] ?? 0) < 1
+          ) {
+              fwrite(
+                  STDERR,
+                  "OperationsService не показал созданную проверенную копию: "
+                  . json_encode($overview, JSON_UNESCAPED_UNICODE | JSON_UNESCAPED_SLASHES)
+                  . "\n",
+              );
+              exit(1);
+          }
+
+          echo "Operations backup smoke OK\n";
+          '
+
+      - name: Подготовить и проверить staging-пакет
+        shell: bash
+        run: |
+          set -euo pipefail
+          package="$RUNNER_TEMP/operations-package"
+          mkdir -p "$package/config"
+
+          php -r '
+          $source = file_get_contents("config/app.php");
+          $updated = str_replace(
+              "'\''version'\'' => '\''0.1.0-dev'\''",
+              "'\''version'\'' => '\''999.2.0-ci'\''",
+              (string) $source,
+              $count,
+          );
+          if ($count !== 1) {
+              fwrite(STDERR, "Не удалось подготовить тестовый config/app.php.\n");
+              exit(1);
+          }
+          file_put_contents($argv[1] . "/config/app.php", $updated);
+          ' "$package"
+
+          php -r '
+          $package = $argv[1];
+          $file = $package . "/config/app.php";
+          file_put_contents(
+              $package . "/manifest.json",
+              json_encode([
+                  "format" => "churchcms-update-v1",
+                  "from_version" => "0.1.0-dev",
+                  "version" => "999.2.0-ci",
+                  "php_min" => "8.3",
+                  "files" => [[
+                      "path" => "config/app.php",
+                      "bytes" => filesize($file),
+                      "sha256" => hash_file("sha256", $file),
+                  ]],
+                  "deleted_files" => [],
+              ], JSON_THROW_ON_ERROR | JSON_PRETTY_PRINT | JSON_UNESCAPED_SLASHES) . PHP_EOL
+          );
+          ' "$package"
+
+          php -r '
+          require "core.php";
+          $stager = new \ChurchCMS\Core\UpdatePackageStager(
+              CHURCHCMS_ROOT,
+              (string) \ChurchCMS\Core\Config::get("operations.update_staging_path"),
+          );
+          $stage = $stager->stage($argv[1]);
+          $overview = (new \ChurchCMS\Modules\Operations\OperationsService())->overview();
+          $package = $overview["packages"][0] ?? null;
+
+          if (
+              ($package["id"] ?? null) !== $stage["id"]
+              || ($package["version"] ?? null) !== "999.2.0-ci"
+              || ($package["ready"] ?? false) !== true
+              || ($package["code_only"] ?? false) !== true
+          ) {
+              fwrite(
+                  STDERR,
+                  "OperationsService не показал готовый code-only пакет: "
+                  . json_encode($overview["packages"], JSON_UNESCAPED_SLASHES)
+                  . "\n",
+              );
+              exit(1);
+          }
+
+          file_put_contents(getenv("RUNNER_TEMP") . "/operations-stage-id", $stage["id"]);
+          echo "Operations staging smoke OK\n";
+          ' "$package"
+
+      - name: Проверить модульную навигацию и экран
+        shell: bash
+        run: |
+          php -r '
+          require "core.php";
+
+          $entries = \ChurchCMS\App\Services\AdminNavigationRegistry::entries();
+          $operations = null;
+
+          foreach ($entries as $entry) {
+              if (($entry["id"] ?? null) === "operations") {
+                  $operations = $entry;
+                  break;
+              }
+          }
+
+          if (
+              !is_array($operations)
+              || ($operations["route"] ?? null) !== "admin_operations"
+              || ($operations["permission"] ?? null) !== "settings.manage"
+          ) {
+              fwrite(STDERR, "Модуль operations не зарегистрировал навигацию.\n");
+              exit(1);
+          }
+
+          $overview = (new \ChurchCMS\Modules\Operations\OperationsService())->overview();
+          $renderer = \ChurchCMS\Core\ThemeRenderer::fromConfig();
+          $html = $renderer->capture("admin.operations", [
+              "health" => $overview["health"],
+              "backups" => $overview["backups"],
+              "packages" => $overview["packages"],
+              "operationStatus" => null,
+          ]);
+
+          foreach ([
+              "Резервные копии",
+              "Подготовленные пакеты",
+              "Создать копию",
+              "confirm_stage",
+              "/admin/system/backups/create",
+              "/admin/system/updates/",
+          ] as $expected) {
+              if (!str_contains($html, $expected)) {
+                  fwrite(STDERR, "Экран системных операций не содержит: {$expected}\n");
+                  exit(1);
+              }
+          }
+
+          foreach ([
+              "backup_path",
+              "update_staging_path",
+              "name=\"path\"",
+          ] as $forbidden) {
+              if (str_contains($html, $forbidden)) {
+                  fwrite(STDERR, "UI раскрывает технический путь: {$forbidden}\n");
+                  exit(1);
+              }
+          }
+
+          echo "Admin operations render smoke OK\n";
+          '

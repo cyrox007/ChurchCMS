@@ -1,6 +1,6 @@
 # ChurchCMS implementation status
 
-Last updated: 2026-09-26
+Last updated: 2026-09-27
 
 ## Current branch
 
@@ -70,7 +70,12 @@ Pending:
 - новые application-файлы готовятся рядом с целевыми путями, предыдущие версии сохраняются до успешного healthcheck;
 - после применения проверяются SHA-256, встроенный PHP syntax parser, целевая `app.version` и installation healthcheck;
 - при ошибке после начала замены application-файлы автоматически откатываются в обратном порядке;
-- CI проверяет успешный apply, автоматический rollback на синтаксически повреждённом PHP и отказ schema-changing пакета до изменения установки.
+- CI проверяет успешный apply, автоматический rollback на синтаксически повреждённом PHP и отказ schema-changing пакета до изменения установки;
+- модуль `operations` регистрирует раздел «Система» в общем Admin Shell с правом `settings.manage`;
+- экран «Система» показывает installation healthcheck, список резервных копий и staging-пакетов без раскрытия/ввода серверных путей;
+- из Admin Shell можно создать и повторно проверить backup, а готовый code-only пакет — применить после явного подтверждения;
+- все операции create/verify/apply записываются в audit log; повреждённый или устаревший staging-пакет в UI не становится применимым;
+- недоступность backup/staging каталога не роняет весь системный экран: оператор получает безопасное предупреждение.
 
 Остаётся:
 
@@ -98,9 +103,6 @@ Implemented:
 
 Pending:
 
-- unified Admin Shell replacing the current dashboard-card prototype;
-- common admin navigation/header/search/notifications;
-- shared admin states and responsive shell;
 - roles/users management UI;
 - password reset;
 - optional 2FA;
@@ -271,7 +273,7 @@ Next:
 
 Остаётся:
 
-- подключать будущие Media, People, Worship, Events, External Channels, Users/Roles, Themes, Settings, Backups и System Health к уже существующим контрактам shell/navigation/search/tasks;
+- подключать будущие Media, People, Worship, Events, External Channels, Users/Roles, Themes и Settings к уже существующим контрактам shell/navigation/search/tasks;
 - пройти ручной pilot-QA с NVDA/VoiceOver/TalkBack и browser zoom 200%/400% на реальных целевых браузерах.
 
 ## Durable project memory

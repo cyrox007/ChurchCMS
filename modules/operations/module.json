@@ -1,0 +1,7 @@
+{
+  "id": "operations",
+  "name": "Системные операции",
+  "version": "0.1.0",
+  "runtime": "runtime.php",
+  "capabilities": []
+}
