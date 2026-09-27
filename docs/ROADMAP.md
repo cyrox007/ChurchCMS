@@ -84,6 +84,20 @@ Status: in progress.
 - [ ] Harden deployment/update path.
 
 
+## Cross-cutting — Организационная структура и федерация
+
+- [x] Профили установки: приход/собор/монастырь/благочиние/епархия/митрополия/духовная школа/смешанный.
+- [x] Локальное дерево organization units и корневая организация сайта.
+- [x] Постоянный `federation.instance_id` для новой установки.
+- [x] Federation link foundation: `parent/child/peer`, scopes, encrypted outbound credential, sync state.
+- [x] Public federation discovery metadata endpoint.
+- [ ] Admin UI дерева организаций/подразделений.
+- [ ] Federation pairing wizard и отзыв доверия.
+- [ ] Organization-scoped RBAC enforcement.
+- [ ] Organization ownership/references для Publications/Pages/People/Worship/Events/Media/Documents.
+- [ ] Parent/child aggregation и remote projections/tombstones.
+- [ ] Federation health/sync dashboard.
+
 ## Cross-cutting — External channels
 
 - [x] Provider-agnostic adapter architecture.
