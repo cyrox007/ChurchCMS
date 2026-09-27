@@ -149,18 +149,25 @@ Next:
 
 Implemented:
 
-- standalone `pages` module skeleton without external runtime dependencies;
-- PostgreSQL/MySQL schema with stable public IDs and per-site canonical paths;
-- optional self-referencing parent links with restricted parent deletion;
-- deterministic sibling order and bounded path length compatible with MySQL 8 indexes;
-- unique `(site_key, path)` invariant and tree/status indexes;
-- PostgreSQL schema smoke plus shared MySQL migration/runtime coverage.
+- отдельный модуль `pages` без внешних runtime-зависимостей;
+- PostgreSQL/MySQL схема со стабильными public ID и site-scoped canonical paths;
+- optional parent links с `ON DELETE RESTRICT`;
+- deterministic sibling order и ограничение длины path, совместимое с MySQL 8 индексами;
+- unique `(site_key, path)` invariant и tree/status индексы;
+- `Page`, `PageStatus`, `PageRepository` и `PageService`;
+- создание draft-страницы с автоматическим slug/path;
+- изменение slug пересчитывает canonical path всего поддерева атомарно;
+- безопасное перемещение поддерева между родителями с пересчётом descendant paths;
+- запрещены self-parent, перемещение внутрь собственного потомка и collision с существующим canonical path;
+- при ошибке перемещения транзакция не оставляет частично изменённое дерево;
+- body страницы проходит общий HTML sanitizer;
+- PostgreSQL smoke проверяет create/rename/move/cycle/collision/rollback, общий MySQL runtime проверяет schema compatibility.
 
 Next:
 
-- domain repository/service and safe subtree moves;
 - public/admin/API vertical slice;
-- menu integration after the Pages domain contract is stable.
+- publish/unpublish workflow в пользовательском интерфейсе;
+- menu integration после стабилизации публичного Pages contract.
 
 ## Comments
 
