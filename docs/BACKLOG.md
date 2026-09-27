@@ -14,6 +14,23 @@ Priority is ordered within each section.
 - [x] Migration CLI validation.
 - [x] PHP 8.3 lint/theme validation CI, PostgreSQL-backed runtime smoke test and MySQL 8 migration/runtime smoke.
 
+## P0 — Организационная структура и федерация
+
+- [x] расширяемый каталог профилей установки до уровня митрополии;
+- [x] локальное дерево organizations и site root;
+- [x] постоянная идентичность ChurchCMS-узла;
+- [x] persistence federation links `parent/child/peer`;
+- [x] отдельные inbound/outbound scopes и encrypted outbound credential;
+- [x] безопасный public discovery endpoint без секретов;
+- [ ] Admin CRUD дерева организаций, отделов и комиссий;
+- [ ] pairing wizard между ChurchCMS-узлами;
+- [ ] organization scopes в RBAC и проверяемое наследование вниз по дереву;
+- [ ] привязка Publications/Pages к organization owner;
+- [ ] привязка People/назначений, Worship, Events, Media и Documents к organization unit;
+- [ ] incremental federation sync с canonical owner и tombstones;
+- [ ] агрегированные ленты вышестоящих узлов без потери источника;
+- [ ] federation health/retry/conflict UI.
+
 ## P0 — Installation and operator UX
 
 - [x] four-step web installer;
