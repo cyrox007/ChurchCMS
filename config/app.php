@@ -50,6 +50,12 @@ return [
     ],
     'site' => [
         'name' => 'ChurchCMS',
+        'profile' => 'parish',
+    ],
+    'federation' => [
+        // Постоянный ID конкретной установки генерируется installer в config/local.php.
+        'instance_id' => '',
+        'enabled' => true,
     ],
     'seo' => [
         'default_description' => '',
