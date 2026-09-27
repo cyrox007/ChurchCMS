@@ -245,26 +245,26 @@ Next:
 Реализовано:
 
 - общий `layout.admin`, отдельный от публичного layout сайта;
-- единый сервис `AdminShell` добавляет пользовательский контекст, доступные разделы, активный раздел и счётчик ожидающих комментариев;
+- единый сервис `AdminShell` добавляет пользовательский контекст, активный раздел, поиск и суммарный счётчик задач;
 - `AdminNavigationRegistry` позволяет модулям регистрировать раздел, маршрут, требуемое право и порядок без правки общей темы;
-- Admin Shell фильтрует модульную навигацию по RBAC до рендера, а layout не знает о конкретных Publications/Comments;
-- обзор, Publications и Comments используют одну административную оболочку;
-- общий header содержит текущий раздел, пользователя и ссылку на публичный сайт;
-- desktop использует постоянную боковую навигацию, которую можно полностью свернуть кнопкой в общей шапке; выбор сохраняется локально в браузере;
-- без JavaScript боковая навигация остаётся полностью видимой, а на узких экранах всегда используется компактная горизонтальная панель;
-- активный раздел отмечается через `aria-current`;
-- выход из системы вынесен в общую оболочку;
-- отдельный CI-smoke проверяет регистрацию layout, использование shell контроллерами и базовую отрисовку.
+- `AdminSearchRegistry` и `AdminSearchService` позволяют модулям подключаться к глобальному поиску с RBAC-фильтрацией и жёсткими лимитами;
+- Publications подключён первым поисковым провайдером по title/slug/excerpt;
+- `AdminTaskRegistry` и `AdminTaskCenter` собирают pending moderation, редакционную работу и ошибки внешних каналов;
+- повторные permission-проверки и агрегат задач кешируются внутри текущего `Request`;
+- обзор, Publications, Comments, Search и Tasks используют одну административную оболочку;
+- общий header содержит текущий раздел, пользователя, глобальный поиск, задачи и ссылку на публичный сайт;
+- desktop использует постоянную боковую навигацию, которую можно полностью свернуть; выбор сохраняется локально в браузере;
+- без JavaScript боковая навигация остаётся видимой, а на узких экранах используется компактная горизонтальная панель;
+- общий компонент `admin.state` задаёт empty/success/error/loading состояния с `role`, `aria-live` и `aria-busy`;
+- активный раздел отмечается через `aria-current`, есть skip-link и единый `:focus-visible`;
+- `prefers-reduced-motion` отключает необязательные transitions/animation/smooth scrolling;
+- dependency-free `tools/accessibility/admin-audit.php` проверяет landmarks, keyboard/focus правила, target=_blank, aria-контракты и ключевые контрастные пары в CI;
+- `docs/ACCESSIBILITY.md` фиксирует автоматическую проверку и ручной pilot-QA сценарий.
 
 Остаётся:
 
-- глобальный поиск в общей шапке Admin Shell с RBAC-фильтрацией провайдеров;
-- Publications подключён первым поисковым провайдером: поиск ограничен по длине/количеству результатов и выполняется только по разрешённому разделу;
-- центр задач собирает через модульные провайдеры pending moderation, редакционную работу и ошибки внешних каналов;
-- задачи фильтруются по RBAC, сортируются по важности и кешируются внутри текущего Request, как и повторные permission-проверки;
-- общий header показывает суммарный счётчик задач и ведёт на `/admin/tasks`.
-- полный keyboard/focus/accessibility audit;
-- подключение будущих Media, People, Worship, Events, External Channels, Users/Roles, Themes, Settings, Backups и System Health.
+- подключать будущие Media, People, Worship, Events, External Channels, Users/Roles, Themes, Settings, Backups и System Health к уже существующим контрактам shell/navigation/search/tasks;
+- пройти ручной pilot-QA с NVDA/VoiceOver/TalkBack и browser zoom 200%/400% на реальных целевых браузерах.
 
 ## Durable project memory
 
@@ -283,5 +283,6 @@ Next:
 - `docs/BACKUPS.md`
 - `docs/UPDATES.md`
 - `docs/NGINX.md`
+- `docs/ACCESSIBILITY.md`
 
 Update this file at the end of every substantial implementation increment.
