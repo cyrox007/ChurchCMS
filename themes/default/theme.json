@@ -1,7 +1,7 @@
 {
   "id": "default",
   "name": "ChurchCMS Default",
-  "version": "0.8.5",
+  "version": "0.8.6",
   "profiles": [
     "small-parish",
     "parish",
@@ -26,6 +26,7 @@
     "layout.admin": "layouts/admin",
     "admin.state": "admin/state",
     "admin.search": "admin/search",
-    "admin.tasks": "admin/tasks"
+    "admin.tasks": "admin/tasks",
+    "admin.operations": "admin/operations"
   }
 }
