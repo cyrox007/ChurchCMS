@@ -382,8 +382,28 @@ final class OrganizationAdminController
         ?string $error,
     ): never {
         $repository = OrganizationRepository::fromDatabase();
-        $units = $repository->tree();
+        $access = OrganizationAccessService::fromDatabase();
+        $userId = self::requiredUserId($request);
+        $units = $access->visibleTree(
+            $userId,
+            'organizations.manage',
+        );
         $root = $repository->siteRoot();
+
+        if ($units === []) {
+            Response::text('403 Forbidden', 403);
+        }
+
+        if (
+            $unit !== null
+            && !$access->can(
+                $userId,
+                'organizations.manage',
+                $unit,
+            )
+        ) {
+            Response::text('403 Forbidden', 403);
+        }
 
         $excluded = [];
         if ($unit !== null) {
@@ -399,6 +419,24 @@ final class OrganizationAdminController
                 && $candidate->status === 'active',
         ));
 
+        $currentParent = $unit !== null
+            && $unit->parentId !== null
+            ? $repository->findById(
+                $unit->parentId,
+                $unit->siteKey,
+            )
+            : null;
+        $parentLocked = $currentParent !== null
+            && !$access->can(
+                $userId,
+                'organizations.manage',
+                $currentParent,
+            );
+        $scopeRoots = $access->scopeRoots(
+            $userId,
+            'organizations.manage',
+        );
+
         AdminShell::page(
             $request,
             'admin.organizations.editor',
@@ -409,6 +447,17 @@ final class OrganizationAdminController
                 'unit' => $unit,
                 'root' => $root,
                 'parents' => $parents,
+                'parentLocked' => $parentLocked,
+                'lockedParent' => $parentLocked
+                    ? $currentParent
+                    : null,
+                'scopeRootIds' => $scopeRoots === null
+                    ? []
+                    : array_map(
+                        static fn(OrganizationUnit $item): int =>
+                            $item->id,
+                        $scopeRoots,
+                    ),
                 'typeLabels' => OrganizationTypeCatalog::all(),
                 'form' => $form,
                 'error' => $error,
@@ -569,6 +618,175 @@ final class OrganizationAdminController
             ENT_QUOTES | ENT_HTML5,
             'UTF-8',
         );
+    }
+
+    private static function resolveCreateParent(
+        OrganizationAccessService $access,
+        int $userId,
+        ?string $parentPublicId,
+    ): OrganizationUnit {
+        $repository = OrganizationRepository::fromDatabase();
+
+        if (
+            $parentPublicId === null
+            || trim($parentPublicId) === ''
+        ) {
+            $parent = $access->defaultCreateParent(
+                $userId,
+                'organizations.manage',
+            );
+
+            if ($parent === null) {
+                throw new InvalidArgumentException(
+                    'Выберите родительскую организацию.'
+                );
+            }
+
+            return $parent;
+        }
+
+        $parent = $repository->findByPublicId(
+            $parentPublicId,
+        );
+
+        if ($parent === null) {
+            throw new InvalidArgumentException(
+                'Родительская организация не найдена.'
+            );
+        }
+
+        if (
+            !$access->can(
+                $userId,
+                'organizations.manage',
+                $parent,
+            )
+        ) {
+            Response::text('403 Forbidden', 403);
+        }
+
+        return $parent;
+    }
+
+    private static function resolveUpdateParent(
+        OrganizationRepository $repository,
+        OrganizationAccessService $access,
+        int $userId,
+        OrganizationUnit $unit,
+        ?string $parentPublicId,
+    ): ?OrganizationUnit {
+        $siteRoot = $repository->siteRoot(
+            $unit->siteKey,
+        );
+
+        if (
+            $siteRoot !== null
+            && $siteRoot->id === $unit->id
+        ) {
+            return null;
+        }
+
+        $currentParent = $unit->parentId !== null
+            ? $repository->findById(
+                $unit->parentId,
+                $unit->siteKey,
+            )
+            : null;
+
+        if (
+            $parentPublicId === null
+            || trim($parentPublicId) === ''
+        ) {
+            $parent = $access->defaultCreateParent(
+                $userId,
+                'organizations.manage',
+                $unit->siteKey,
+            );
+
+            if ($parent === null) {
+                throw new InvalidArgumentException(
+                    'Выберите родительскую организацию.'
+                );
+            }
+        } else {
+            $parent = $repository->findByPublicId(
+                $parentPublicId,
+                $unit->siteKey,
+            );
+
+            if ($parent === null) {
+                throw new InvalidArgumentException(
+                    'Родительская организация не найдена.'
+                );
+            }
+        }
+
+        if (
+            $currentParent !== null
+            && !$access->can(
+                $userId,
+                'organizations.manage',
+                $currentParent,
+            )
+        ) {
+            if ($parent->id !== $currentParent->id) {
+                Response::text('403 Forbidden', 403);
+            }
+
+            return $currentParent;
+        }
+
+        if (
+            !$access->can(
+                $userId,
+                'organizations.manage',
+                $parent,
+            )
+        ) {
+            Response::text('403 Forbidden', 403);
+        }
+
+        return $parent;
+    }
+
+    private static function requireUnitAccess(
+        Request $request,
+        OrganizationUnit $unit,
+    ): OrganizationAccessService {
+        AdminAuthorization::requirePermission(
+            $request,
+            'organizations.manage',
+        );
+
+        $access = OrganizationAccessService::fromDatabase();
+        $userId = self::requiredUserId($request);
+
+        if (
+            !$access->can(
+                $userId,
+                'organizations.manage',
+                $unit,
+            )
+        ) {
+            Response::text('403 Forbidden', 403);
+        }
+
+        return $access;
+    }
+
+    private static function requiredUserId(
+        Request $request,
+    ): int {
+        $user = $request->attribute('admin.user');
+        $userId = is_array($user)
+            ? (int) ($user['id'] ?? 0)
+            : 0;
+
+        if ($userId <= 0) {
+            Response::text('403 Forbidden', 403);
+        }
+
+        return $userId;
     }
 
     private static function actorId(
