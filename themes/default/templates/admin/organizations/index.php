@@ -10,6 +10,10 @@ $status = is_array($organizationStatus ?? null)
 $rootId = isset($root) && $root instanceof \ChurchCMS\Modules\Organizations\OrganizationUnit
     ? $root->id
     : 0;
+$scopeRootIds = array_values(array_map(
+    'intval',
+    is_array($scopeRootIds ?? null) ? $scopeRootIds : [],
+));
 ?>
 <section class="admin-shell">
     <header class="admin-heading">
@@ -49,6 +53,11 @@ $rootId = isset($root) && $root instanceof \ChurchCMS\Modules\Organizations\Orga
                     substr_count(trim($unit->path, '/'), '/'),
                 );
                 $isRoot = $unit->id === $rootId;
+                $isScopeRoot = in_array(
+                    $unit->id,
+                    $scopeRootIds,
+                    true,
+                );
                 $isArchived = $unit->status === 'archived';
                 ?>
                 <article
@@ -61,6 +70,8 @@ $rootId = isset($root) && $root instanceof \ChurchCMS\Modules\Organizations\Orga
                             <span><?= $theme->e($typeLabels[$unit->type] ?? $unit->type) ?></span>
                             <?php if ($isRoot): ?>
                                 <span class="status-pill">Корень сайта</span>
+                            <?php elseif ($isScopeRoot): ?>
+                                <span class="status-pill">Граница доступа</span>
                             <?php endif; ?>
                             <?php if ($isArchived): ?>
                                 <span class="status-pill status-pill--withdrawn">Архив</span>
