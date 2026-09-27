@@ -74,7 +74,10 @@ Priority is ordered within each section.
 
 ## P1 — Content
 
-- content tree/pages;
+- [ ] content tree/pages;
+  - [x] PostgreSQL/MySQL schema foundation with stable public IDs, site-scoped canonical paths, parent links and ordered-tree indexes;
+  - [ ] domain repository/service and safe subtree moves;
+  - [ ] public/admin/API vertical slice;
 - [x] publication categories/tags with site-scoped normalized storage, editor fields, public/API/syndication projections and PostgreSQL/MySQL smoke coverage;
 - menus;
 - content revisions;

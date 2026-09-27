@@ -145,6 +145,23 @@ Next:
 - scheduled publication execution;
 - Media/cover relation.
 
+## Pages / content tree
+
+Implemented:
+
+- standalone `pages` module skeleton without external runtime dependencies;
+- PostgreSQL/MySQL schema with stable public IDs and per-site canonical paths;
+- optional self-referencing parent links with restricted parent deletion;
+- deterministic sibling order and bounded path length compatible with MySQL 8 indexes;
+- unique `(site_key, path)` invariant and tree/status indexes;
+- PostgreSQL schema smoke plus shared MySQL migration/runtime coverage.
+
+Next:
+
+- domain repository/service and safe subtree moves;
+- public/admin/API vertical slice;
+- menu integration after the Pages domain contract is stable.
+
 ## Comments
 
 Implemented:
