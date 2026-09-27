@@ -12,6 +12,7 @@ use ChurchCMS\Modules\Organizations\FederationApiController;
 $moduleRoot = __DIR__;
 foreach ([
     'OrganizationUnit.php',
+    'OrganizationTypeCatalog.php',
     'FederationLink.php',
     'OrganizationRepository.php',
     'FederationRepository.php',
