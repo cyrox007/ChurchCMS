@@ -116,6 +116,20 @@ final class PublicationTaxonomyService
     }
 
     /**
+     * @param list<int> $publicationIds
+     * @return array<int,array{
+     *     categories:list<array{public_id:string,name:string,slug:string}>,
+     *     tags:list<array{public_id:string,name:string,slug:string}>
+     * }>
+     */
+    public function forPublications(array $publicationIds): array
+    {
+        return $this->repository->forPublications(
+            $publicationIds,
+        );
+    }
+
+    /**
      * @param list<array{public_id:string,name:string,slug:string}> $terms
      */
     public static function names(array $terms): string
