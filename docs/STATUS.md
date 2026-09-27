@@ -99,6 +99,10 @@ Implemented:
 - audit event foundation;
 - production error handler загружается до bootstrap ядра, скрывает внутренние детали и возвращает request ID;
 - HTML/API ошибки HTTP 500 получают `Cache-Control: no-store`, а подробность записывается в server log и `storage/logs/error.log`;
+- authenticated password rotation доступна из Admin Shell и требует текущий пароль;
+- `auth_version` хранится в БД/сессии: после смены пароля все другие старые административные сессии перестают проходить `current()`;
+- текущая сессия получает новую auth version, новый session ID и новый CSRF token;
+- password rotation записывается в audit log без пароля/секретов;
 - protected admin dashboard;
 - friendly publication editor;
 - comment moderation queue.
@@ -106,7 +110,7 @@ Implemented:
 Pending:
 
 - roles/users management UI;
-- password reset;
+- forgotten-password/reset flow с безопасным каналом доставки;
 - optional 2FA;
 - scoped permission enforcement in future domain modules.
 
@@ -296,5 +300,6 @@ Next:
 - `docs/NGINX.md`
 - `docs/ACCESSIBILITY.md`
 - `docs/ERROR_HANDLING.md`
+- `docs/AUTHENTICATION.md`
 
 Update this file at the end of every substantial implementation increment.
