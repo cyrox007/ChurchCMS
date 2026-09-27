@@ -94,7 +94,7 @@ Status: in progress.
 - [x] Admin UI дерева организаций/подразделений.
 - [ ] Federation pairing wizard и отзыв доверия.
 - [x] Organization-scoped RBAC enforcement.
-- [ ] Organization ownership/references для Publications/Pages/People/Worship/Events/Media/Documents.
+- [ ] Organization ownership/references для Publications/Pages/People/Worship/Events/Media/Documents (foundation Publications реализован; Admin Shell/RBAC и Pages остаются).
 - [ ] Parent/child aggregation и remote projections/tombstones.
 - [ ] Federation health/sync dashboard.
 

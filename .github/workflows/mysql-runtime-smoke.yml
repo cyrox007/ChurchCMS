@@ -12,6 +12,9 @@ on:
       - 'modules/publications/PublicationService.php'
       - 'modules/publications/PublicationTaxonomyRepository.php'
       - 'modules/publications/PublicationTaxonomyService.php'
+      - 'modules/publications/PublicationRepository.php'
+      - 'modules/organizations/**'
+      - 'tools/publication-organization-owner-smoke.php'
       - '.github/workflows/mysql-runtime-smoke.yml'
   pull_request:
     branches:
@@ -24,6 +27,9 @@ on:
       - 'modules/publications/PublicationService.php'
       - 'modules/publications/PublicationTaxonomyRepository.php'
       - 'modules/publications/PublicationTaxonomyService.php'
+      - 'modules/publications/PublicationRepository.php'
+      - 'modules/organizations/**'
+      - 'tools/publication-organization-owner-smoke.php'
       - '.github/workflows/mysql-runtime-smoke.yml'
 
 permissions:
@@ -181,3 +187,6 @@ jobs:
 
           echo "MySQL runtime smoke OK\n";
           '
+
+      - name: Проверить organization owner публикации в MySQL
+        run: php tools/publication-organization-owner-smoke.php

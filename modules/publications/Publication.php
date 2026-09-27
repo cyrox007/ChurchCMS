@@ -15,6 +15,7 @@ final class Publication
         public readonly int $id,
         public readonly string $publicId,
         public readonly string $siteKey,
+        public readonly ?string $ownerOrganizationPublicId,
         public readonly PublicationType $type,
         public readonly PublicationStatus $status,
         public readonly string $slug,

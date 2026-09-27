@@ -9,6 +9,7 @@ use ChurchCMS\Core\HtmlSanitizer;
 use ChurchCMS\Core\PageCache;
 use ChurchCMS\Core\Slugger;
 use ChurchCMS\Core\Uuid;
+use ChurchCMS\Modules\Organizations\OrganizationRepository;
 use DateTimeImmutable;
 use InvalidArgumentException;
 use PDO;
@@ -43,6 +44,7 @@ final class PublicationService
         string $siteKey = 'default',
         array $categoryNames = [],
         array $tagNames = [],
+        ?string $ownerOrganizationPublicId = null,
     ): string {
         $data = $this->normalizeEditorData(
             title: $title,
@@ -61,6 +63,10 @@ final class PublicationService
         $tags = PublicationTaxonomyService::tagsFromNames(
             $tagNames,
         );
+        $ownerOrganizationPublicId = $this->organizationOwner(
+            $ownerOrganizationPublicId,
+            $data['site_key'],
+        );
 
         $publicId = Uuid::v4();
         $now = gmdate('Y-m-d H:i:s');
@@ -73,11 +79,13 @@ final class PublicationService
         try {
             $statement = $this->pdo->prepare(
                 'INSERT INTO publications (
-                    public_id, site_key, type, status, slug, title, excerpt, body_html,
+                    public_id, site_key, owner_organization_public_id,
+                    type, status, slug, title, excerpt, body_html,
                     author_name, published_at, created_at, updated_at, syndication_targets,
                     syndication_title, syndication_excerpt, comments_enabled
                  ) VALUES (
-                    :public_id, :site_key, :type, :status, :slug, :title, :excerpt, :body_html,
+                    :public_id, :site_key, :owner_organization_public_id,
+                    :type, :status, :slug, :title, :excerpt, :body_html,
                     :author_name, NULL, :created_at, :updated_at, :syndication_targets,
                     NULL, NULL, :comments_enabled
                  )'
@@ -86,6 +94,8 @@ final class PublicationService
             $statement->execute([
                 'public_id' => $publicId,
                 'site_key' => $data['site_key'],
+                'owner_organization_public_id' =>
+                    $ownerOrganizationPublicId,
                 'type' => $data['type'],
                 'status' => PublicationStatus::Draft->value,
                 'slug' => $data['slug'],
@@ -413,6 +423,43 @@ final class PublicationService
         PageCache::bumpVersion();
     }
 
+    public function assignOrganizationOwner(
+        string $publicId,
+        string $organizationPublicId,
+        string $siteKey = 'default',
+    ): void {
+        self::assertUuid($publicId);
+        $siteKey = self::siteKey($siteKey);
+        $organizationPublicId = $this->organizationOwner(
+            $organizationPublicId,
+            $siteKey,
+        );
+
+        if ($organizationPublicId === null) {
+            throw new InvalidArgumentException(
+                'Организация-владелец не найдена.'
+            );
+        }
+
+        $publicationId = $this->publicationDatabaseId(
+            $publicId,
+            $siteKey,
+        );
+        $statement = $this->pdo->prepare(
+            'UPDATE publications
+             SET owner_organization_public_id = :owner,
+                 updated_at = :updated_at
+             WHERE id = :id'
+        );
+        $statement->execute([
+            'owner' => $organizationPublicId,
+            'updated_at' => gmdate('Y-m-d H:i:s'),
+            'id' => $publicationId,
+        ]);
+
+        PageCache::bumpVersion();
+    }
+
     /**
      * @param list<string> $syndicationTargets
      * @return array{
@@ -508,6 +555,56 @@ final class PublicationService
         }
 
         return (int) $id;
+    }
+
+    private function organizationOwner(
+        ?string $publicId,
+        string $siteKey,
+    ): ?string {
+        $repository = new OrganizationRepository($this->pdo);
+        $publicId = $publicId !== null
+            ? trim($publicId)
+            : '';
+
+        if ($publicId === '') {
+            return $repository->siteRoot($siteKey)?->publicId;
+        }
+
+        self::assertUuid($publicId);
+        $organization = $repository->findByPublicId(
+            $publicId,
+            $siteKey,
+        );
+
+        if ($organization === null) {
+            throw new InvalidArgumentException(
+                'Организация-владелец не найдена на этом сайте.'
+            );
+        }
+
+        if ($organization->status !== 'active') {
+            throw new InvalidArgumentException(
+                'Архивная организация не может владеть публикацией.'
+            );
+        }
+
+        return $organization->publicId;
+    }
+
+    private static function siteKey(string $siteKey): string
+    {
+        $siteKey = trim($siteKey);
+
+        if (
+            preg_match(
+                '/^[a-z0-9][a-z0-9_.-]{0,63}$/D',
+                $siteKey,
+            ) !== 1
+        ) {
+            throw new InvalidArgumentException('Invalid site key.');
+        }
+
+        return $siteKey;
     }
 
     private function rollbackOwnedTransaction(

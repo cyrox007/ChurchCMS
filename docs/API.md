@@ -143,6 +143,7 @@ For example a publication projection may expose:
   "slug": "...",
   "title": "...",
   "excerpt": "...",
+  "organization_owner_id": "stable-organization-public-id",
   "published_at": "...",
   "url": "...",
   "cover": {}
@@ -167,6 +168,10 @@ The API contract decides what leaves the system, not the table schema.
 External systems must not depend on database primary keys.
 
 Public objects will receive stable external identifiers or canonical slugs. This allows ChurchCMS to migrate or reorganize its database without breaking diocesan integrations.
+
+Публикации передают `organization_owner_id` как stable public ID локальной
+organization unit. Агрегаторы должны сохранять его вместе с материалом и не
+подменять владельца сайтом, который только ретранслировал публикацию.
 
 ## Pagination
 

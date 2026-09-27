@@ -33,6 +33,8 @@ final class PublicationApiResource implements ApiResource
             'excerpt' => $this->publication->excerpt,
             'body_html' => $this->publication->bodyHtml,
             'author' => $this->publication->authorName,
+            'organization_owner_id' =>
+                $this->publication->ownerOrganizationPublicId,
             'comments_enabled' => $this->publication->commentsEnabled,
             'categories' => array_values($this->taxonomy['categories'] ?? []),
             'tags' => array_values($this->taxonomy['tags'] ?? []),

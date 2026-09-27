@@ -53,7 +53,7 @@ Implemented:
 Дальше:
 
 - безопасный pairing/revoke workflow;
-- ownership/reference organization unit в контентных модулях;
+- выбор publication owner в Admin Shell с organization-scoped RBAC и ownership для остальных контентных модулей;
 - incremental aggregation/sync с canonical ownership и tombstones.
 
 ## Installation
@@ -177,9 +177,14 @@ Implemented:
 - автоматическая публикация записывается в audit log и инвалидирует публичный cache;
 - CI проверяет due/future/cancelled, запрет прошедшего времени, idempotent rerun и элементы редактора;
 - audit/cache invalidation on changes.
+- публикация хранит stable public ID локальной organization unit владельца;
+- новый draft автоматически получает корневую организацию своего `site_key`, если она создана;
+- `PublicationService` запрещает назначать владельца из другого сайта или архивной ветки, а public/partner API возвращает `organization_owner_id`;
+- migration безопасно backfill существующих публикаций через `organization_site_roots`, оставляя nullable только legacy-строки без корня.
 
 Next:
 
+- выбор organization owner в Admin Shell с organization-scoped RBAC;
 - revisions;
 - Media/cover relation.
 
