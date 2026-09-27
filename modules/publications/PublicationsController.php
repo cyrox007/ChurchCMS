@@ -30,10 +30,23 @@ final class PublicationsController
             'follow' => true,
         ];
 
+        $publications = $repository->published(
+            'default',
+            $perPage,
+            $offset,
+        );
+        $taxonomy = PublicationTaxonomyService::fromDatabase()
+            ->forPublications(array_map(
+                static fn(Publication $publication): int =>
+                    $publication->id,
+                $publications,
+            ));
+
         ThemeRenderer::fromConfig()->page('publication.index', [
             'title' => $seo['title'],
             'heading' => 'Публикации',
-            'publications' => $repository->published('default', $perPage, $offset),
+            'publications' => $publications,
+            'taxonomy' => $taxonomy,
             'page' => $page,
             'perPage' => $perPage,
             'total' => $repository->countPublished('default'),
