@@ -22,14 +22,36 @@ final class OrganizationAdminController
         );
 
         $repository = OrganizationRepository::fromDatabase();
+        $access = OrganizationAccessService::fromDatabase();
+        $userId = self::requiredUserId($request);
+        $units = $access->visibleTree(
+            $userId,
+            'organizations.manage',
+        );
+
+        if ($units === []) {
+            Response::text('403 Forbidden', 403);
+        }
+
+        $scopeRoots = $access->scopeRoots(
+            $userId,
+            'organizations.manage',
+        );
 
         AdminShell::page(
             $request,
             'admin.organizations.index',
             [
                 'title' => 'Церковная структура',
-                'units' => $repository->tree(),
+                'units' => $units,
                 'root' => $repository->siteRoot(),
+                'scopeRootIds' => $scopeRoots === null
+                    ? []
+                    : array_map(
+                        static fn(OrganizationUnit $unit): int =>
+                            $unit->id,
+                        $scopeRoots,
+                    ),
                 'typeLabels' => OrganizationTypeCatalog::all(),
                 'organizationStatus' => self::status($request),
             ],
@@ -44,12 +66,38 @@ final class OrganizationAdminController
             'organizations.manage',
         );
 
-        $parent = trim((string) $request->get('parent', ''));
+        $access = OrganizationAccessService::fromDatabase();
+        $userId = self::requiredUserId($request);
+        $parentPublicId = trim(
+            (string) $request->get('parent', '')
+        );
+
+        if ($parentPublicId !== '') {
+            $parent = OrganizationRepository::fromDatabase()
+                ->findByPublicId($parentPublicId);
+
+            if (
+                $parent === null
+                || !$access->can(
+                    $userId,
+                    'organizations.manage',
+                    $parent,
+                )
+            ) {
+                Response::text('403 Forbidden', 403);
+            }
+        } else {
+            $parent = $access->defaultCreateParent(
+                $userId,
+                'organizations.manage',
+            );
+            $parentPublicId = $parent?->publicId ?? '';
+        }
 
         $this->editor(
             $request,
             null,
-            self::emptyForm($parent),
+            self::emptyForm($parentPublicId),
             null,
         );
     }
@@ -62,8 +110,17 @@ final class OrganizationAdminController
         );
 
         $form = self::form($request);
+        $access = OrganizationAccessService::fromDatabase();
+        $userId = self::requiredUserId($request);
 
         try {
+            $parent = self::resolveCreateParent(
+                $access,
+                $userId,
+                $form['parent_public_id'],
+            );
+            $form['parent_public_id'] = $parent->publicId;
+
             $publicId = OrganizationService::fromDatabase()
                 ->create(
                     name: $form['name'],
