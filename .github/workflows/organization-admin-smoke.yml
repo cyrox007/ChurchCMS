@@ -8,6 +8,7 @@ on:
     paths:
       - 'app/services/AuthorizationService.php'
       - 'modules/organizations/**'
+      - 'tools/organization-admin-smoke.php'
       - 'themes/default/templates/admin/organizations/**'
       - 'themes/default/theme.json'
       - 'themes/default/assets/css/site.css'
@@ -19,6 +20,7 @@ on:
     paths:
       - 'app/services/AuthorizationService.php'
       - 'modules/organizations/**'
+      - 'tools/organization-admin-smoke.php'
       - 'themes/default/templates/admin/organizations/**'
       - 'themes/default/theme.json'
       - 'themes/default/assets/css/site.css'
