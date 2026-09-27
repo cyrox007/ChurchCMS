@@ -8,6 +8,8 @@ error_reporting(E_ALL);
 $root = __DIR__;
 $localConfigPath = $root . '/config/local.php';
 
+require_once $root . '/core/SiteProfileCatalog.php';
+
 header('X-Content-Type-Options: nosniff');
 header('X-Frame-Options: DENY');
 header('Referrer-Policy: no-referrer');
@@ -32,6 +34,28 @@ function installerHost(): string
 function detectedSiteUrl(): string
 {
     return (installerHttps() ? 'https' : 'http') . '://' . installerHost();
+}
+
+function installerUuidV4(): string
+{
+    $bytes = random_bytes(16);
+    $bytes[6] = chr(
+        (ord($bytes[6]) & 0x0f) | 0x40
+    );
+    $bytes[8] = chr(
+        (ord($bytes[8]) & 0x3f) | 0x80
+    );
+
+    $hex = bin2hex($bytes);
+
+    return sprintf(
+        '%s-%s-%s-%s-%s',
+        substr($hex, 0, 8),
+        substr($hex, 8, 4),
+        substr($hex, 12, 4),
+        substr($hex, 16, 4),
+        substr($hex, 20, 12),
+    );
 }
 
 function installerCsrf(): string
@@ -258,7 +282,7 @@ if (($_SERVER['REQUEST_METHOD'] ?? 'GET') === 'POST') {
                 throw new InvalidArgumentException('Укажите название сайта.');
             }
 
-            if (!in_array($profile, ['small-parish', 'parish', 'cathedral', 'education', 'mixed'], true)) {
+            if (!\ChurchCMS\Core\SiteProfileCatalog::exists($profile)) {
                 throw new InvalidArgumentException('Выберите тип сайта.');
             }
 
@@ -293,6 +317,10 @@ if (($_SERVER['REQUEST_METHOD'] ?? 'GET') === 'POST') {
                     'name' => $siteName,
                     'profile' => $profile,
                 ],
+                'federation' => [
+                    'instance_id' => installerUuidV4(),
+                    'enabled' => true,
+                ],
                 'database' => [
                     'driver' => $driver,
                     'host' => $host,
@@ -318,6 +346,12 @@ if (($_SERVER['REQUEST_METHOD'] ?? 'GET') === 'POST') {
                     $root,
                 );
                 $runner->migrate();
+
+                \ChurchCMS\Modules\Organizations\OrganizationService::fromDatabase()
+                    ->ensureSiteRoot(
+                        $siteName,
+                        $profile,
+                    );
             } catch (Throwable $migrationError) {
                 @unlink($localConfigPath);
                 throw new RuntimeException(
@@ -519,13 +553,13 @@ $csrf = htmlspecialchars(installerCsrf(), ENT_QUOTES | ENT_SUBSTITUTE, 'UTF-8');
 <label class="field">
 <span>Тип сайта</span>
 <select name="profile">
-<option value="small-parish">Небольшой приход</option>
-<option value="parish" selected>Приход / храм</option>
-<option value="cathedral">Кафедральный собор</option>
-<option value="education">Духовная школа / семинария</option>
-<option value="mixed">Храм + образовательная организация</option>
+<?php foreach (\ChurchCMS\Core\SiteProfileCatalog::all() as $profileKey => $profileInfo): ?>
+<option value="<?= htmlspecialchars($profileKey, ENT_QUOTES | ENT_SUBSTITUTE, 'UTF-8') ?>" <?= $profileKey === 'parish' ? 'selected' : '' ?>>
+<?= htmlspecialchars($profileInfo['label'], ENT_QUOTES | ENT_SUBSTITUTE, 'UTF-8') ?>
+</option>
+<?php endforeach; ?>
 </select>
-<small>Позже это определит набор рекомендуемых разделов.</small>
+<small>Профиль задаёт стартовый набор возможностей, но не ограничивает дальнейшее развитие сайта.</small>
 </label>
 
 <label class="field">
