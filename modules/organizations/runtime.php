@@ -19,6 +19,7 @@ foreach ([
     'OrganizationTypeCatalog.php',
     'FederationLink.php',
     'OrganizationRepository.php',
+    'OrganizationAccessService.php',
     'FederationRepository.php',
     'OrganizationService.php',
     'FederationService.php',
