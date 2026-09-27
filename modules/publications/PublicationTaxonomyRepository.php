@@ -145,7 +145,7 @@ final class PublicationTaxonomyRepository
              INNER JOIN {$termTable} t
                 ON t.id = l.{$foreignKey}
              WHERE l.publication_id IN ({$placeholders})
-             ORDER BY l.publication_id ASC, t.name ASC, t.id ASC"
+             ORDER BY l.publication_id ASC, t.slug ASC, t.id ASC"
         );
 
         foreach ($publicationIds as $index => $publicationId) {
