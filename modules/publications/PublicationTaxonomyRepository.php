@@ -134,6 +134,7 @@ final class PublicationTaxonomyRepository
         ]);
 
         if ($names === []) {
+            $this->cleanupOrphans($kind, $siteKey);
             return;
         }
 
@@ -159,6 +160,30 @@ final class PublicationTaxonomyRepository
                 'term_id' => $termId,
             ]);
         }
+
+        $this->cleanupOrphans($kind, $siteKey);
+    }
+
+    private function cleanupOrphans(
+        string $kind,
+        string $siteKey,
+    ): void {
+        [$termTable, $linkTable, $foreignKey] = self::tables(
+            $kind,
+        );
+
+        $statement = $this->pdo->prepare(
+            "DELETE FROM {$termTable}
+             WHERE site_key = :site_key
+               AND NOT EXISTS (
+                    SELECT 1
+                    FROM {$linkTable} l
+                    WHERE l.{$foreignKey} = {$termTable}.id
+               )"
+        );
+        $statement->execute([
+            'site_key' => $siteKey,
+        ]);
     }
 
     private function ensureTerm(
