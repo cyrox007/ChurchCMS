@@ -6,6 +6,7 @@ on:
       - develop
       - main
     paths:
+      - 'app/services/AuthorizationService.php'
       - 'modules/organizations/**'
       - 'themes/default/templates/admin/organizations/**'
       - 'themes/default/theme.json'
@@ -16,6 +17,7 @@ on:
       - develop
       - main
     paths:
+      - 'app/services/AuthorizationService.php'
       - 'modules/organizations/**'
       - 'themes/default/templates/admin/organizations/**'
       - 'themes/default/theme.json'
@@ -59,7 +61,8 @@ jobs:
         shell: bash
         run: |
           set -euo pipefail
-          find modules/organizations -type f -name '*.php' -print0             | xargs -0 -n1 php -l
+          php -l app/services/AuthorizationService.php
+          find modules/organizations -type f -name '*.php' -print0 | xargs -0 -n1 php -l
           php -l themes/default/templates/admin/organizations/index.php
           php -l themes/default/templates/admin/organizations/editor.php
           php bin/migrate.php validate
