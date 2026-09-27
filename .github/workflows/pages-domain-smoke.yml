@@ -1,0 +1,258 @@
+name: Проверка доменного дерева страниц
+
+on:
+  push:
+    branches:
+      - develop
+      - main
+    paths:
+      - 'modules/pages/**'
+      - '.github/workflows/pages-domain-smoke.yml'
+  pull_request:
+    branches:
+      - develop
+      - main
+    paths:
+      - 'modules/pages/**'
+      - '.github/workflows/pages-domain-smoke.yml'
+
+permissions:
+  contents: read
+
+jobs:
+  pages-domain:
+    runs-on: ubuntu-latest
+
+    services:
+      postgres:
+        image: postgres:16
+        env:
+          POSTGRES_DB: churchcms
+          POSTGRES_USER: churchcms
+          POSTGRES_PASSWORD: churchcms
+        ports:
+          - 5432:5432
+        options: >-
+          --health-cmd pg_isready
+          --health-interval 10s
+          --health-timeout 5s
+          --health-retries 5
+
+    steps:
+      - name: Получить исходный код
+        uses: actions/checkout@v4
+
+      - name: Подготовить PHP 8.3
+        uses: shivammathur/setup-php@v2
+        with:
+          php-version: '8.3'
+          extensions: pdo, pdo_pgsql, mbstring
+          coverage: none
+
+      - name: Проверить PHP и миграции
+        shell: bash
+        run: |
+          set -euo pipefail
+          php -l modules/pages/PageStatus.php
+          php -l modules/pages/Page.php
+          php -l modules/pages/PageRepository.php
+          php -l modules/pages/PageService.php
+          php -l modules/pages/runtime.php
+          php bin/migrate.php validate
+
+      - name: Подготовить тестовую установку
+        shell: bash
+        run: |
+          set -euo pipefail
+          mkdir -p storage/cache storage/logs storage/sessions storage/rate-limits storage/uploads
+          cat > config/local.php <<'PHP'
+          <?php
+
+          declare(strict_types=1);
+
+          return [
+              'installation' => [
+                  'completed' => true,
+              ],
+              'security' => [
+                  'secret_key' => base64_encode(str_repeat('p', 32)),
+              ],
+              'database' => [
+                  'driver' => 'pgsql',
+                  'host' => '127.0.0.1',
+                  'port' => 5432,
+                  'database' => 'churchcms',
+                  'username' => 'churchcms',
+                  'password' => 'churchcms',
+              ],
+          ];
+          PHP
+          php bin/migrate.php
+
+      - name: Проверить создание и перемещение поддерева
+        shell: bash
+        run: |
+          php -r '
+          require "core.php";
+
+          $service = ChurchCMSModulesPagesPageService::fromDatabase();
+          $repository = ChurchCMSModulesPagesPageRepository::fromDatabase();
+
+          $rootId = $service->createDraft(
+              title: "О приходе",
+              slug: "o-prihode",
+              bodyInput: "Корневая страница",
+          );
+          $childId = $service->createDraft(
+              title: "История",
+              slug: "istoriya",
+              bodyInput: "История прихода",
+              parentPublicId: $rootId,
+              sortOrder: 10,
+          );
+          $grandchildId = $service->createDraft(
+              title: "Архив",
+              slug: "arhiv",
+              bodyInput: "Архив",
+              parentPublicId: $childId,
+          );
+          $targetId = $service->createDraft(
+              title: "Жизнь прихода",
+              slug: "zhizn-prihoda",
+              bodyInput: "Раздел",
+          );
+
+          $root = $repository->findByPublicId($rootId);
+          $child = $repository->findByPublicId($childId);
+          $grandchild = $repository->findByPublicId($grandchildId);
+
+          if (
+              $root?->path !== "/o-prihode"
+              || $child?->path !== "/o-prihode/istoriya"
+              || $grandchild?->path !== "/o-prihode/istoriya/arhiv"
+          ) {
+              fwrite(STDERR, "Начальные пути дерева некорректны.\n");
+              exit(1);
+          }
+
+          $service->updateContent(
+              publicId: $rootId,
+              title: "О храме",
+              slug: "o-hrame",
+              bodyInput: "Обновлённая корневая страница",
+          );
+
+          $child = $repository->findByPublicId($childId);
+          $grandchild = $repository->findByPublicId($grandchildId);
+
+          if (
+              $child?->path !== "/o-hrame/istoriya"
+              || $grandchild?->path !== "/o-hrame/istoriya/arhiv"
+          ) {
+              fwrite(STDERR, "Переименование корня не обновило поддерево.\n");
+              exit(1);
+          }
+
+          $service->moveSubtree(
+              publicId: $childId,
+              newParentPublicId: $targetId,
+              sortOrder: 5,
+          );
+
+          $child = $repository->findByPublicId($childId);
+          $grandchild = $repository->findByPublicId($grandchildId);
+          $target = $repository->findByPublicId($targetId);
+
+          if (
+              $target === null
+              || $child?->parentId !== $target->id
+              || $child->path !== "/zhizn-prihoda/istoriya"
+              || $child->sortOrder !== 5
+              || $grandchild?->path !== "/zhizn-prihoda/istoriya/arhiv"
+          ) {
+              fwrite(STDERR, "Перемещение поддерева не сохранило структуру.\n");
+              exit(1);
+          }
+
+          try {
+              $service->moveSubtree(
+                  publicId: $targetId,
+                  newParentPublicId: $grandchildId,
+              );
+              fwrite(STDERR, "Циклическое перемещение было разрешено.\n");
+              exit(1);
+          } catch (InvalidArgumentException) {
+          }
+
+          $collisionId = $service->createDraft(
+              title: "История отдельно",
+              slug: "istoriya",
+              bodyInput: "Конфликт",
+          );
+
+          try {
+              $service->moveSubtree(
+                  publicId: $childId,
+                  newParentPublicId: null,
+              );
+              fwrite(STDERR, "Конфликт canonical path не был остановлен.\n");
+              exit(1);
+          } catch (InvalidArgumentException) {
+          }
+
+          $childAfterFailure = $repository->findByPublicId($childId);
+          $grandchildAfterFailure = $repository->findByPublicId($grandchildId);
+
+          if (
+              $childAfterFailure?->path !== "/zhizn-prihoda/istoriya"
+              || $grandchildAfterFailure?->path !== "/zhizn-prihoda/istoriya/arhiv"
+              || $repository->findByPublicId($collisionId)?->path !== "/istoriya"
+          ) {
+              fwrite(STDERR, "Ошибка перемещения оставила дерево частично изменённым.\n");
+              exit(1);
+          }
+
+          $tree = $repository->tree();
+          if (count($tree) !== 5) {
+              fwrite(STDERR, "Repository tree потерял страницы.\n");
+              exit(1);
+          }
+
+          echo "Pages domain subtree smoke OK\n";
+          '
+
+      - name: Проверить санитизацию и ограничения
+        shell: bash
+        run: |
+          php -r '
+          require "core.php";
+
+          $service = ChurchCMSModulesPagesPageService::fromDatabase();
+          $repository = ChurchCMSModulesPagesPageRepository::fromDatabase();
+
+          $id = $service->createDraft(
+              title: "Безопасный HTML",
+              bodyInput: "<p>Текст</p><script>alert(1)</script>",
+          );
+          $page = $repository->findByPublicId($id);
+
+          if (
+              $page === null
+              || str_contains($page->bodyHtml, "<script")
+          ) {
+              fwrite(STDERR, "Page body не прошёл HTML sanitizer.\n");
+              exit(1);
+          }
+
+          try {
+              $service->createDraft(
+                  title: "Ошибка",
+                  sortOrder: -1,
+              );
+              fwrite(STDERR, "Отрицательный sort_order был принят.\n");
+              exit(1);
+          } catch (InvalidArgumentException) {
+          }
+
+          echo "Pages domain validation smoke OK\n";
+          '
