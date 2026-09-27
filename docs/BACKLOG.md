@@ -81,7 +81,7 @@ Priority is ordered within each section.
 - [x] publication categories/tags with site-scoped normalized storage, editor fields, public/API/syndication projections and PostgreSQL/MySQL smoke coverage;
 - menus;
 - content revisions;
-- scheduled publication worker/cron entry;
+- [x] worker/cron отложенной публикации;
 - [x] canonical URL/SEO metadata foundation;
 - [x] Open Graph and Twitter/X social metadata;
 - [x] XML sitemap and robots endpoints;
