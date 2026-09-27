@@ -23,11 +23,41 @@ final class PublicationSyndicationProvider implements SyndicationProvider
 
         $result = [];
         $repository = PublicationRepository::fromDatabase();
+        $publications = $repository->published(
+            $this->siteKey,
+            100,
+            0,
+        );
+        $taxonomy = PublicationTaxonomyService::fromDatabase()
+            ->forPublications(array_map(
+                static fn(Publication $publication): int =>
+                    $publication->id,
+                $publications,
+            ));
 
-        foreach ($repository->published($this->siteKey, 100, 0) as $publication) {
-            if ($publication->syndicationTargets === [] || $publication->publishedAt === null) {
+        foreach ($publications as $publication) {
+            if (
+                $publication->syndicationTargets === []
+                || $publication->publishedAt === null
+            ) {
                 continue;
             }
+
+            $categories = [
+                $publication->type->value,
+            ];
+
+            foreach (
+                $taxonomy[$publication->id]['categories'] ?? []
+                as $category
+            ) {
+                $name = trim((string) ($category['name'] ?? ''));
+                if ($name !== '') {
+                    $categories[] = $name;
+                }
+            }
+
+            $categories = array_values(array_unique($categories));
 
             $result[] = new SyndicationEntry(
                 id: $publication->publicId,
@@ -38,7 +68,7 @@ final class PublicationSyndicationProvider implements SyndicationProvider
                 publishedAt: $publication->publishedAt,
                 updatedAt: $publication->updatedAt,
                 author: $publication->authorName,
-                categories: [$publication->type->value],
+                categories: $categories,
                 targets: $publication->syndicationTargets,
             );
         }
