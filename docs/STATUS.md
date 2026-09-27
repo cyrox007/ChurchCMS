@@ -23,6 +23,30 @@ Implemented:
 - PostgreSQL-backed runtime smoke verifies PDO connectivity, readiness and full migration application;
 - MySQL 8.4 smoke verifies DDL migrations without invalid outer transactions, idempotent rerun and installation readiness.
 
+## Организационная структура и федерация
+
+Реализован foundation:
+
+- профили установки расширены от прихода до благочиния, епархии и митрополии;
+- профиль задаёт стартовый набор возможностей, но не ограничивает будущие модули;
+- `organization_units` хранит локальное дерево церковных организаций/подразделений;
+- `organization_site_roots` связывает `site_key` с организацией, которую представляет сайт;
+- новая установка получает постоянный публичный `federation.instance_id`;
+- installer создаёт корневую organization unit после миграций;
+- `organization_federation_links` хранит независимые связи `parent/child/peer`;
+- federation link содержит remote instance/root IDs, URL, status, sync cursor, inbound/outbound scopes и encrypted outbound credential;
+- организационное подчинение не создаёт federation link и не выдаёт remote admin access;
+- `GET /api/v1/federation/meta` публикует безопасную discovery-информацию без credentials и внутренних DB ID;
+- `docs/ORGANIZATIONS_AND_FEDERATION.md` фиксирует результаты анализа епархиальных/митрополичьих сайтов и общий domain contract.
+
+Дальше:
+
+- Admin UI дерева организаций/отделов/комиссий;
+- безопасный pairing/revoke workflow;
+- organization-scoped RBAC;
+- ownership/reference organization unit в контентных модулях;
+- incremental aggregation/sync с canonical ownership и tombstones.
+
 ## Installation
 
 Implemented:

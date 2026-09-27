@@ -9,6 +9,10 @@ ChurchCMS is a reusable CMS for:
 - Orthodox parishes and churches;
 - cathedrals and large parishes;
 - monasteries;
+- deaneries;
+- dioceses;
+- metropolias;
+- diocesan departments, commissions and other church organizations;
 - theological seminaries and schools;
 - mixed church/education organizations.
 
@@ -77,9 +81,74 @@ Adds:
 - Moodle integration;
 - OJS integration.
 
+### Deanery
+
+Adds:
+
+- deanery profile and contacts;
+- dean and assistants;
+- churches/parishes of the deanery;
+- clergy directory;
+- deanery news/events/documents;
+- aggregation from connected parish ChurchCMS nodes.
+
+### Diocese
+
+Adds:
+
+- ruling bishop and episcopal service;
+- diocesan administration;
+- deaneries;
+- parishes/churches/chapels;
+- monasteries;
+- diocesan departments, commissions and councils;
+- decrees/orders/official documents;
+- clergy and appointments;
+- diocesan news plus controlled aggregation from deaneries/parishes;
+- organization-scoped editorial access.
+
+### Metropolia
+
+Adds:
+
+- metropolia profile and head;
+- subordinate dioceses;
+- cross-diocese news aggregation;
+- common departments/projects/documents;
+- federation with independent diocesan ChurchCMS installations.
+
 ### Mixed profile
 
-Can enable parish/cathedral and education capabilities together.
+Can enable parish/cathedral, organization-hierarchy and education capabilities together.
+
+## Организационная иерархия и федерация ChurchCMS
+
+Каждая установка ChurchCMS является самостоятельным узлом и должна полноценно работать без подключения к другим ChurchCMS.
+
+Узел может представлять любой поддерживаемый уровень: приход, собор, монастырь, благочиние, епархию, митрополию, духовную школу или иную церковную организацию.
+
+Обязательные правила:
+
+- у установки есть постоянный публичный `instance_id`;
+- у каждого `site_key` есть корневая организация;
+- локальная структура хранится как дерево организаций/подразделений;
+- тип организации является расширяемой строкой, а не закрытым DB enum;
+- профиль установки задаёт рекомендуемый стартовый набор функций, но не ограничивает модули;
+- церковная иерархия и техническая связь сайтов — разные сущности;
+- удалённые ChurchCMS связываются как `parent`, `child` или `peer`;
+- связь с вышестоящим узлом не обязательна для работы сайта;
+- разрыв связи не должен лишать локальный сайт собственного контента или управления;
+- факт подчинения не выдаёт удалённой стороне административных прав;
+- inbound/outbound scopes задаются явно для каждой федеративной связи;
+- один сайт может получать данные сверху, отдавать данные наверх и обмениваться выбранными потоками с равными узлами;
+- сайт более высокого уровня агрегирует только разрешённые данные, а canonical owner материала остаётся известен;
+- одна и та же церковная структура может быть полностью локальной, полностью распределённой по независимым ChurchCMS или смешанной;
+- прямой общий доступ к БД между установками запрещён;
+- межсайтовый обмен использует versioned HTTP API и стабильные public ID;
+- удалённые credentials шифруются at rest;
+- discovery metadata не содержит секретов;
+- pairing/trust должен быть явным и отзывным;
+- future delegated remote write, если появится, проектируется отдельным контрактом и никогда не включается автоматически.
 
 ## Themes and design
 
