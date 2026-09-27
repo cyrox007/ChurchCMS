@@ -106,10 +106,8 @@ final class PublicationRepository
         return is_array($row) ? $this->hydrate($row) : null;
     }
 
-    public function findById(
-        int $id,
-        string $siteKey = 'default',
-    ): ?Publication {
+    public function findById(int $id): ?Publication
+    {
         if ($id <= 0) {
             return null;
         }
@@ -117,12 +115,10 @@ final class PublicationRepository
         $statement = $this->pdo->prepare(
             'SELECT * FROM publications
              WHERE id = :id
-               AND site_key = :site_key
              LIMIT 1'
         );
         $statement->execute([
             'id' => $id,
-            'site_key' => $siteKey,
         ]);
 
         $row = $statement->fetch();
