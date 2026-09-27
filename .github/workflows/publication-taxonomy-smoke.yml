@@ -1,0 +1,335 @@
+name: Проверка категорий и тегов публикаций
+
+on:
+  push:
+    branches:
+      - develop
+      - main
+    paths:
+      - 'modules/publications/**'
+      - 'themes/default/templates/admin/publications/editor.php'
+      - 'themes/default/templates/publications/**'
+      - 'themes/default/assets/css/site.css'
+      - 'themes/default/theme.json'
+      - '.github/workflows/publication-taxonomy-smoke.yml'
+  pull_request:
+    branches:
+      - develop
+      - main
+    paths:
+      - 'modules/publications/**'
+      - 'themes/default/templates/admin/publications/editor.php'
+      - 'themes/default/templates/publications/**'
+      - 'themes/default/assets/css/site.css'
+      - 'themes/default/theme.json'
+      - '.github/workflows/publication-taxonomy-smoke.yml'
+
+permissions:
+  contents: read
+
+jobs:
+  publication-taxonomy:
+    runs-on: ubuntu-latest
+
+    services:
+      postgres:
+        image: postgres:16
+        env:
+          POSTGRES_DB: churchcms
+          POSTGRES_USER: churchcms
+          POSTGRES_PASSWORD: churchcms
+        ports:
+          - 5432:5432
+        options: >-
+          --health-cmd pg_isready
+          --health-interval 10s
+          --health-timeout 5s
+          --health-retries 5
+
+    steps:
+      - name: Получить исходный код
+        uses: actions/checkout@v4
+
+      - name: Подготовить PHP 8.3
+        uses: shivammathur/setup-php@v2
+        with:
+          php-version: '8.3'
+          extensions: pdo, pdo_pgsql, mbstring
+          coverage: none
+
+      - name: Проверить PHP, миграции и тему
+        shell: bash
+        run: |
+          set -euo pipefail
+          php -l modules/publications/PublicationTaxonomyRepository.php
+          php -l modules/publications/PublicationTaxonomyService.php
+          php -l modules/publications/PublicationService.php
+          php -l modules/publications/PublicationsAdminController.php
+          php -l modules/publications/PublicationsController.php
+          php -l modules/publications/PublicationsApiController.php
+          php -l modules/publications/PublicationApiResource.php
+          php -l modules/publications/PublicationSyndicationProvider.php
+          php -l modules/publications/migrations/20260927_081000_create_publication_taxonomy.php
+          php -l themes/default/templates/admin/publications/editor.php
+          php -l themes/default/templates/publications/index.php
+          php -l themes/default/templates/publications/show.php
+          php bin/migrate.php validate
+          php bin/theme-check.php
+
+      - name: Подготовить тестовую установку
+        shell: bash
+        run: |
+          set -euo pipefail
+          mkdir -p storage/cache storage/logs storage/sessions storage/rate-limits storage/uploads
+          cat > config/local.php <<'PHP'
+          <?php
+
+          declare(strict_types=1);
+
+          return [
+              'installation' => [
+                  'completed' => true,
+              ],
+              'security' => [
+                  'secret_key' => base64_encode(str_repeat('t', 32)),
+              ],
+              'database' => [
+                  'driver' => 'pgsql',
+                  'host' => '127.0.0.1',
+                  'port' => 5432,
+                  'database' => 'churchcms',
+                  'username' => 'churchcms',
+                  'password' => 'churchcms',
+              ],
+              'syndication' => [
+                  'site_url' => 'https://example.test',
+              ],
+          ];
+          PHP
+          php bin/migrate.php
+
+      - name: Проверить жизненный цикл таксономии
+        shell: bash
+        run: |
+          php -r '
+          require "core.php";
+
+          use ChurchCMS\Modules\Publications\PublicationApiResource;
+          use ChurchCMS\Modules\Publications\PublicationRepository;
+          use ChurchCMS\Modules\Publications\PublicationService;
+          use ChurchCMS\Modules\Publications\PublicationTaxonomyService;
+          use ChurchCMS\Modules\Publications\PublicationType;
+
+          $service = PublicationService::fromDatabase();
+          $repository = PublicationRepository::fromDatabase();
+          $taxonomy = PublicationTaxonomyService::fromDatabase();
+
+          $firstId = $service->createDraft(
+              title: "Первая публикация",
+              type: PublicationType::News,
+              excerpt: "Описание",
+              bodyHtml: "Текст",
+              categoryNames: [
+                  "Новости прихода",
+                  " Богослужение ",
+                  "новости прихода",
+              ],
+              tagNames: [
+                  "Пасха",
+                  "молодёжь",
+                  "ПАСХА",
+              ],
+          );
+
+          $secondId = $service->createDraft(
+              title: "Вторая публикация",
+              type: PublicationType::Article,
+              excerpt: "Описание",
+              bodyHtml: "Текст",
+              categoryNames: [
+                  "Новости прихода",
+              ],
+              tagNames: [
+                  "архив",
+              ],
+          );
+
+          $first = $repository->findByPublicId($firstId);
+          $second = $repository->findByPublicId($secondId);
+
+          if ($first === null || $second === null) {
+              fwrite(STDERR, "Тестовые публикации не найдены.\n");
+              exit(1);
+          }
+
+          $firstTaxonomy = $taxonomy->forPublication($first->id);
+
+          if (
+              array_column($firstTaxonomy["categories"], "name")
+                  !== ["Богослужение", "Новости прихода"]
+              || count($firstTaxonomy["tags"]) !== 2
+          ) {
+              fwrite(
+                  STDERR,
+                  "Категории/теги не нормализованы: "
+                  . json_encode(
+                      $firstTaxonomy,
+                      JSON_UNESCAPED_UNICODE
+                      | JSON_UNESCAPED_SLASHES,
+                  )
+                  . "\n",
+              );
+              exit(1);
+          }
+
+          $pdo = ChurchCMS\Core\DatabaseManager::getInstance()->connection();
+
+          $shared = (int) $pdo->query(
+              "SELECT COUNT(*)
+               FROM publication_categories
+               WHERE slug = '''novosti-prikhoda'''"
+          )->fetchColumn();
+
+          if ($shared !== 1) {
+              fwrite(STDERR, "Общая категория не была переиспользована.\n");
+              exit(1);
+          }
+
+          $service->update(
+              publicId: $firstId,
+              title: "Первая публикация",
+              slug: $first->slug,
+              type: PublicationType::News,
+              excerpt: "Описание",
+              bodyHtml: "Текст",
+              authorName: null,
+              syndicationTargets: [],
+              commentsEnabled: false,
+              categoryNames: [
+                  "Новости прихода",
+                  "Жизнь общины",
+              ],
+              tagNames: [
+                  "Пасха",
+                  "добрые дела",
+              ],
+          );
+
+          $updated = $repository->findByPublicId($firstId);
+          $updatedTaxonomy = $taxonomy->forPublication($first->id);
+
+          if (
+              $updated === null
+              || array_column($updatedTaxonomy["categories"], "name")
+                  !== ["Жизнь общины", "Новости прихода"]
+              || array_column($updatedTaxonomy["tags"], "name")
+                  !== ["Пасха", "добрые дела"]
+          ) {
+              fwrite(STDERR, "Таксономия не обновилась атомарно.\n");
+              exit(1);
+          }
+
+          $orphanCategory = (int) $pdo->query(
+              "SELECT COUNT(*)
+               FROM publication_categories
+               WHERE slug = '''bogosluzhenie'''"
+          )->fetchColumn();
+          $orphanTag = (int) $pdo->query(
+              "SELECT COUNT(*)
+               FROM publication_tags
+               WHERE slug = '''molodezh'''"
+          )->fetchColumn();
+
+          if ($orphanCategory !== 0 || $orphanTag !== 0) {
+              fwrite(STDERR, "Осиротевшие термины не были удалены.\n");
+              exit(1);
+          }
+
+          $batch = $taxonomy->forPublications([
+              $first->id,
+              $second->id,
+          ]);
+
+          if (
+              count($batch) !== 2
+              || count($batch[$first->id]["categories"] ?? []) !== 2
+              || count($batch[$second->id]["categories"] ?? []) !== 1
+          ) {
+              fwrite(STDERR, "Пакетная загрузка таксономии некорректна.\n");
+              exit(1);
+          }
+
+          $api = (new PublicationApiResource(
+              $updated,
+              $updatedTaxonomy,
+          ))->toApiArray();
+
+          if (
+              array_column($api["categories"] ?? [], "name")
+                  !== ["Жизнь общины", "Новости прихода"]
+              || array_column($api["tags"] ?? [], "name")
+                  !== ["Пасха", "добрые дела"]
+          ) {
+              fwrite(STDERR, "API resource потерял таксономию.\n");
+              exit(1);
+          }
+
+          try {
+              PublicationTaxonomyService::categoriesFromInput(
+                  implode(", ", array_fill(0, 9, "Категория")),
+              );
+              fwrite(STDERR, "Лимит категорий не сработал.\n");
+              exit(1);
+          } catch (InvalidArgumentException) {
+          }
+
+          echo "Publication taxonomy lifecycle smoke OK\n";
+          '
+
+      - name: Проверить редактор и публичные шаблоны
+        shell: bash
+        run: |
+          php -r '
+          require "core.php";
+
+          $renderer = ChurchCMS\Core\ThemeRenderer::fromConfig();
+
+          $editor = $renderer->capture(
+              "admin.publications.editor",
+              [
+                  "publication" => null,
+                  "form" => [
+                      "type" => "news",
+                      "title" => "",
+                      "excerpt" => "",
+                      "body" => "",
+                      "author_name" => "",
+                      "slug" => "",
+                      "comments_enabled" => false,
+                      "categories" => "",
+                      "tags" => "",
+                  ],
+                  "error" => null,
+                  "success" => null,
+                  "canPublish" => false,
+                  "canSyndicate" => false,
+              ],
+          );
+
+          foreach ([
+              "name=\"categories\"",
+              "name=\"tags\"",
+              "До 8 категорий",
+              "До 20 тегов",
+          ] as $expected) {
+              if (!str_contains($editor, $expected)) {
+                  fwrite(
+                      STDERR,
+                      "Редактор таксономии не содержит: {$expected}\n",
+                  );
+                  exit(1);
+              }
+          }
+
+          echo "Publication taxonomy render smoke OK\n";
+          '
