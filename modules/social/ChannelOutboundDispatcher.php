@@ -34,8 +34,7 @@ final class ChannelOutboundDispatcher
      *     claimed:int,
      *     sent:int,
      *     retried:int,
-     *     dead_letter:int,
-     *     skipped:int
+     *     dead_letter:int
      * }
      */
     public function dispatch(
@@ -60,7 +59,6 @@ final class ChannelOutboundDispatcher
             'sent' => 0,
             'retried' => 0,
             'dead_letter' => 0,
-            'skipped' => 0,
         ];
 
         foreach ($posts as $post) {
