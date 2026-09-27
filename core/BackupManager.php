@@ -92,6 +92,90 @@ final class BackupManager
         }
     }
 
+    /**
+     * @return list<array{
+     *     id:string,
+     *     created_at:string,
+     *     app_version:string,
+     *     files:int,
+     *     tables:int
+     * }>
+     */
+    public function list(int $limit = 20): array
+    {
+        $limit = max(1, min(100, $limit));
+        $root = $this->prepareBackupRoot();
+        $entries = scandir($root);
+
+        if ($entries === false) {
+            throw new RuntimeException('Не удалось прочитать каталог резервных копий.');
+        }
+
+        rsort($entries, SORT_STRING);
+        $backups = [];
+
+        foreach ($entries as $entry) {
+            if (
+                count($backups) >= $limit
+                || preg_match(self::BACKUP_ID_PATTERN, $entry) !== 1
+            ) {
+                continue;
+            }
+
+            $path = $root . DIRECTORY_SEPARATOR . $entry;
+            if (!is_dir($path) || is_link($path)) {
+                continue;
+            }
+
+            $manifestPath = $path . DIRECTORY_SEPARATOR . 'manifest.json';
+            $raw = is_file($manifestPath)
+                ? file_get_contents($manifestPath)
+                : false;
+
+            if (!is_string($raw)) {
+                continue;
+            }
+
+            try {
+                $manifest = json_decode(
+                    $raw,
+                    true,
+                    64,
+                    JSON_THROW_ON_ERROR,
+                );
+            } catch (\JsonException) {
+                continue;
+            }
+
+            if (
+                !is_array($manifest)
+                || ($manifest['format'] ?? null) !== self::FORMAT
+            ) {
+                continue;
+            }
+
+            $files = is_array($manifest['files'] ?? null)
+                ? count($manifest['files'])
+                : 0;
+            $database = is_array($manifest['database'] ?? null)
+                ? $manifest['database']
+                : [];
+            $tables = is_array($database['tables'] ?? null)
+                ? count($database['tables'])
+                : 0;
+
+            $backups[] = [
+                'id' => $entry,
+                'created_at' => (string) ($manifest['created_at'] ?? ''),
+                'app_version' => (string) ($manifest['app_version'] ?? ''),
+                'files' => $files,
+                'tables' => $tables,
+            ];
+        }
+
+        return $backups;
+    }
+
     public function verify(string $backupId): bool
     {
         if (preg_match(self::BACKUP_ID_PATTERN, $backupId) !== 1) {
