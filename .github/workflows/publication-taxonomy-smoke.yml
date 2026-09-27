@@ -183,7 +183,7 @@ jobs:
                FROM publication_categories
                WHERE slug = :slug"
           );
-          $sharedStatement->execute(["slug" => "novosti-prikhoda"]);
+          $sharedStatement->execute(["slug" => "novosti-prihoda"]);
           $shared = (int) $sharedStatement->fetchColumn();
 
           if ($shared !== 1) {
