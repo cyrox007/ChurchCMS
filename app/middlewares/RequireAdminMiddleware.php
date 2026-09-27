@@ -17,6 +17,7 @@ final class RequireAdminMiddleware
             $request->unsetSession('admin_authenticated');
             $request->unsetSession('admin_user_id');
             $request->unsetSession('admin_user_public_id');
+            $request->unsetSession('admin_auth_version');
             Response::redirectLocal('/admin/login', 303);
         }
 
