@@ -97,6 +97,8 @@ Implemented:
 - RBAC schema/services;
 - scope storage;
 - audit event foundation;
+- production error handler загружается до bootstrap ядра, скрывает внутренние детали и возвращает request ID;
+- HTML/API ошибки HTTP 500 получают `Cache-Control: no-store`, а подробность записывается в server log и `storage/logs/error.log`;
 - protected admin dashboard;
 - friendly publication editor;
 - comment moderation queue.
@@ -106,7 +108,6 @@ Pending:
 - roles/users management UI;
 - password reset;
 - optional 2FA;
-- production error handler;
 - scoped permission enforcement in future domain modules.
 
 ## Publications
@@ -294,5 +295,6 @@ Next:
 - `docs/UPDATES.md`
 - `docs/NGINX.md`
 - `docs/ACCESSIBILITY.md`
+- `docs/ERROR_HANDLING.md`
 
 Update this file at the end of every substantial implementation increment.
