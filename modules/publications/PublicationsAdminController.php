@@ -60,6 +60,12 @@ final class PublicationsAdminController
                 authorName: $form['author_name'],
                 syndicationTargets: $this->targetsForRequest($request, []),
                 commentsEnabled: $form['comments_enabled'],
+                categoryNames: PublicationTaxonomyService::categoriesFromInput(
+                    $form['categories'],
+                ),
+                tagNames: PublicationTaxonomyService::tagsFromInput(
+                    $form['tags'],
+                ),
             );
 
             $publication = $repository->findByPublicId($publicId);
@@ -124,6 +130,12 @@ final class PublicationsAdminController
                 authorName: $form['author_name'],
                 syndicationTargets: $this->targetsForRequest($request, $publication->syndicationTargets),
                 commentsEnabled: $form['comments_enabled'],
+                categoryNames: PublicationTaxonomyService::categoriesFromInput(
+                    $form['categories'],
+                ),
+                tagNames: PublicationTaxonomyService::tagsFromInput(
+                    $form['tags'],
+                ),
             );
 
             $updated = $repository->findByPublicId($publicId);
@@ -199,6 +211,8 @@ final class PublicationsAdminController
             'author_name' => trim((string) $request->post('author_name', '')),
             'slug' => trim((string) $request->post('slug', '')),
             'comments_enabled' => $request->post('comments_enabled') === '1',
+            'categories' => trim((string) $request->post('categories', '')),
+            'tags' => trim((string) $request->post('tags', '')),
             'seo_title' => trim((string) $request->post('seo_title', '')),
             'seo_description' => trim((string) $request->post('seo_description', '')),
             'seo_keywords' => trim((string) $request->post('seo_keywords', '')),
@@ -213,6 +227,9 @@ final class PublicationsAdminController
 
     private function formFromPublication(Publication $publication): array
     {
+        $taxonomy = PublicationTaxonomyService::fromDatabase()
+            ->forPublication($publication->id);
+
         $form = [
             'type' => $publication->type->value,
             'title' => $publication->title,
@@ -221,6 +238,12 @@ final class PublicationsAdminController
             'author_name' => $publication->authorName ?? '',
             'slug' => $publication->slug,
             'comments_enabled' => $publication->commentsEnabled,
+            'categories' => PublicationTaxonomyService::names(
+                $taxonomy['categories'],
+            ),
+            'tags' => PublicationTaxonomyService::names(
+                $taxonomy['tags'],
+            ),
         ];
 
         $capability = ModuleRuntimeLoader::capability('seo', 'seo.publications');
@@ -244,6 +267,8 @@ final class PublicationsAdminController
             'author_name' => '',
             'slug' => '',
             'comments_enabled' => false,
+            'categories' => '',
+            'tags' => '',
         ] + $this->seoDefaults();
     }
 
