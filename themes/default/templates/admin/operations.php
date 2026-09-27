@@ -7,6 +7,7 @@ $checks = is_array($health['checks'] ?? null) ? $health['checks'] : [];
 $backups = is_array($backups ?? null) ? $backups : [];
 $packages = is_array($packages ?? null) ? $packages : [];
 $status = is_array($operationStatus ?? null) ? $operationStatus : null;
+$warnings = is_array($operationWarnings ?? null) ? $operationWarnings : [];
 
 $checkLabels = [
     'php' => 'Версия PHP',
@@ -33,6 +34,14 @@ $checkLabels = [
             'message' => (string) ($status['message'] ?? ''),
         ]) ?>
     <?php endif; ?>
+
+    <?php foreach ($warnings as $warning): ?>
+        <?= $theme->component('admin.state', [
+            'kind' => 'error',
+            'title' => 'Служебный каталог недоступен',
+            'message' => (string) $warning,
+        ]) ?>
+    <?php endforeach; ?>
 
     <section class="admin-operations-section" aria-labelledby="system-health-title">
         <div class="admin-operations-heading">
