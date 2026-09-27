@@ -114,19 +114,13 @@ jobs:
           php -r '
           require "core.php";
 
-          use ChurchCMS\Modules\Publications\PublicationApiResource;
-          use ChurchCMS\Modules\Publications\PublicationRepository;
-          use ChurchCMS\Modules\Publications\PublicationService;
-          use ChurchCMS\Modules\Publications\PublicationTaxonomyService;
-          use ChurchCMS\Modules\Publications\PublicationType;
-
-          $service = PublicationService::fromDatabase();
-          $repository = PublicationRepository::fromDatabase();
-          $taxonomy = PublicationTaxonomyService::fromDatabase();
+          $service = \ChurchCMS\Modules\Publications\PublicationService::fromDatabase();
+          $repository = \ChurchCMS\Modules\Publications\PublicationRepository::fromDatabase();
+          $taxonomy = \ChurchCMS\Modules\Publications\PublicationTaxonomyService::fromDatabase();
 
           $firstId = $service->createDraft(
               title: "Первая публикация",
-              type: PublicationType::News,
+              type: \ChurchCMS\Modules\Publications\PublicationType::News,
               excerpt: "Описание",
               bodyHtml: "Текст",
               categoryNames: [
@@ -143,7 +137,7 @@ jobs:
 
           $secondId = $service->createDraft(
               title: "Вторая публикация",
-              type: PublicationType::Article,
+              type: \ChurchCMS\Modules\Publications\PublicationType::Article,
               excerpt: "Описание",
               bodyHtml: "Текст",
               categoryNames: [
@@ -199,7 +193,7 @@ jobs:
               publicId: $firstId,
               title: "Первая публикация",
               slug: $first->slug,
-              type: PublicationType::News,
+              type: \ChurchCMS\Modules\Publications\PublicationType::News,
               excerpt: "Описание",
               bodyHtml: "Текст",
               authorName: null,
@@ -259,7 +253,7 @@ jobs:
               exit(1);
           }
 
-          $api = (new PublicationApiResource(
+          $api = (new \ChurchCMS\Modules\Publications\PublicationApiResource(
               $updated,
               $updatedTaxonomy,
           ))->toApiArray();
@@ -275,8 +269,15 @@ jobs:
           }
 
           try {
-              PublicationTaxonomyService::categoriesFromInput(
-                  implode(", ", array_fill(0, 9, "Категория")),
+              \ChurchCMS\Modules\Publications\PublicationTaxonomyService::categoriesFromInput(
+                  implode(
+                      ", ",
+                      array_map(
+                          static fn(int $index): string =>
+                              "Категория {$index}",
+                          range(1, 9),
+                      ),
+                  ),
               );
               fwrite(STDERR, "Лимит категорий не сработал.\n");
               exit(1);
