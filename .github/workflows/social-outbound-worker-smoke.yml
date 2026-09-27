@@ -350,15 +350,20 @@ jobs:
           php -r '
           require "core.php";
 
-          $pdo = DatabaseManager::getInstance()->connection();
-          $pdo->exec(
+          $pdo = \ChurchCMS\Core\DatabaseManager::getInstance()->connection();
+          $statement = $pdo->prepare(
               "UPDATE publication_social_posts
-               SET status = '''processing''',
-                   updated_at = '''2000-01-01 00:00:00'''
-               WHERE status = '''pending'''"
+               SET status = :processing,
+                   updated_at = :updated_at
+               WHERE status = :pending"
           );
+          $statement->execute([
+              "processing" => "processing",
+              "updated_at" => "2000-01-01 00:00:00",
+              "pending" => "pending",
+          ]);
 
-          $claimed = SocialPostRepository::fromDatabase()
+          $claimed = \ChurchCMS\Modules\Social\SocialPostRepository::fromDatabase()
               ->claimPending(
                   limit: 1,
                   staleSeconds: 60,
