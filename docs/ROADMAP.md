@@ -90,7 +90,7 @@ Status: in progress.
 - [x] Bidirectional inbox/outbox persistence foundation.
 - [x] Encrypted integration credentials.
 - [ ] Admin connection wizard.
-- [ ] Outbound worker and retry/dead-letter processing.
+- [x] Outbound worker and retry/dead-letter processing.
 - [ ] Inbound review/import workflow.
 - [ ] Built-in Telegram/VK/MAX adapters.
 - [ ] Built-in YouTube/Rutube adapters.

@@ -26,6 +26,7 @@ foreach ([
     'ExternalChannelItemRepository.php',
     'ChannelSyncStateRepository.php',
     'ChannelSyncService.php',
+    'ChannelOutboundDispatcher.php',
     'ExternalChannelsCapability.php',
     'SocialAdminTaskProvider.php',
 ] as $file) {

@@ -106,6 +106,28 @@ final class PublicationRepository
         return is_array($row) ? $this->hydrate($row) : null;
     }
 
+    public function findById(int $id): ?Publication
+    {
+        if ($id <= 0) {
+            return null;
+        }
+
+        $statement = $this->pdo->prepare(
+            'SELECT * FROM publications
+             WHERE id = :id
+             LIMIT 1'
+        );
+        $statement->execute([
+            'id' => $id,
+        ]);
+
+        $row = $statement->fetch();
+
+        return is_array($row)
+            ? $this->hydrate($row)
+            : null;
+    }
+
     /**
      * @return list<Publication>
      */

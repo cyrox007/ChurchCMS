@@ -35,27 +35,87 @@ final class SocialPostRepository
         );
     }
 
-    /** @return list<SocialPost> */
-    public function pending(int $limit = 20): array
-    {
+    /**
+     * Атомарно резервирует pending-записи для одного запуска worker.
+     *
+     * @return list<SocialPost>
+     */
+    public function claimPending(
+        int $limit = 20,
+        int $staleSeconds = 900,
+    ): array {
         $limit = max(1, min(100, $limit));
+        $staleSeconds = max(60, min(86400, $staleSeconds));
+        $now = gmdate('Y-m-d H:i:s');
+        $staleBefore = gmdate(
+            'Y-m-d H:i:s',
+            time() - $staleSeconds,
+        );
 
-        $statement = $this->pdo->prepare(
-            'SELECT * FROM publication_social_posts
+        $recover = $this->pdo->prepare(
+            'UPDATE publication_social_posts
+             SET status = :pending,
+                 updated_at = :updated_at
+             WHERE status = :processing
+               AND updated_at < :stale_before'
+        );
+        $recover->execute([
+            'pending' => 'pending',
+            'processing' => 'processing',
+            'updated_at' => $now,
+            'stale_before' => $staleBefore,
+        ]);
+
+        $select = $this->pdo->prepare(
+            'SELECT id FROM publication_social_posts
              WHERE status = :status
                AND enabled = :enabled
              ORDER BY queued_at ASC, id ASC
              LIMIT :limit'
         );
-        $statement->bindValue(':status', 'pending');
-        $statement->bindValue(':enabled', 1, PDO::PARAM_INT);
-        $statement->bindValue(':limit', $limit, PDO::PARAM_INT);
-        $statement->execute();
+        $select->bindValue(':status', 'pending');
+        $select->bindValue(':enabled', 1, PDO::PARAM_INT);
+        $select->bindValue(':limit', $limit, PDO::PARAM_INT);
+        $select->execute();
 
-        return array_map(
-            fn(array $row): SocialPost => $this->hydrate($row),
-            $statement->fetchAll(),
+        $claim = $this->pdo->prepare(
+            'UPDATE publication_social_posts
+             SET status = :processing,
+                 updated_at = :updated_at
+             WHERE id = :id
+               AND status = :pending'
         );
+        $load = $this->pdo->prepare(
+            'SELECT * FROM publication_social_posts
+             WHERE id = :id
+             LIMIT 1'
+        );
+
+        $claimed = [];
+
+        foreach ($select->fetchAll(PDO::FETCH_COLUMN) as $rawId) {
+            $id = (int) $rawId;
+
+            $claim->execute([
+                'processing' => 'processing',
+                'updated_at' => $now,
+                'id' => $id,
+                'pending' => 'pending',
+            ]);
+
+            if ($claim->rowCount() !== 1) {
+                continue;
+            }
+
+            $load->execute(['id' => $id]);
+            $row = $load->fetch();
+
+            if (is_array($row)) {
+                $claimed[] = $this->hydrate($row);
+            }
+        }
+
+        return $claimed;
     }
 
     public function failedCount(): int

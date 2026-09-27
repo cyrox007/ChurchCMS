@@ -186,7 +186,7 @@ Priority is ordered within each section.
 - [x] sync cursor/state model;
 - [x] polling sync service foundation;
 - [x] channel runtime/capability registration;
-- [ ] outbound dispatcher worker;
+- [x] outbound dispatcher worker;
 - [ ] inbox review/admin UI;
 - [ ] connection setup/testing UI;
 - [ ] per-publication external channel selector;

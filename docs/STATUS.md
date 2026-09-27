@@ -255,6 +255,11 @@ Architecture implemented:
 - remote ID/fingerprint deduplication;
 - sync cursor/error state;
 - polling synchronization service;
+- outbound dispatcher worker с atomic claim через статус `processing`;
+- retry между запусками worker и dead-letter через `failed` после `social.max_attempts`;
+- recovery зависшего `processing` после timeout;
+- credential расшифровывается только внутри worker перед вызовом adapter;
+- CLI `php bin/channel-dispatch.php` поддерживает bounded batch/max-attempts и не входит в public request path;
 - runtime capability.
 
 The intended model is:
@@ -278,7 +283,6 @@ External content never becomes official automatically by default.
 Next:
 
 - connection/admin UI;
-- outbound worker;
 - inbound review UI;
 - Telegram/VK/MAX adapters;
 - YouTube/Rutube adapters;
