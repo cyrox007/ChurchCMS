@@ -163,10 +163,12 @@ jobs:
           }
 
           $items = $taxonomy->forPublications([$first->id, $second->id]);
-          $shared = (int) $pdo->query(
+          $sharedStatement = $pdo->prepare(
               "SELECT COUNT(*) FROM publication_categories
-               WHERE slug = '''obschaya-kategoriya'''"
-          )->fetchColumn();
+               WHERE slug = :slug"
+          );
+          $sharedStatement->execute(["slug" => "obschaya-kategoriya"]);
+          $shared = (int) $sharedStatement->fetchColumn();
 
           if (
               $shared !== 1

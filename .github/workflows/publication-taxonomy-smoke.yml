@@ -178,11 +178,13 @@ jobs:
 
           $pdo = ChurchCMS\Core\DatabaseManager::getInstance()->connection();
 
-          $shared = (int) $pdo->query(
+          $sharedStatement = $pdo->prepare(
               "SELECT COUNT(*)
                FROM publication_categories
-               WHERE slug = '''novosti-prikhoda'''"
-          )->fetchColumn();
+               WHERE slug = :slug"
+          );
+          $sharedStatement->execute(["slug" => "novosti-prikhoda"]);
+          $shared = (int) $sharedStatement->fetchColumn();
 
           if ($shared !== 1) {
               fwrite(STDERR, "Общая категория не была переиспользована.\n");
@@ -223,16 +225,20 @@ jobs:
               exit(1);
           }
 
-          $orphanCategory = (int) $pdo->query(
+          $orphanCategoryStatement = $pdo->prepare(
               "SELECT COUNT(*)
                FROM publication_categories
-               WHERE slug = '''bogosluzhenie'''"
-          )->fetchColumn();
-          $orphanTag = (int) $pdo->query(
+               WHERE slug = :slug"
+          );
+          $orphanCategoryStatement->execute(["slug" => "bogosluzhenie"]);
+          $orphanCategory = (int) $orphanCategoryStatement->fetchColumn();
+          $orphanTagStatement = $pdo->prepare(
               "SELECT COUNT(*)
                FROM publication_tags
-               WHERE slug = '''molodezh'''"
-          )->fetchColumn();
+               WHERE slug = :slug"
+          );
+          $orphanTagStatement->execute(["slug" => "molodezh"]);
+          $orphanTag = (int) $orphanTagStatement->fetchColumn();
 
           if ($orphanCategory !== 0 || $orphanTag !== 0) {
               fwrite(STDERR, "Осиротевшие термины не были удалены.\n");
