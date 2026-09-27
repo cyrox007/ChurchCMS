@@ -1,0 +1,9 @@
+{
+  "id": "operations",
+  "name": "System Operations",
+  "version": "0.1.0",
+  "runtime": "runtime.php",
+  "capabilities": [
+    "operations.admin"
+  ]
+}
