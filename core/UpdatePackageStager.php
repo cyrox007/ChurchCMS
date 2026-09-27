@@ -158,7 +158,7 @@ final class UpdatePackageStager
      *     ready:bool
      * }>
      */
-    public function list(int $limit = 20): array
+    public function packages(int $limit = 20): array
     {
         $limit = max(1, min(100, $limit));
         $root = $this->prepareStagingRoot();
