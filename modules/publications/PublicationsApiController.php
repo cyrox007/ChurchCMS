@@ -19,11 +19,12 @@ final class PublicationsApiController
         $perPage = max(1, min(50, (int) $request->get('per_page', 20)));
         $offset = ($page - 1) * $perPage;
 
-        $items = array_map(
-            static fn(Publication $publication): array =>
-                (new PublicationApiResource($publication))->toApiArray(),
-            $repository->published('default', $perPage, $offset),
+        $publications = $repository->published(
+            'default',
+            $perPage,
+            $offset,
         );
+        $items = $this->resources($publications);
 
         $total = $repository->countPublished('default');
 
@@ -48,8 +49,14 @@ final class PublicationsApiController
             ApiResponse::error('publication_not_found', 'Publication not found.', 404);
         }
 
+        $taxonomy = PublicationTaxonomyService::fromDatabase()
+            ->forPublication($publication->id);
+
         ApiResponse::success(
-            (new PublicationApiResource($publication))->toApiArray(),
+            (new PublicationApiResource(
+                $publication,
+                $taxonomy,
+            ))->toApiArray(),
             cacheSeconds: 60,
         );
     }
@@ -84,11 +91,7 @@ final class PublicationsApiController
                 in_array('diocese', $publication->syndicationTargets, true),
         ));
 
-        $items = array_map(
-            static fn(Publication $publication): array =>
-                (new PublicationApiResource($publication))->toApiArray(),
-            $publications,
-        );
+        $items = $this->resources($publications);
 
         $lastUpdatedAt = null;
         if ($scan !== []) {
@@ -108,4 +111,28 @@ final class PublicationsApiController
             'partner' => ApiAccess::partnerId($request),
         ]);
     }
+
+    /**
+     * @param list<Publication> $publications
+     * @return list<array<string,mixed>>
+     */
+    private function resources(array $publications): array
+    {
+        $taxonomy = PublicationTaxonomyService::fromDatabase()
+            ->forPublications(array_map(
+                static fn(Publication $publication): int =>
+                    $publication->id,
+                $publications,
+            ));
+
+        return array_map(
+            static fn(Publication $publication): array =>
+                (new PublicationApiResource(
+                    $publication,
+                    $taxonomy[$publication->id] ?? [],
+                ))->toApiArray(),
+            $publications,
+        );
+    }
+
 }
