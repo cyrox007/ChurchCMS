@@ -37,6 +37,9 @@ Priority is ordered within each section.
   - [x] staging/проверка пакета обновления;
   - [ ] доверенный источник/аутентичность релизного пакета до автоматической сетевой загрузки;
   - [ ] обязательная резервная копия перед миграциями/заменой файлов и сценарий отката;
+    - [x] code-only apply: повторная проверка staging → обязательный backup → откатываемая замена/добавление/удаление файлов → PHP syntax/version/healthcheck;
+    - [x] автоматический файловый rollback при ошибке code-only обновления;
+    - [ ] schema-changing apply: безопасный возврат старой схемы и данных после миграций; блокер — текущий логический backup не является DDL snapshot;
   - [ ] мастер обновления/резервного копирования в Admin Shell;
 - [x] replace dashboard-card prototype with unified Admin Shell;
 - [x] persistent/collapsible admin navigation;
