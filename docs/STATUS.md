@@ -37,11 +37,17 @@ Implemented:
 - federation link содержит remote instance/root IDs, URL, status, sync cursor, inbound/outbound scopes и encrypted outbound credential;
 - организационное подчинение не создаёт federation link и не выдаёт remote admin access;
 - `GET /api/v1/federation/meta` публикует безопасную discovery-информацию без credentials и внутренних DB ID;
+- Admin Shell содержит раздел «Структура» с отдельным правом `organizations.manage`;
+- администратор может создавать благочиния, приходы, монастыри, отделы, комиссии и другие типы, менять родителя/slug/порядок и описание;
+- при изменении slug или родителя canonical path всего поддерева пересчитывается транзакционно;
+- запрещены циклические перемещения, второй root и помещение активного узла внутрь архивированного;
+- вместо hard-delete используется архивирование/восстановление всего поддерева; root сайта архивировать нельзя;
+- default theme заявляет совместимость с parish/cathedral/monastery/deanery/diocese/metropolia/education/mixed/organization;
+- отдельный PostgreSQL smoke проверяет domain operations, RBAC permissions и рендер Admin Shell;
 - `docs/ORGANIZATIONS_AND_FEDERATION.md` фиксирует результаты анализа епархиальных/митрополичьих сайтов и общий domain contract.
 
 Дальше:
 
-- Admin UI дерева организаций/отделов/комиссий;
 - безопасный pairing/revoke workflow;
 - organization-scoped RBAC;
 - ownership/reference organization unit в контентных модулях;
