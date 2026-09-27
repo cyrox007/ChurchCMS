@@ -30,6 +30,7 @@ final class OperationsAdminController
                 'health' => $overview['health'],
                 'backups' => $overview['backups'],
                 'packages' => $overview['packages'],
+                'operationWarnings' => $overview['warnings'],
                 'operationStatus' => self::status($request),
             ],
             'operations',
