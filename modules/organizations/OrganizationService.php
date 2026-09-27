@@ -169,6 +169,20 @@ final class OrganizationService
             }
         }
 
+        $siteRoot = $this->repository->siteRoot(
+            $siteKey,
+        );
+
+        if ($siteRoot !== null && $parent === null) {
+            $parent = $siteRoot;
+        }
+
+        if ($parent !== null && $parent->status !== 'active') {
+            throw new InvalidArgumentException(
+                'Нельзя добавить подразделение в архивированную организацию.'
+            );
+        }
+
         $slug = Slugger::fromText(
             trim($slug) === '' ? $name : $slug,
             'organization',
@@ -328,6 +342,23 @@ final class OrganizationService
                 $parentPublicId,
                 $siteKey,
             );
+
+            if (
+                $root !== null
+                && $unit->id !== $root->id
+                && $parent === null
+            ) {
+                $parent = $root;
+            }
+
+            if (
+                $parent !== null
+                && $parent->status !== 'active'
+            ) {
+                throw new InvalidArgumentException(
+                    'Нельзя переместить организацию в архивированный раздел.'
+                );
+            }
 
             if (
                 $root !== null
