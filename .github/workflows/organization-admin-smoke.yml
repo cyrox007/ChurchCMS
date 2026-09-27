@@ -6,7 +6,9 @@ on:
       - develop
       - main
     paths:
+      - 'app/services/AuthorizationService.php'
       - 'modules/organizations/**'
+      - 'tools/organization-admin-smoke.php'
       - 'themes/default/templates/admin/organizations/**'
       - 'themes/default/theme.json'
       - 'themes/default/assets/css/site.css'
@@ -16,7 +18,9 @@ on:
       - develop
       - main
     paths:
+      - 'app/services/AuthorizationService.php'
       - 'modules/organizations/**'
+      - 'tools/organization-admin-smoke.php'
       - 'themes/default/templates/admin/organizations/**'
       - 'themes/default/theme.json'
       - 'themes/default/assets/css/site.css'
@@ -59,7 +63,8 @@ jobs:
         shell: bash
         run: |
           set -euo pipefail
-          find modules/organizations -type f -name '*.php' -print0             | xargs -0 -n1 php -l
+          php -l app/services/AuthorizationService.php
+          find modules/organizations -type f -name '*.php' -print0 | xargs -0 -n1 php -l
           php -l themes/default/templates/admin/organizations/index.php
           php -l themes/default/templates/admin/organizations/editor.php
           php bin/migrate.php validate

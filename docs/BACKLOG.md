@@ -24,7 +24,7 @@ Priority is ordered within each section.
 - [x] безопасный public discovery endpoint без секретов;
 - [x] Admin CRUD дерева организаций, отделов и комиссий;
 - [ ] pairing wizard между ChurchCMS-узлами;
-- [ ] organization scopes в RBAC и проверяемое наследование вниз по дереву;
+- [x] organization scopes в RBAC и проверяемое наследование вниз по дереву;
 - [ ] привязка Publications/Pages к organization owner;
 - [ ] привязка People/назначений, Worship, Events, Media и Documents к organization unit;
 - [ ] incremental federation sync с canonical owner и tombstones;
@@ -81,7 +81,7 @@ Priority is ordered within each section.
 - [x] auth rate limit;
 - [x] administrator authentication;
 - [x] roles/permissions schema and authorization service;
-- [x] scope storage schema; enforcement to be added with scoped modules;
+- [x] scope storage schema и enforcement для организационного дерева;
 - [x] audit log foundation and publication/comment events;
 - [ ] password reset/rotation;
   - [x] самостоятельная смена пароля из Admin Shell с проверкой текущего пароля;

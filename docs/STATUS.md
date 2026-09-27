@@ -43,13 +43,16 @@ Implemented:
 - запрещены циклические перемещения, второй root и помещение активного узла внутрь архивированного;
 - вместо hard-delete используется архивирование/восстановление всего поддерева; root сайта архивировать нельзя;
 - default theme заявляет совместимость с parish/cathedral/monastery/deanery/diocese/metropolia/education/mixed/organization;
-- отдельный PostgreSQL smoke проверяет domain operations, RBAC permissions и рендер Admin Shell;
+- `AuthorizationService` различает глобальное назначение роли и scope-ограниченное назначение через `admin_role_scopes`;
+- `OrganizationAccessService` наследует organization scope вниз по canonical path поддерева, но не вверх и не на соседние ветки;
+- Admin Shell показывает и разрешает изменять только доступное поддерево; перенос узла за границу scope и действия над чужой веткой запрещены;
+- единственная доступная граница автоматически используется как родитель при создании, а родитель выше границы доступа блокируется от изменения;
+- отдельный PostgreSQL smoke проверяет domain operations, organization-scoped RBAC, permissions и рендер Admin Shell;
 - `docs/ORGANIZATIONS_AND_FEDERATION.md` фиксирует результаты анализа епархиальных/митрополичьих сайтов и общий domain contract.
 
 Дальше:
 
 - безопасный pairing/revoke workflow;
-- organization-scoped RBAC;
 - ownership/reference organization unit в контентных модулях;
 - incremental aggregation/sync с canonical ownership и tombstones.
 

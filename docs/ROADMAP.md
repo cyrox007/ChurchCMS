@@ -93,7 +93,7 @@ Status: in progress.
 - [x] Public federation discovery metadata endpoint.
 - [x] Admin UI дерева организаций/подразделений.
 - [ ] Federation pairing wizard и отзыв доверия.
-- [ ] Organization-scoped RBAC enforcement.
+- [x] Organization-scoped RBAC enforcement.
 - [ ] Organization ownership/references для Publications/Pages/People/Worship/Events/Media/Documents.
 - [ ] Parent/child aggregation и remote projections/tombstones.
 - [ ] Federation health/sync dashboard.
