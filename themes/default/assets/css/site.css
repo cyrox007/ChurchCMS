@@ -2301,3 +2301,35 @@ a.admin-task:focus-visible {
     justify-content: flex-start;
     margin-top: .75rem;
 }
+
+
+/* Категории и теги публикации */
+.publication-taxonomy {
+    display: flex;
+    flex-wrap: wrap;
+    gap: .45rem;
+    margin-top: .9rem;
+}
+
+.publication-taxonomy__item {
+    display: inline-flex;
+    align-items: center;
+    min-height: 1.9rem;
+    padding: .25rem .55rem;
+    border: 1px solid var(--line);
+    border-radius: 999px;
+    color: var(--ink-700);
+    background: #f7f9fb;
+    font-size: .8rem;
+    line-height: 1.2;
+}
+
+.publication-taxonomy__item--category {
+    color: var(--navy-900);
+    background: #edf3f8;
+}
+
+.publication-taxonomy__item--tag {
+    color: #6b1f2d;
+    background: #fbf1f3;
+}

@@ -30,10 +30,23 @@ final class PublicationsController
             'follow' => true,
         ];
 
+        $publications = $repository->published(
+            'default',
+            $perPage,
+            $offset,
+        );
+        $taxonomy = PublicationTaxonomyService::fromDatabase()
+            ->forPublications(array_map(
+                static fn(Publication $publication): int =>
+                    $publication->id,
+                $publications,
+            ));
+
         ThemeRenderer::fromConfig()->page('publication.index', [
             'title' => $seo['title'],
             'heading' => 'Публикации',
-            'publications' => $repository->published('default', $perPage, $offset),
+            'publications' => $publications,
+            'taxonomy' => $taxonomy,
             'page' => $page,
             'perPage' => $perPage,
             'total' => $repository->countPublished('default'),
@@ -51,6 +64,9 @@ final class PublicationsController
         if ($publication === null) {
             Response::text('404 Not Found', 404);
         }
+
+        $taxonomy = PublicationTaxonomyService::fromDatabase()
+            ->forPublication($publication->id);
 
         $commentsAvailable = false;
         $comments = [];
@@ -111,6 +127,8 @@ final class PublicationsController
         ThemeRenderer::fromConfig()->page('publication.show', [
             'title' => (string) ($seo['title'] ?? $publication->title),
             'publication' => $publication,
+            'categories' => $taxonomy['categories'],
+            'tags' => $taxonomy['tags'],
             'commentsAvailable' => $commentsAvailable,
             'comments' => $comments,
             'commentFlash' => $commentFlash,

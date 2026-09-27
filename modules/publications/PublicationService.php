@@ -13,6 +13,7 @@ use DateTimeImmutable;
 use InvalidArgumentException;
 use PDO;
 use PDOException;
+use Throwable;
 
 final class PublicationService
 {
@@ -27,6 +28,8 @@ final class PublicationService
 
     /**
      * @param list<string> $syndicationTargets
+     * @param list<string> $categoryNames
+     * @param list<string> $tagNames
      */
     public function createDraft(
         string $title,
@@ -38,6 +41,8 @@ final class PublicationService
         array $syndicationTargets = [],
         bool $commentsEnabled = false,
         string $siteKey = 'default',
+        array $categoryNames = [],
+        array $tagNames = [],
     ): string {
         $data = $this->normalizeEditorData(
             title: $title,
@@ -50,9 +55,20 @@ final class PublicationService
             commentsEnabled: $commentsEnabled,
             siteKey: $siteKey,
         );
+        $categories = PublicationTaxonomyService::categoriesFromNames(
+            $categoryNames,
+        );
+        $tags = PublicationTaxonomyService::tagsFromNames(
+            $tagNames,
+        );
 
         $publicId = Uuid::v4();
         $now = gmdate('Y-m-d H:i:s');
+        $ownsTransaction = !$this->pdo->inTransaction();
+
+        if ($ownsTransaction) {
+            $this->pdo->beginTransaction();
+        }
 
         try {
             $statement = $this->pdo->prepare(
@@ -79,14 +95,43 @@ final class PublicationService
                 'author_name' => $data['author_name'],
                 'created_at' => $now,
                 'updated_at' => $now,
-                'syndication_targets' => json_encode($data['syndication_targets'], JSON_THROW_ON_ERROR),
+                'syndication_targets' => json_encode(
+                    $data['syndication_targets'],
+                    JSON_THROW_ON_ERROR,
+                ),
                 'comments_enabled' => $data['comments_enabled'] ? 1 : 0,
             ]);
-        } catch (PDOException $e) {
-            if (self::isUniqueViolation($e)) {
-                throw new InvalidArgumentException('Publication URL is already used.', 0, $e);
+
+            $publicationId = $this->publicationDatabaseId(
+                $publicId,
+                $data['site_key'],
+            );
+            (new PublicationTaxonomyService($this->pdo))
+                ->replaceForPublication(
+                    $publicationId,
+                    $data['site_key'],
+                    $categories,
+                    $tags,
+                );
+
+            if ($ownsTransaction) {
+                $this->pdo->commit();
             }
-            throw $e;
+        } catch (PDOException $error) {
+            $this->rollbackOwnedTransaction($ownsTransaction);
+
+            if (self::isUniqueViolation($error)) {
+                throw new InvalidArgumentException(
+                    'Адрес публикации уже используется.',
+                    0,
+                    $error,
+                );
+            }
+
+            throw $error;
+        } catch (Throwable $error) {
+            $this->rollbackOwnedTransaction($ownsTransaction);
+            throw $error;
         }
 
         return $publicId;
@@ -94,6 +139,8 @@ final class PublicationService
 
     /**
      * @param list<string> $syndicationTargets
+     * @param list<string> $categoryNames
+     * @param list<string> $tagNames
      */
     public function update(
         string $publicId,
@@ -106,6 +153,8 @@ final class PublicationService
         array $syndicationTargets,
         bool $commentsEnabled,
         string $siteKey = 'default',
+        array $categoryNames = [],
+        array $tagNames = [],
     ): void {
         self::assertUuid($publicId);
 
@@ -120,8 +169,24 @@ final class PublicationService
             commentsEnabled: $commentsEnabled,
             siteKey: $siteKey,
         );
+        $categories = PublicationTaxonomyService::categoriesFromNames(
+            $categoryNames,
+        );
+        $tags = PublicationTaxonomyService::tagsFromNames(
+            $tagNames,
+        );
+
+        $ownsTransaction = !$this->pdo->inTransaction();
+        if ($ownsTransaction) {
+            $this->pdo->beginTransaction();
+        }
 
         try {
+            $publicationId = $this->publicationDatabaseId(
+                $publicId,
+                $data['site_key'],
+            );
+
             $statement = $this->pdo->prepare(
                 'UPDATE publications
                  SET type = :type,
@@ -133,8 +198,7 @@ final class PublicationService
                      syndication_targets = :syndication_targets,
                      comments_enabled = :comments_enabled,
                      updated_at = :updated_at
-                 WHERE public_id = :public_id
-                   AND site_key = :site_key'
+                 WHERE id = :id'
             );
             $statement->execute([
                 'type' => $data['type'],
@@ -143,18 +207,43 @@ final class PublicationService
                 'excerpt' => $data['excerpt'],
                 'body_html' => $data['body_html'],
                 'author_name' => $data['author_name'],
-                'syndication_targets' => json_encode($data['syndication_targets'], JSON_THROW_ON_ERROR),
+                'syndication_targets' => json_encode(
+                    $data['syndication_targets'],
+                    JSON_THROW_ON_ERROR,
+                ),
                 'comments_enabled' => $data['comments_enabled'] ? 1 : 0,
                 'updated_at' => gmdate('Y-m-d H:i:s'),
-                'public_id' => $publicId,
-                'site_key' => $data['site_key'],
+                'id' => $publicationId,
             ]);
-            PageCache::bumpVersion();
-        } catch (PDOException $e) {
-            if (self::isUniqueViolation($e)) {
-                throw new InvalidArgumentException('Publication URL is already used.', 0, $e);
+
+            (new PublicationTaxonomyService($this->pdo))
+                ->replaceForPublication(
+                    $publicationId,
+                    $data['site_key'],
+                    $categories,
+                    $tags,
+                );
+
+            if ($ownsTransaction) {
+                $this->pdo->commit();
             }
-            throw $e;
+
+            PageCache::bumpVersion();
+        } catch (PDOException $error) {
+            $this->rollbackOwnedTransaction($ownsTransaction);
+
+            if (self::isUniqueViolation($error)) {
+                throw new InvalidArgumentException(
+                    'Адрес публикации уже используется.',
+                    0,
+                    $error,
+                );
+            }
+
+            throw $error;
+        } catch (Throwable $error) {
+            $this->rollbackOwnedTransaction($ownsTransaction);
+            throw $error;
         }
     }
 
@@ -304,6 +393,39 @@ final class PublicationService
         $result = array_keys($allowed);
         sort($result, SORT_STRING);
         return $result;
+    }
+
+    private function publicationDatabaseId(
+        string $publicId,
+        string $siteKey,
+    ): int {
+        $statement = $this->pdo->prepare(
+            'SELECT id FROM publications
+             WHERE public_id = :public_id
+               AND site_key = :site_key
+             LIMIT 1'
+        );
+        $statement->execute([
+            'public_id' => $publicId,
+            'site_key' => $siteKey,
+        ]);
+
+        $id = $statement->fetchColumn();
+        if ($id === false || (int) $id <= 0) {
+            throw new InvalidArgumentException(
+                'Публикация не найдена.'
+            );
+        }
+
+        return (int) $id;
+    }
+
+    private function rollbackOwnedTransaction(
+        bool $ownsTransaction,
+    ): void {
+        if ($ownsTransaction && $this->pdo->inTransaction()) {
+            $this->pdo->rollBack();
+        }
     }
 
     private static function assertUuid(string $value): void

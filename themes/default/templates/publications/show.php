@@ -40,6 +40,22 @@ $shareLinks = \ChurchCMS\Core\Config::get('sharing.enabled', true) === true
             <?php endif; ?>
         </div>
 
+        <?php if (!empty($categories) || !empty($tags)): ?>
+            <div class="publication-taxonomy" aria-label="Категории и теги">
+                <?php foreach (($categories ?? []) as $category): ?>
+                    <span class="publication-taxonomy__item publication-taxonomy__item--category">
+                        <?= $theme->e((string) ($category['name'] ?? '')) ?>
+                    </span>
+                <?php endforeach; ?>
+
+                <?php foreach (($tags ?? []) as $tag): ?>
+                    <span class="publication-taxonomy__item publication-taxonomy__item--tag">
+                        #<?= $theme->e((string) ($tag['name'] ?? '')) ?>
+                    </span>
+                <?php endforeach; ?>
+            </div>
+        <?php endif; ?>
+
         <?php if ($publication->excerpt !== ''): ?>
             <p class="publication__lead" itemprop="description"><?= $theme->e($publication->excerpt) ?></p>
         <?php endif; ?>

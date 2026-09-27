@@ -29,6 +29,8 @@ foreach ([
     'PublicationType.php',
     'Publication.php',
     'PublicationRepository.php',
+    'PublicationTaxonomyRepository.php',
+    'PublicationTaxonomyService.php',
     'PublicationService.php',
     'PublicationApiResource.php',
     'PublicationSyndicationProvider.php',

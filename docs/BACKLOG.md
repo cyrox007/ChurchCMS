@@ -70,12 +70,12 @@ Priority is ordered within each section.
   - [x] самостоятельная смена пароля из Admin Shell с проверкой текущего пароля;
   - [x] отзыв старых административных сессий через `auth_version`;
   - [ ] forgotten-password/reset flow с безопасным каналом доставки одноразового подтверждения;
-- production error handler.
+- [x] production error handler.
 
 ## P1 — Content
 
 - content tree/pages;
-- publication categories/tags;
+- [x] publication categories/tags with site-scoped normalized storage, editor fields, public/API/syndication projections and PostgreSQL/MySQL smoke coverage;
 - menus;
 - content revisions;
 - scheduled publication worker/cron entry;
@@ -171,7 +171,7 @@ Priority is ordered within each section.
 - [ ] define reference hardware and release thresholds;
   - blocker: выбрать и зафиксировать эталонный Nginx/PHP-FPM + PostgreSQL/MySQL стенд, затем снять реальные HTTP p50/p95/p99/RPS/ошибки; GitHub Actions используется только для smoke и не является эталонным железом;
 - [x] verify reverse-proxy Nginx configuration;
-- [ ] query-plan/index audit with production-scale fixture data.
+- [x] query-plan/index audit with production-scale fixture data.
 
 ## P1 — External Channels
 
