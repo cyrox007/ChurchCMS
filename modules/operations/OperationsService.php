@@ -51,8 +51,8 @@ final class OperationsService
                 $this->database,
                 $this->root,
             ))->check(),
-            'backups' => $this->backupManager()->list(20),
-            'packages' => $this->stager()->list(20),
+            'backups' => $this->backupManager()->backups(20),
+            'packages' => $this->stager()->packages(20),
         ];
     }
 
