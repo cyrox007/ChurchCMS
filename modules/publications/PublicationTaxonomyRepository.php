@@ -39,16 +39,52 @@ final class PublicationTaxonomyRepository
             ];
         }
 
-        return [
-            'categories' => $this->terms(
-                $publicationId,
-                'category',
-            ),
-            'tags' => $this->terms(
-                $publicationId,
-                'tag',
-            ),
+        $all = $this->forPublications([$publicationId]);
+
+        return $all[$publicationId] ?? [
+            'categories' => [],
+            'tags' => [],
         ];
+    }
+
+    /**
+     * @param list<int> $publicationIds
+     * @return array<int,array{
+     *     categories:list<array{public_id:string,name:string,slug:string}>,
+     *     tags:list<array{public_id:string,name:string,slug:string}>
+     * }>
+     */
+    public function forPublications(array $publicationIds): array
+    {
+        $ids = array_values(array_unique(array_filter(
+            array_map('intval', $publicationIds),
+            static fn(int $id): bool => $id > 0,
+        )));
+
+        if ($ids === []) {
+            return [];
+        }
+
+        $result = [];
+        foreach ($ids as $id) {
+            $result[$id] = [
+                'categories' => [],
+                'tags' => [],
+            ];
+        }
+
+        $this->loadTermsForPublications(
+            $ids,
+            'category',
+            $result,
+        );
+        $this->loadTermsForPublications(
+            $ids,
+            'tag',
+            $result,
+        );
+
+        return $result;
     }
 
     /**
@@ -82,36 +118,59 @@ final class PublicationTaxonomyRepository
     }
 
     /**
-     * @return list<array{public_id:string,name:string,slug:string}>
+     * @param list<int> $publicationIds
+     * @param array<int,array{
+     *     categories:list<array{public_id:string,name:string,slug:string}>,
+     *     tags:list<array{public_id:string,name:string,slug:string}>
+     * }> $result
      */
-    private function terms(
-        int $publicationId,
+    private function loadTermsForPublications(
+        array $publicationIds,
         string $kind,
-    ): array {
+        array &$result,
+    ): void {
         [$termTable, $linkTable, $foreignKey] = self::tables(
             $kind,
         );
+        $placeholders = implode(
+            ', ',
+            array_fill(0, count($publicationIds), '?'),
+        );
+        $bucket = $kind === 'category'
+            ? 'categories'
+            : 'tags';
 
         $statement = $this->pdo->prepare(
-            "SELECT t.public_id, t.name, t.slug
+            "SELECT l.publication_id, t.public_id, t.name, t.slug
              FROM {$linkTable} l
              INNER JOIN {$termTable} t
                 ON t.id = l.{$foreignKey}
-             WHERE l.publication_id = :publication_id
-             ORDER BY t.name ASC, t.id ASC"
+             WHERE l.publication_id IN ({$placeholders})
+             ORDER BY l.publication_id ASC, t.name ASC, t.id ASC"
         );
-        $statement->execute([
-            'publication_id' => $publicationId,
-        ]);
 
-        return array_values(array_map(
-            static fn(array $row): array => [
+        foreach ($publicationIds as $index => $publicationId) {
+            $statement->bindValue(
+                $index + 1,
+                $publicationId,
+                PDO::PARAM_INT,
+            );
+        }
+
+        $statement->execute();
+
+        foreach ($statement->fetchAll() as $row) {
+            $publicationId = (int) $row['publication_id'];
+            if (!isset($result[$publicationId])) {
+                continue;
+            }
+
+            $result[$publicationId][$bucket][] = [
                 'public_id' => (string) $row['public_id'],
                 'name' => (string) $row['name'],
                 'slug' => (string) $row['slug'],
-            ],
-            $statement->fetchAll(),
-        ));
+            ];
+        }
     }
 
     /**
