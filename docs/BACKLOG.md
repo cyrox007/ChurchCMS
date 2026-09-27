@@ -66,7 +66,10 @@ Priority is ordered within each section.
 - [x] roles/permissions schema and authorization service;
 - [x] scope storage schema; enforcement to be added with scoped modules;
 - [x] audit log foundation and publication/comment events;
-- password reset/rotation;
+- [ ] password reset/rotation;
+  - [x] самостоятельная смена пароля из Admin Shell с проверкой текущего пароля;
+  - [x] отзыв старых административных сессий через `auth_version`;
+  - [ ] forgotten-password/reset flow с безопасным каналом доставки одноразового подтверждения;
 - production error handler.
 
 ## P1 — Content

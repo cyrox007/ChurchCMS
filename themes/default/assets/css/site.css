@@ -2268,3 +2268,36 @@ a.admin-task:focus-visible {
         grid-template-columns: 1fr;
     }
 }
+
+
+/* Аккаунт администратора */
+.admin-account-link {
+    color: rgba(248, 251, 255, .88);
+    font-weight: 750;
+    text-decoration: none;
+}
+
+.admin-account-link:hover,
+.admin-account-link:focus-visible,
+.admin-account-link[aria-current="page"] {
+    color: #fff;
+    text-decoration: underline;
+    text-underline-offset: .2em;
+}
+
+.admin-account-form {
+    width: min(36rem, 100%);
+    display: grid;
+    gap: .2rem;
+    margin-top: 1.25rem;
+    padding: 1.25rem;
+    border: 1px solid var(--line);
+    border-radius: var(--radius-md);
+    background: var(--paper);
+}
+
+.admin-form-actions {
+    display: flex;
+    justify-content: flex-start;
+    margin-top: .75rem;
+}

@@ -32,7 +32,7 @@ final class AdminAuthService
         }
 
         $statement = $this->pdo->prepare(
-            'SELECT id, public_id, username, password_hash, display_name, email, status
+            'SELECT id, public_id, username, password_hash, display_name, email, status, auth_version
              FROM admin_users
              WHERE username = :username
              LIMIT 1'
@@ -63,6 +63,7 @@ final class AdminAuthService
         $request->setSession('admin_authenticated', true);
         $request->setSession('admin_user_id', (int) $user['id']);
         $request->setSession('admin_user_public_id', (string) $user['public_id']);
+        $request->setSession('admin_auth_version', (int) ($user['auth_version'] ?? 1));
         $request->setSession('admin_authenticated_at', time());
         Csrf::rotate();
 
@@ -100,7 +101,7 @@ final class AdminAuthService
         }
 
         $statement = $this->pdo->prepare(
-            'SELECT id, public_id, username, display_name, email, status
+            'SELECT id, public_id, username, display_name, email, status, auth_version
              FROM admin_users
              WHERE id = :id
              LIMIT 1'
@@ -112,6 +113,17 @@ final class AdminAuthService
             return null;
         }
 
+        $sessionAuthVersion = (int) $request->session('admin_auth_version', 0);
+        $databaseAuthVersion = (int) ($user['auth_version'] ?? 0);
+
+        if (
+            $sessionAuthVersion <= 0
+            || $databaseAuthVersion <= 0
+            || $sessionAuthVersion !== $databaseAuthVersion
+        ) {
+            return null;
+        }
+
         return [
             'id' => (int) $user['id'],
             'public_id' => (string) $user['public_id'],
@@ -119,6 +131,106 @@ final class AdminAuthService
             'display_name' => (string) $user['display_name'],
             'email' => isset($user['email']) ? (string) $user['email'] : null,
         ];
+    }
+
+    public function rotatePassword(
+        Request $request,
+        string $currentPassword,
+        string $newPassword,
+        string $confirmation,
+    ): int {
+        $user = $this->current($request);
+        if ($user === null) {
+            throw new \RuntimeException(
+                'Сессия устарела. Войдите в систему заново.'
+            );
+        }
+
+        if ($currentPassword === '') {
+            throw new \InvalidArgumentException(
+                'Укажите текущий пароль.'
+            );
+        }
+
+        if (strlen($newPassword) < 12) {
+            throw new \InvalidArgumentException(
+                'Новый пароль должен содержать не менее 12 символов.'
+            );
+        }
+
+        if (!hash_equals($newPassword, $confirmation)) {
+            throw new \InvalidArgumentException(
+                'Новый пароль и подтверждение не совпадают.'
+            );
+        }
+
+        $statement = $this->pdo->prepare(
+            'SELECT password_hash, auth_version
+             FROM admin_users
+             WHERE id = :id
+             LIMIT 1'
+        );
+        $statement->execute(['id' => $user['id']]);
+        $credentials = $statement->fetch();
+
+        if (
+            !is_array($credentials)
+            || !password_verify(
+                $currentPassword,
+                (string) ($credentials['password_hash'] ?? ''),
+            )
+        ) {
+            throw new \InvalidArgumentException(
+                'Текущий пароль указан неверно.'
+            );
+        }
+
+        if (
+            password_verify(
+                $newPassword,
+                (string) $credentials['password_hash'],
+            )
+        ) {
+            throw new \InvalidArgumentException(
+                'Новый пароль должен отличаться от текущего.'
+            );
+        }
+
+        $newVersion = max(
+            1,
+            (int) ($credentials['auth_version'] ?? 1) + 1,
+        );
+        $passwordHash = password_hash(
+            $newPassword,
+            PASSWORD_DEFAULT,
+        );
+
+        if (!is_string($passwordHash) || $passwordHash === '') {
+            throw new \RuntimeException(
+                'Не удалось безопасно подготовить новый пароль.'
+            );
+        }
+
+        $update = $this->pdo->prepare(
+            'UPDATE admin_users
+             SET password_hash = :password_hash,
+                 auth_version = :auth_version,
+                 updated_at = :updated_at
+             WHERE id = :id'
+        );
+        $update->execute([
+            'password_hash' => $passwordHash,
+            'auth_version' => $newVersion,
+            'updated_at' => gmdate('Y-m-d H:i:s'),
+            'id' => $user['id'],
+        ]);
+
+        SessionSecurity::regenerate();
+        $request->setSession('admin_auth_version', $newVersion);
+        $request->setSession('admin_authenticated_at', time());
+        Csrf::rotate();
+
+        return $newVersion;
     }
 
     public function logout(): void
