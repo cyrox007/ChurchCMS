@@ -14,6 +14,7 @@ Initial read-only public slice of the ChurchCMS publication domain.
 - public API;
 - trusted partner incremental sync API;
 - syndication provider for RSS/aggregator targets;
+- стабильная ссылка на organization owner для локальной и федеративной атрибуции;
 - per-publication `comments_enabled` toggle, disabled by default.
 
 ## Public routes
@@ -40,6 +41,12 @@ GET /api/v1/partner/publications
 ```
 
 Partner sync requires the `content.read` scope.
+
+`organization_owner_id` содержит stable public ID локальной organization unit,
+которая владеет материалом. Новый draft автоматически получает корневую
+организацию текущего сайта, если она создана. Сервис отклоняет владельца из
+другого `site_key` и архивную организацию. Legacy-строки могут временно
+оставаться без владельца до явного назначения.
 
 Incremental sync:
 

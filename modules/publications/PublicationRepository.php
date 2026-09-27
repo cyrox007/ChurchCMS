@@ -345,6 +345,11 @@ final class PublicationRepository
             id: (int) $row['id'],
             publicId: (string) $row['public_id'],
             siteKey: (string) $row['site_key'],
+            ownerOrganizationPublicId:
+                isset($row['owner_organization_public_id'])
+                && $row['owner_organization_public_id'] !== ''
+                    ? (string) $row['owner_organization_public_id']
+                    : null,
             type: $type,
             status: $status,
             slug: (string) $row['slug'],
