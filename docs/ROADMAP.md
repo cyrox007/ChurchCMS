@@ -29,7 +29,7 @@ Status: in progress.
 - [x] Unified Admin Shell for non-technical operators.
 - [x] Admin navigation/search/notifications foundation.
 - [ ] Publications (core workflow, public/admin/API/syndication and categories/tags implemented; revisions, scheduled execution and Media relation pending).
-- [ ] Pages/content tree.
+- [ ] Pages/content tree (schema and domain repository/service with safe subtree moves implemented; public/admin/API slice pending).
 - [ ] Navigation/menu.
 - [ ] Media library.
 - [ ] People/clergy.
