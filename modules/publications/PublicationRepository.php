@@ -106,6 +106,32 @@ final class PublicationRepository
         return is_array($row) ? $this->hydrate($row) : null;
     }
 
+    public function findById(
+        int $id,
+        string $siteKey = 'default',
+    ): ?Publication {
+        if ($id <= 0) {
+            return null;
+        }
+
+        $statement = $this->pdo->prepare(
+            'SELECT * FROM publications
+             WHERE id = :id
+               AND site_key = :site_key
+             LIMIT 1'
+        );
+        $statement->execute([
+            'id' => $id,
+            'site_key' => $siteKey,
+        ]);
+
+        $row = $statement->fetch();
+
+        return is_array($row)
+            ? $this->hydrate($row)
+            : null;
+    }
+
     /**
      * @return list<Publication>
      */
