@@ -282,7 +282,6 @@ jobs:
                   "sent" => 1,
                   "retried" => 1,
                   "dead_letter" => 1,
-                  "skipped" => 0,
               ]
           ) {
               fwrite(
