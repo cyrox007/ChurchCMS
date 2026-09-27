@@ -6,10 +6,13 @@ namespace ChurchCMS\Modules\Publications;
 
 use ChurchCMS\App\Services\AdminAuthorization;
 use ChurchCMS\Core\AuditLog;
+use ChurchCMS\Core\Config;
 use ChurchCMS\Core\ModuleRuntimeLoader;
 use ChurchCMS\Core\Request;
 use ChurchCMS\Core\Response;
 use ChurchCMS\App\Services\AdminShell;
+use DateTimeImmutable;
+use DateTimeZone;
 use InvalidArgumentException;
 
 final class PublicationsAdminController
@@ -169,6 +172,107 @@ final class PublicationsAdminController
         Response::redirectLocal('/admin/publications/' . rawurlencode($publicId) . '?saved=1');
     }
 
+    public function schedule(
+        Request $request,
+        string $publicId,
+    ): never {
+        AdminAuthorization::requirePermission(
+            $request,
+            'publications.publish',
+        );
+
+        $repository = PublicationRepository::fromDatabase();
+        $publication = $repository->findByPublicId($publicId);
+        if ($publication === null) {
+            Response::text('404 Not Found', 404);
+        }
+
+        $raw = trim((string) $request->post(
+            'scheduled_at',
+            '',
+        ));
+
+        try {
+            $timezone = $this->applicationTimezone();
+            $when = DateTimeImmutable::createFromFormat(
+                '!Y-m-d\\TH:i',
+                $raw,
+                $timezone,
+            );
+
+            if (
+                !$when instanceof DateTimeImmutable
+                || $when->format('Y-m-d\\TH:i') !== $raw
+            ) {
+                throw new InvalidArgumentException(
+                    'Укажите корректные дату и время публикации.'
+                );
+            }
+
+            PublicationService::fromDatabase()->schedule(
+                $publicId,
+                $when,
+            );
+            $this->audit(
+                $request,
+                'publication.scheduled',
+                $publicId,
+            );
+
+            Response::redirectLocal(
+                '/admin/publications/'
+                . rawurlencode($publicId)
+                . '?saved=1'
+            );
+        } catch (InvalidArgumentException) {
+            $this->renderEditor(
+                $request,
+                $publication,
+                $this->formFromPublication($publication),
+                'Не удалось запланировать публикацию. Проверьте дату и время.',
+            );
+        }
+    }
+
+    public function unschedule(
+        Request $request,
+        string $publicId,
+    ): never {
+        AdminAuthorization::requirePermission(
+            $request,
+            'publications.publish',
+        );
+
+        if (
+            PublicationRepository::fromDatabase()
+                ->findByPublicId($publicId) === null
+        ) {
+            Response::text('404 Not Found', 404);
+        }
+
+        try {
+            PublicationService::fromDatabase()->unschedule(
+                $publicId,
+            );
+            $this->audit(
+                $request,
+                'publication.unscheduled',
+                $publicId,
+            );
+
+            Response::redirectLocal(
+                '/admin/publications/'
+                . rawurlencode($publicId)
+                . '?saved=1'
+            );
+        } catch (InvalidArgumentException) {
+            Response::redirectLocal(
+                '/admin/publications/'
+                . rawurlencode($publicId)
+            );
+        }
+    }
+
     public function withdraw(Request $request, string $publicId): never
     {
         AdminAuthorization::requirePermission($request, 'publications.publish');
@@ -198,6 +302,11 @@ final class PublicationsAdminController
             'success' => $success,
             'canPublish' => AdminAuthorization::can($request, 'publications.publish'),
             'canSyndicate' => AdminAuthorization::can($request, 'publications.syndicate'),
+            'scheduleTimezone' => $this->applicationTimezone()
+                ->getName(),
+            'scheduledAtLocal' => $this->scheduledAtLocal(
+                $publication,
+            ),
         ], 'publications');
     }
 
@@ -285,6 +394,38 @@ final class PublicationsAdminController
             'robots_index' => true,
             'robots_follow' => true,
         ];
+    }
+
+    private function applicationTimezone(): DateTimeZone
+    {
+        try {
+            return new DateTimeZone(
+                (string) Config::get(
+                    'app.timezone',
+                    'UTC',
+                ),
+            );
+        } catch (\Throwable) {
+            return new DateTimeZone('UTC');
+        }
+    }
+
+    private function scheduledAtLocal(
+        ?Publication $publication,
+    ): string {
+        if (
+            $publication === null
+            || $publication->status !== PublicationStatus::Scheduled
+            || $publication->publishedAt === null
+        ) {
+            return '';
+        }
+
+        $timezone = $this->applicationTimezone();
+
+        return $publication->publishedAt
+            ->setTimezone($timezone)
+            ->format('Y-m-d\\TH:i');
     }
 
     private function saveSeo(Publication $publication, array $form): void
