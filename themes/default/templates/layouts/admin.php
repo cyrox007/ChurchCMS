@@ -45,7 +45,15 @@ $current = static fn(string $section): string =>
         </nav>
 
         <div class="admin-sidebar__footer">
-            <?php if ($displayName !== ''): ?><span><?= $theme->e($displayName) ?></span><?php endif; ?>
+            <?php if ($displayName !== ''): ?>
+                <a
+                    class="admin-account-link"
+                    href="<?= $theme->e($theme->route('admin_account_password')) ?>"
+                    <?= $current('account') ?>
+                >
+                    <?= $theme->e($displayName) ?>
+                </a>
+            <?php endif; ?>
             <form method="post" action="<?= $theme->e($theme->route('admin_logout')) ?>">
                 <?= $theme->csrfInput() ?>
                 <button class="admin-logout" type="submit">Выйти</button>
