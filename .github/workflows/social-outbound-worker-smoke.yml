@@ -107,19 +107,34 @@ jobs:
           php -r '
           require "core.php";
 
-          $pdo = \ChurchCMS\Core\\DatabaseManager::getInstance()->connection();
+          use ChurchCMS\Core\DatabaseManager;
+          use ChurchCMS\Core\SecretVault;
+          use ChurchCMS\Core\Uuid;
+          use ChurchCMS\Modules\Publications\PublicationRepository;
+          use ChurchCMS\Modules\Publications\PublicationService;
+          use ChurchCMS\Modules\Social\ChannelAdapter;
+          use ChurchCMS\Modules\Social\ChannelAdapterRegistry;
+          use ChurchCMS\Modules\Social\ChannelCapability;
+          use ChurchCMS\Modules\Social\ChannelOutboundDispatcher;
+          use ChurchCMS\Modules\Social\ChannelOutboundItem;
+          use ChurchCMS\Modules\Social\ChannelPublishResult;
+          use ChurchCMS\Modules\Social\ChannelPullBatch;
+          use ChurchCMS\Modules\Social\SocialConnection;
+          use ChurchCMS\Modules\Social\SocialPostRepository;
 
-          $publicationId = \ChurchCMS\Modules\\Publications\\PublicationService::fromDatabase()
+          $pdo = DatabaseManager::getInstance()->connection();
+
+          $publicationId = PublicationService::fromDatabase()
               ->createDraft(
                   title: "Материал для внешних каналов",
                   slug: "external-worker-smoke",
                   excerpt: "Короткое описание",
                   bodyHtml: "Текст",
               );
-          \ChurchCMS\Modules\\Publications\\PublicationService::fromDatabase()
+          PublicationService::fromDatabase()
               ->publish($publicationId);
 
-          $publication = \ChurchCMS\Modules\\Publications\\PublicationRepository::fromDatabase()
+          $publication = PublicationRepository::fromDatabase()
               ->findByPublicId($publicationId);
 
           if ($publication === null) {
@@ -127,7 +142,7 @@ jobs:
               exit(1);
           }
 
-          $adapter = new class implements \ChurchCMS\Modules\\Social\\ChannelAdapter {
+          $adapter = new class implements ChannelAdapter {
               public function providerId(): string
               {
                   return "smoke";
@@ -141,18 +156,18 @@ jobs:
               public function capabilities(): array
               {
                   return [
-                      \ChurchCMS\Modules\\Social\\ChannelCapability::PUBLISH_TEXT,
-                      \ChurchCMS\Modules\\Social\\ChannelCapability::PUBLISH_LINK,
+                      ChannelCapability::PUBLISH_TEXT,
+                      ChannelCapability::PUBLISH_LINK,
                   ];
               }
 
               public function publish(
-                  \ChurchCMS\Modules\\Social\\SocialConnection $connection,
+                  SocialConnection $connection,
                   string $credentials,
-                  \ChurchCMS\Modules\\Social\\ChannelOutboundItem $item,
-              ): \ChurchCMS\Modules\\Social\\ChannelPublishResult {
+                  ChannelOutboundItem $item,
+              ): ChannelPublishResult {
                   if ($credentials !== "secret-token") {
-                      return new \ChurchCMS\Modules\\Social\\ChannelPublishResult(
+                      return new ChannelPublishResult(
                           false,
                           error: "credential mismatch",
                       );
@@ -163,44 +178,44 @@ jobs:
                       || $item->canonicalUrl
                           !== "https://example.test/publications/external-worker-smoke"
                   ) {
-                      return new \ChurchCMS\Modules\\Social\\ChannelPublishResult(
+                      return new ChannelPublishResult(
                           false,
                           error: "outbound item mismatch",
                       );
                   }
 
                   if ($connection->targetRef === "success") {
-                      return new \ChurchCMS\Modules\\Social\\ChannelPublishResult(
+                      return new ChannelPublishResult(
                           true,
                           remoteId: "remote-success-1",
                           remoteUrl: "https://remote.test/1",
                       );
                   }
 
-                  return new \ChurchCMS\Modules\\Social\\ChannelPublishResult(
+                  return new ChannelPublishResult(
                       false,
                       error: "temporary smoke failure",
                   );
               }
 
               public function pull(
-                  \ChurchCMS\Modules\\Social\\SocialConnection $connection,
+                  SocialConnection $connection,
                   string $credentials,
                   ?string $cursor,
                   int $limit = 50,
-              ): \ChurchCMS\Modules\\Social\\ChannelPullBatch {
-                  return new \ChurchCMS\Modules\\Social\\ChannelPullBatch(
+              ): ChannelPullBatch {
+                  return new ChannelPullBatch(
                       [],
                       $cursor,
                   );
               }
           };
 
-          \ChurchCMS\Modules\\Social\\ChannelAdapterRegistry::register(
+          ChannelAdapterRegistry::register(
               $adapter,
           );
 
-          $token = \ChurchCMS\Core\\SecretVault::encrypt(
+          $token = SecretVault::encrypt(
               "secret-token",
           );
           $now = gmdate("Y-m-d H:i:s");
@@ -222,7 +237,7 @@ jobs:
           $connectionIds = [];
           foreach (["success", "retry", "dead"] as $target) {
               $insertConnection->execute([
-                  "public_id" => \ChurchCMS\Core\\Uuid::v4(),
+                  "public_id" => Uuid::v4(),
                   "provider" => "smoke",
                   "name" => "Smoke {$target}",
                   "target_ref" => $target,
@@ -257,7 +272,7 @@ jobs:
               ["target" => "dead", "attempts" => 1, "text" => null],
           ] as $row) {
               $insertPost->execute([
-                  "public_id" => \ChurchCMS\Core\\Uuid::v4(),
+                  "public_id" => Uuid::v4(),
                   "publication_id" => $publication->id,
                   "connection_id" => $connectionIds[$row["target"]],
                   "enabled" => 1,
@@ -270,7 +285,7 @@ jobs:
               ]);
           }
 
-          $summary = \ChurchCMS\Modules\\Social\\ChannelOutboundDispatcher::fromDatabase()
+          $summary = ChannelOutboundDispatcher::fromDatabase()
               ->dispatch(
                   limit: 20,
                   maxAttempts: 2,
@@ -335,7 +350,7 @@ jobs:
           php -r '
           require "core.php";
 
-          $pdo = \ChurchCMS\Core\\DatabaseManager::getInstance()->connection();
+          $pdo = DatabaseManager::getInstance()->connection();
           $pdo->exec(
               "UPDATE publication_social_posts
                SET status = '''processing''',
@@ -343,7 +358,7 @@ jobs:
                WHERE status = '''pending'''"
           );
 
-          $claimed = \ChurchCMS\Modules\\Social\\SocialPostRepository::fromDatabase()
+          $claimed = SocialPostRepository::fromDatabase()
               ->claimPending(
                   limit: 1,
                   staleSeconds: 60,
