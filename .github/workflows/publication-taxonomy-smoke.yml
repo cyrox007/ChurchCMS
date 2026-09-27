@@ -268,6 +268,30 @@ jobs:
               exit(1);
           }
 
+          $service->setSyndicationTargets($firstId, ["rss"]);
+          $service->publish($firstId);
+          $entries = iterator_to_array(
+              (new \ChurchCMS\Modules\Publications\PublicationSyndicationProvider())
+                  ->entries(),
+              false,
+          );
+          $entry = null;
+          foreach ($entries as $candidate) {
+              if ($candidate->id === $firstId) {
+                  $entry = $candidate;
+                  break;
+              }
+          }
+
+          if (
+              $entry === null
+              || !in_array("Жизнь общины", $entry->categories, true)
+              || !in_array("Новости прихода", $entry->categories, true)
+          ) {
+              fwrite(STDERR, "Синдикация потеряла категории публикации.\n");
+              exit(1);
+          }
+
           try {
               \ChurchCMS\Modules\Publications\PublicationTaxonomyService::categoriesFromInput(
                   implode(

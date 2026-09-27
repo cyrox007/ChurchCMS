@@ -125,6 +125,12 @@ Implemented:
 - title/excerpt/body/author;
 - comments_enabled per publication;
 - explicit syndication targets;
+- site-scoped reusable categories and tags with normalized many-to-many storage;
+- category/tag editing with bounded input, normalization and duplicate removal;
+- batch taxonomy loading for public lists, API collections and syndication without N+1 queries;
+- categories/tags in public detail and API resources, and categories in publication lists and syndication feeds;
+- PostgreSQL lifecycle smoke covers create, deduplication, reuse, update, orphan cleanup, API and syndication projections;
+- MySQL runtime smoke covers taxonomy migration, shared-term reuse and batch reads;
 - internal create/update/publish/withdraw service;
 - public list/detail pages;
 - admin list/editor;
@@ -135,7 +141,6 @@ Implemented:
 
 Next:
 
-- categories/tags;
 - revisions;
 - scheduled publication execution;
 - Media/cover relation.

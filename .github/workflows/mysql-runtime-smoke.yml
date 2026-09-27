@@ -9,6 +9,9 @@ on:
       - 'core/MigrationRunner.php'
       - 'database/migrations/**'
       - 'modules/*/migrations/**'
+      - 'modules/publications/PublicationService.php'
+      - 'modules/publications/PublicationTaxonomyRepository.php'
+      - 'modules/publications/PublicationTaxonomyService.php'
       - '.github/workflows/mysql-runtime-smoke.yml'
   pull_request:
     branches:
@@ -18,6 +21,9 @@ on:
       - 'core/MigrationRunner.php'
       - 'database/migrations/**'
       - 'modules/*/migrations/**'
+      - 'modules/publications/PublicationService.php'
+      - 'modules/publications/PublicationTaxonomyRepository.php'
+      - 'modules/publications/PublicationTaxonomyService.php'
       - '.github/workflows/mysql-runtime-smoke.yml'
 
 permissions:
@@ -132,6 +138,42 @@ jobs:
                   . json_encode($health, JSON_UNESCAPED_SLASHES)
                   . "\n",
               );
+              exit(1);
+          }
+
+          $service = \ChurchCMS\Modules\Publications\PublicationService::fromDatabase();
+          $repository = \ChurchCMS\Modules\Publications\PublicationRepository::fromDatabase();
+          $taxonomy = \ChurchCMS\Modules\Publications\PublicationTaxonomyService::fromDatabase();
+
+          $firstPublicId = $service->createDraft(
+              title: "MySQL taxonomy one",
+              categoryNames: ["Общая категория", "Новости"],
+              tagNames: ["проверка"],
+          );
+          $secondPublicId = $service->createDraft(
+              title: "MySQL taxonomy two",
+              categoryNames: ["Общая категория"],
+          );
+          $first = $repository->findByPublicId($firstPublicId);
+          $second = $repository->findByPublicId($secondPublicId);
+
+          if ($first === null || $second === null) {
+              fwrite(STDERR, "MySQL taxonomy publications are missing.\n");
+              exit(1);
+          }
+
+          $items = $taxonomy->forPublications([$first->id, $second->id]);
+          $shared = (int) $pdo->query(
+              "SELECT COUNT(*) FROM publication_categories
+               WHERE slug = '''obschaya-kategoriya'''"
+          )->fetchColumn();
+
+          if (
+              $shared !== 1
+              || count($items[$first->id]["categories"] ?? []) !== 2
+              || count($items[$second->id]["categories"] ?? []) !== 1
+          ) {
+              fwrite(STDERR, "MySQL taxonomy lifecycle failed.\n");
               exit(1);
           }
 

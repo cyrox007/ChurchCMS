@@ -8,7 +8,6 @@ use ChurchCMS\Core\DatabaseManager;
 use ChurchCMS\Core\Slugger;
 use ChurchCMS\Core\Uuid;
 use PDO;
-use PDOException;
 use RuntimeException;
 
 final class PublicationTaxonomyRepository
@@ -296,31 +295,31 @@ final class PublicationTaxonomyRepository
                 )";
 
         if ($driver === 'pgsql') {
-            $sql .= ' RETURNING id';
+            $sql .= ' ON CONFLICT (site_key, slug) DO NOTHING RETURNING id';
+        } elseif ($driver === 'mysql') {
+            $sql .= ' ON DUPLICATE KEY UPDATE id = LAST_INSERT_ID(id)';
+        } else {
+            throw new RuntimeException(
+                "Неподдерживаемый драйвер таксономии: {$driver}"
+            );
         }
 
-        try {
-            $statement = $this->pdo->prepare($sql);
-            $statement->execute([
-                'public_id' => Uuid::v4(),
-                'site_key' => $siteKey,
-                'slug' => $slug,
-                'name' => $name,
-                'created_at' => $now,
-                'updated_at' => $now,
-            ]);
+        $statement = $this->pdo->prepare($sql);
+        $statement->execute([
+            'public_id' => Uuid::v4(),
+            'site_key' => $siteKey,
+            'slug' => $slug,
+            'name' => $name,
+            'created_at' => $now,
+            'updated_at' => $now,
+        ]);
 
-            $id = $driver === 'pgsql'
-                ? $statement->fetchColumn()
-                : $this->pdo->lastInsertId();
+        $id = $driver === 'pgsql'
+            ? $statement->fetchColumn()
+            : $this->pdo->lastInsertId();
 
-            if ($id !== false && (int) $id > 0) {
-                return (int) $id;
-            }
-        } catch (PDOException $error) {
-            if (!self::isUniqueViolation($error)) {
-                throw $error;
-            }
+        if ($id !== false && (int) $id > 0) {
+            return (int) $id;
         }
 
         $existing = $this->findTermId(
@@ -379,20 +378,5 @@ final class PublicationTaxonomyRepository
                 'Неподдерживаемый тип таксономии публикации.'
             ),
         };
-    }
-
-    private static function isUniqueViolation(
-        PDOException $error,
-    ): bool {
-        $sqlState = (string) (
-            $error->errorInfo[0]
-            ?? $error->getCode()
-        );
-
-        return in_array(
-            $sqlState,
-            ['23000', '23505'],
-            true,
-        );
     }
 }
