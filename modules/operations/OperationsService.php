@@ -8,7 +8,6 @@ use ChurchCMS\Core\BackupManager;
 use ChurchCMS\Core\Config;
 use ChurchCMS\Core\DatabaseManager;
 use ChurchCMS\Core\InstallationHealthCheck;
-use ChurchCMS\Core\RuntimeException;
 use ChurchCMS\Core\UpdatePackageApplier;
 use ChurchCMS\Core\UpdatePackageStager;
 
