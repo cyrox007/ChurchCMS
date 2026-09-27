@@ -216,12 +216,7 @@ $formAction = $isEdit
 
     <?php if ($isEdit && !empty($canPublish)): ?>
         <section class="publication-state-actions">
-            <?php if ($publication->status->value !== 'published'): ?>
-                <form method="post" action="<?= $theme->e($theme->route('admin_publication_publish', ['publicId' => $publication->publicId])) ?>">
-                    <?= $theme->csrfInput() ?>
-                    <button class="button button--primary" type="submit">Опубликовать на сайте</button>
-                </form>
-            <?php else: ?>
+            <?php if ($publication->status->value === 'published'): ?>
                 <a class="button button--quiet" href="<?= $theme->e($theme->route('publication_show', ['slug' => $publication->slug])) ?>" target="_blank" rel="noopener">
                     Посмотреть на сайте
                 </a>
@@ -229,6 +224,39 @@ $formAction = $isEdit
                     <?= $theme->csrfInput() ?>
                     <button class="button button--quiet" type="submit">Снять с публикации</button>
                 </form>
+            <?php else: ?>
+                <form method="post" action="<?= $theme->e($theme->route('admin_publication_publish', ['publicId' => $publication->publicId])) ?>">
+                    <?= $theme->csrfInput() ?>
+                    <button class="button button--primary" type="submit">Опубликовать сейчас</button>
+                </form>
+
+                <?php if ($publication->status->value === 'scheduled'): ?>
+                    <div class="publication-schedule-summary">
+                        <strong>Публикация запланирована</strong>
+                        <span>
+                            <?= $theme->e(str_replace('T', ' ', (string) ($scheduledAtLocal ?? ''))) ?>
+                            (<?= $theme->e((string) ($scheduleTimezone ?? 'UTC')) ?>)
+                        </span>
+                    </div>
+                    <form method="post" action="<?= $theme->e($theme->route('admin_publication_unschedule', ['publicId' => $publication->publicId])) ?>">
+                        <?= $theme->csrfInput() ?>
+                        <button class="button button--quiet" type="submit">Отменить планирование</button>
+                    </form>
+                <?php else: ?>
+                    <form class="publication-schedule-form" method="post" action="<?= $theme->e($theme->route('admin_publication_schedule', ['publicId' => $publication->publicId])) ?>">
+                        <?= $theme->csrfInput() ?>
+                        <label class="field">
+                            <span>Опубликовать позже <small><?= $theme->e((string) ($scheduleTimezone ?? 'UTC')) ?></small></span>
+                            <input
+                                type="datetime-local"
+                                name="scheduled_at"
+                                value="<?= $theme->e((string) ($scheduledAtLocal ?? '')) ?>"
+                                required
+                            >
+                        </label>
+                        <button class="button button--quiet" type="submit">Запланировать</button>
+                    </form>
+                <?php endif; ?>
             <?php endif; ?>
         </section>
     <?php endif; ?>
