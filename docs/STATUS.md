@@ -1,6 +1,6 @@
 # ChurchCMS implementation status
 
-Last updated: 2026-09-27
+Last updated: 2026-09-28
 
 ## Current branch
 
@@ -210,13 +210,15 @@ Implemented:
 - migration backfill существующих страниц через `organization_site_roots`, сохраняя nullable для legacy-строк без корня;
 - `PageService::publish()` требует опубликованного родителя, перенос опубликованного узла под draft запрещён, а `unpublish()` атомарно скрывает всё поддерево;
 - `GET /api/v1/pages` и `GET /api/v1/pages/{public_id}` отдают только опубликованные страницы, stable parent/owner IDs и canonical path;
-- PostgreSQL smoke проверяет create/rename/move/cycle/collision/rollback, publish/unpublish, API projection и маршруты; общий MySQL runtime проверяет schema compatibility.
+- Admin Shell содержит organization-scoped дерево Pages, создание/редактирование, выбор владельца и publish/unpublish;
+- права `pages.read/create/edit/publish` наследуют organization scope вниз по дереву организаций;
+- список владельцев, родительские страницы и изменяющие действия не выходят за доступную ветку; операции над поддеревом требуют доступа ко всем затрагиваемым узлам;
+- содержимое, родитель, canonical path, порядок и владелец сохраняются атомарно;
+- PostgreSQL smoke проверяет create/rename/move/cycle/collision/rollback, publish/unpublish, API/Admin projection, маршруты и границы RBAC; общий MySQL runtime проверяет schema compatibility.
 
 Next:
 
-- public/admin vertical slice;
-- выбор organization owner в Admin Shell с organization-scoped RBAC;
-- publish/unpublish workflow в пользовательском интерфейсе;
+- публичный HTML по canonical path;
 - menu integration после стабилизации публичного Pages contract.
 
 ## Comments

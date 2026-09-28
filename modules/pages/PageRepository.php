@@ -113,6 +113,40 @@ final class PageRepository
     }
 
     /**
+     * Возвращает дерево для Admin Shell с учётом доступных владельцев.
+     * null означает глобальный доступ, пустой список — отсутствие доступа.
+     *
+     * @param list<string>|null $ownerPublicIds
+     * @return list<Page>
+     */
+    public function adminTree(
+        string $siteKey = 'default',
+        ?array $ownerPublicIds = null,
+    ): array {
+        [$ownerSql, $ownerParameters] = self::ownerFilter(
+            $ownerPublicIds,
+        );
+        $statement = $this->pdo->prepare(
+            'SELECT * FROM pages
+             WHERE site_key = :site_key
+             ' . $ownerSql . '
+             ORDER BY path ASC, sort_order ASC, id ASC'
+        );
+        $statement->bindValue(':site_key', $siteKey);
+
+        foreach ($ownerParameters as $parameter => $value) {
+            $statement->bindValue($parameter, $value);
+        }
+
+        $statement->execute();
+
+        return array_map(
+            fn(array $row): Page => $this->hydrate($row),
+            $statement->fetchAll(),
+        );
+    }
+
+    /**
      * Возвращает опубликованные страницы в стабильном порядке дерева.
      *
      * @return list<Page>
@@ -295,6 +329,43 @@ final class PageRepository
         $statement->execute($params);
 
         return $statement->fetchColumn() !== false;
+    }
+
+    /**
+     * @param list<string>|null $ownerPublicIds
+     * @return array{0:string,1:array<string,string>}
+     */
+    private static function ownerFilter(?array $ownerPublicIds): array
+    {
+        if ($ownerPublicIds === null) {
+            return ['', []];
+        }
+
+        $ownerPublicIds = array_values(array_unique(array_filter(
+            $ownerPublicIds,
+            static fn(mixed $value): bool =>
+                is_string($value) && trim($value) !== '',
+        )));
+
+        if ($ownerPublicIds === []) {
+            return ['AND 1 = 0', []];
+        }
+
+        $parameters = [];
+        $placeholders = [];
+
+        foreach ($ownerPublicIds as $index => $publicId) {
+            $parameter = ':owner_' . $index;
+            $placeholders[] = $parameter;
+            $parameters[$parameter] = $publicId;
+        }
+
+        return [
+            'AND owner_organization_public_id IN ('
+                . implode(', ', $placeholders)
+                . ')',
+            $parameters,
+        ];
     }
 
     private function hydrate(array $row): Page

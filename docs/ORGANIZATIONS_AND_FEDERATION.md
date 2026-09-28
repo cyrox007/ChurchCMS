@@ -271,8 +271,10 @@ Pages используют тот же invariant `(site_key, owner_organization_
 Новая страница получает site root владельцем, а domain service позволяет
 назначить активную локальную organization unit. Public API страниц возвращает
 stable `organization_owner_id`, `parent_id` и canonical `path`, не раскрывая
-внутренние DB ID. Выбор владельца в Admin Shell, публичный HTML и
-organization-scoped RBAC остаются следующим вертикальным срезом Pages.
+внутренние DB ID. Раздел Pages в Admin Shell фильтрует дерево и владельцев по
+organization scope, а изменение canonical path и снятие с публикации разрешает
+только при доступе ко всему затрагиваемому поддереву. Публичный HTML остаётся
+следующим вертикальным срезом Pages.
 
 ## Источники исследования
 
