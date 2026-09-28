@@ -1,7 +1,7 @@
 {
   "id": "default",
   "name": "ChurchCMS Default",
-  "version": "0.8.10",
+  "version": "0.8.11",
   "profiles": [
     "small-parish",
     "parish",
@@ -17,6 +17,7 @@
   "templates": {
     "layout.main": "layouts/main",
     "page.home": "pages/home",
+    "page.show": "pages/show",
     "partial.header": "partials/header",
     "partial.footer": "partials/footer",
     "component.card": "components/card",
