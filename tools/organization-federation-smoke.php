@@ -159,6 +159,84 @@ if (
     exit(1);
 }
 
+$federation = FederationService::fromDatabase();
+$federation->revoke($linkId);
+
+$revoked = FederationRepository::fromDatabase()
+    ->findByPublicId($linkId);
+
+if (
+    $revoked === null
+    || $revoked->status !== 'revoked'
+    || FederationRepository::fromDatabase()
+        ->outboundToken($revoked->id) !== null
+) {
+    fwrite(
+        STDERR,
+        "Отзыв federation trust не очистил credential.\n",
+    );
+    exit(1);
+}
+
+$replacementToken = 'ccms_federation_smoke_secret_reconnected';
+$reconnectedId = $federation->connect(
+    localOrganizationPublicId: $root->publicId,
+    relation: 'parent',
+    remoteInstanceId: $remoteInstance,
+    remoteOrganizationPublicId: $remoteOrganization,
+    remoteBaseUrl: 'https://metropolia.example.test',
+    inboundScopes: [
+        'documents.read',
+    ],
+    outboundScopes: [
+        'content.read',
+    ],
+    outboundToken: $replacementToken,
+    remoteProfile: 'metropolia',
+    remoteName: 'Тестовая митрополия после переподключения',
+);
+
+$reconnected = FederationRepository::fromDatabase()
+    ->findByPublicId($reconnectedId);
+
+if (
+    $reconnectedId !== $linkId
+    || $reconnected === null
+    || $reconnected->status !== 'pending'
+    || $reconnected->remoteName
+        !== 'Тестовая митрополия после переподключения'
+    || FederationRepository::fromDatabase()
+        ->outboundToken($reconnected->id)
+        !== $replacementToken
+) {
+    fwrite(
+        STDERR,
+        "Повторное federation pairing после revoke некорректно.\n",
+    );
+    exit(1);
+}
+
+try {
+    FederationService::fromDatabase()->connect(
+        localOrganizationPublicId: $root->publicId,
+        relation: 'peer',
+        remoteInstanceId: (string) Config::get(
+            'federation.instance_id',
+            '',
+        ),
+        remoteOrganizationPublicId:
+            '40000000-0000-4000-8000-000000000004',
+        remoteBaseUrl: 'https://self.example.test',
+    );
+
+    fwrite(
+        STDERR,
+        "Связь ChurchCMS с самим собой ошибочно разрешена.\n",
+    );
+    exit(1);
+} catch (InvalidArgumentException) {
+}
+
 try {
     FederationService::fromDatabase()->connect(
         localOrganizationPublicId: $root->publicId,
@@ -176,6 +254,31 @@ try {
     );
     exit(1);
 } catch (InvalidArgumentException) {
+}
+
+foreach ([
+    'https://operator:secret@remote.example.test',
+    'https://remote.example.test?token=secret',
+    'https://remote.example.test#metadata',
+] as $unsafeBaseUrl) {
+    try {
+        FederationService::fromDatabase()->connect(
+            localOrganizationPublicId: $root->publicId,
+            relation: 'peer',
+            remoteInstanceId:
+                '30000000-0000-4000-8000-000000000003',
+            remoteOrganizationPublicId:
+                '40000000-0000-4000-8000-000000000004',
+            remoteBaseUrl: $unsafeBaseUrl,
+        );
+
+        fwrite(
+            STDERR,
+            "Federation URL с userinfo/query/fragment ошибочно разрешён.\n",
+        );
+        exit(1);
+    } catch (InvalidArgumentException) {
+    }
 }
 
 if (
