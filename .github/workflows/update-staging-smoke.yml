@@ -7,6 +7,7 @@ on:
       - main
     paths:
       - 'core/UpdatePackageStager.php'
+      - 'core/UpdatePackageTrustVerifier.php'
       - 'bin/update.php'
       - 'config/app.php'
       - '.github/workflows/update-staging-smoke.yml'
@@ -16,6 +17,7 @@ on:
       - main
     paths:
       - 'core/UpdatePackageStager.php'
+      - 'core/UpdatePackageTrustVerifier.php'
       - 'bin/update.php'
       - 'config/app.php'
       - '.github/workflows/update-staging-smoke.yml'
