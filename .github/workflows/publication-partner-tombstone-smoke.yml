@@ -1,0 +1,228 @@
+name: Проверка tombstone partner-публикаций
+
+on:
+  push:
+    branches:
+      - develop
+      - main
+    paths:
+      - 'modules/publications/PublicationPartnerTombstoneRepository.php'
+      - 'modules/publications/PublicationRepository.php'
+      - 'modules/publications/PublicationService.php'
+      - 'modules/publications/PublicationsApiController.php'
+      - 'modules/publications/runtime.php'
+      - 'modules/publications/migrations/**'
+      - 'tools/publication-partner-tombstone-smoke.php'
+      - '.github/workflows/publication-partner-tombstone-smoke.yml'
+  pull_request:
+    branches:
+      - develop
+      - main
+    paths:
+      - 'modules/publications/PublicationPartnerTombstoneRepository.php'
+      - 'modules/publications/PublicationRepository.php'
+      - 'modules/publications/PublicationService.php'
+      - 'modules/publications/PublicationsApiController.php'
+      - 'modules/publications/runtime.php'
+      - 'modules/publications/migrations/**'
+      - 'tools/publication-partner-tombstone-smoke.php'
+      - '.github/workflows/publication-partner-tombstone-smoke.yml'
+
+permissions:
+  contents: read
+
+jobs:
+  publication-partner-tombstones:
+    runs-on: ubuntu-latest
+
+    services:
+      postgres:
+        image: postgres:16
+        env:
+          POSTGRES_DB: churchcms
+          POSTGRES_USER: churchcms
+          POSTGRES_PASSWORD: churchcms
+        ports:
+          - 5432:5432
+        options: >-
+          --health-cmd pg_isready
+          --health-interval 10s
+          --health-timeout 5s
+          --health-retries 5
+
+    steps:
+      - name: Получить исходный код
+        uses: actions/checkout@v4
+
+      - name: Подготовить PHP 8.3
+        uses: shivammathur/setup-php@v2
+        with:
+          php-version: '8.3'
+          extensions: pdo, pdo_pgsql, mbstring, curl
+          coverage: none
+
+      - name: Проверить синтаксис и миграции
+        shell: bash
+        run: |
+          set -euo pipefail
+          php -l modules/publications/PublicationPartnerTombstoneRepository.php
+          php -l modules/publications/PublicationService.php
+          php -l modules/publications/PublicationsApiController.php
+          php -l modules/publications/runtime.php
+          php -l tools/publication-partner-tombstone-smoke.php
+          php -l modules/publications/migrations/20260928_170000_create_publication_partner_tombstones.php
+          php bin/migrate.php validate
+
+      - name: Подготовить тестовую установку
+        shell: bash
+        run: |
+          set -euo pipefail
+          mkdir -p storage/cache storage/logs storage/sessions storage/rate-limits storage/uploads
+          cat > config/local.php <<'PHP'
+          <?php
+
+          declare(strict_types=1);
+
+          return [
+              'installation' => [
+                  'completed' => true,
+              ],
+              'security' => [
+                  'secret_key' => base64_encode(str_repeat('t', 32)),
+              ],
+              'site' => [
+                  'name' => 'Тестовый источник публикаций',
+                  'profile' => 'diocese',
+              ],
+              'federation' => [
+                  'enabled' => true,
+                  'instance_id' => '70000000-0000-4000-8000-000000000007',
+              ],
+              'api' => [
+                  'partner_tokens' => [
+                      'tombstone-smoke' => [
+                          'hash' => hash(
+                              'sha256',
+                              'churchcms-tombstone-smoke-token',
+                          ),
+                          'scopes' => ['content.read'],
+                          'origins' => [],
+                          'enabled' => true,
+                      ],
+                  ],
+              ],
+              'database' => [
+                  'driver' => 'pgsql',
+                  'host' => '127.0.0.1',
+                  'port' => 5432,
+                  'database' => 'churchcms',
+                  'username' => 'churchcms',
+                  'password' => 'churchcms',
+              ],
+          ];
+          PHP
+          php bin/migrate.php
+
+      - name: Проверить доменный lifecycle tombstone
+        run: php tools/publication-partner-tombstone-smoke.php
+
+      - name: Подготовить tombstone для partner API
+        shell: bash
+        run: |
+          set -euo pipefail
+          php -r '
+          require "core.php";
+
+          $root = \ChurchCMS\Modules\Organizations\OrganizationService::fromDatabase()
+              ->ensureSiteRoot(
+                  "API источник",
+                  "diocese",
+                  "default",
+              );
+          $service = \ChurchCMS\Modules\Publications\PublicationService::fromDatabase();
+          $publicId = $service->createDraft(
+              title: "Удалённый из федерации материал",
+              syndicationTargets: ["diocese"],
+          );
+          $service->publish(
+              $publicId,
+              new DateTimeImmutable(
+                  "-1 minute",
+                  new DateTimeZone("UTC"),
+              ),
+          );
+          $service->withdraw($publicId);
+
+          file_put_contents(
+              getenv("RUNNER_TEMP") . "/tombstone-public-id",
+              $publicId,
+          );
+          file_put_contents(
+              getenv("RUNNER_TEMP") . "/tombstone-owner-id",
+              $root->publicId,
+          );
+          '
+
+      - name: Проверить partner API tombstone
+        shell: bash
+        run: |
+          set -euo pipefail
+          php -S 127.0.0.1:8098 index.php >"$RUNNER_TEMP/tombstone-server.log" 2>&1 &
+          server_pid="$!"
+          trap 'kill "$server_pid" 2>/dev/null || true' EXIT
+          sleep 1
+
+          response="$RUNNER_TEMP/tombstones.json"
+          curl -fsS             -H 'Authorization: Bearer churchcms-tombstone-smoke-token'             'http://127.0.0.1:8098/api/v1/partner/publications/tombstones?updated_since=2000-01-01T00%3A00%3A00Z'             > "$response"
+
+          php -r '
+          $payload = json_decode(
+              file_get_contents($argv[1]),
+              true,
+              32,
+              JSON_THROW_ON_ERROR,
+          );
+          $data = $payload["data"] ?? [];
+          $expectedId = trim(
+              file_get_contents(
+                  getenv("RUNNER_TEMP") . "/tombstone-public-id"
+              )
+          );
+          $expectedOwner = trim(
+              file_get_contents(
+                  getenv("RUNNER_TEMP") . "/tombstone-owner-id"
+              )
+          );
+
+          if (
+              count($data) !== 1
+              || ($data[0]["action"] ?? null) !== "delete"
+              || ($data[0]["id"] ?? null) !== $expectedId
+              || ($data[0]["organization_owner_id"] ?? null)
+                  !== $expectedOwner
+              || ($data[0]["reason"] ?? null) !== "withdrawn"
+              || !isset($data[0]["deleted_at"])
+              || !isset($data[0]["updated_at"])
+              || ($payload["meta"]["sync"]["next_updated_since"] ?? null)
+                  === null
+          ) {
+              fwrite(
+                  STDERR,
+                  "Partner API вернул некорректный tombstone: "
+                  . json_encode(
+                      $payload,
+                      JSON_UNESCAPED_UNICODE
+                      | JSON_UNESCAPED_SLASHES,
+                  )
+                  . "\n",
+              );
+              exit(1);
+          }
+
+          echo "Partner API tombstone проверен\n";
+          ' "$response"
+
+          status="$(
+            curl -sS -o /dev/null -w '%{http_code}'               'http://127.0.0.1:8098/api/v1/partner/publications/tombstones'
+          )"
+          test "$status" = "401"
