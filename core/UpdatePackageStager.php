@@ -97,6 +97,15 @@ final class UpdatePackageStager
 
             $this->verifyStagedFiles($temporary, $files);
 
+            if ($trustedKeyId !== null) {
+                $copiedKeyId = $this->trustVerifier->verify($temporary);
+                if ($copiedKeyId !== $trustedKeyId) {
+                    throw new RuntimeException(
+                        'Ключ подписи изменился во время подготовки пакета.'
+                    );
+                }
+            }
+
             if (!rename($temporary, $final)) {
                 throw new RuntimeException('Не удалось зафиксировать проверенный staging-пакет.');
             }
