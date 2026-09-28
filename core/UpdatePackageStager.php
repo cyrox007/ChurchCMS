@@ -346,7 +346,7 @@ final class UpdatePackageStager
 
         if (
             preg_match('/^[0-9]+\.[0-9]+\.[0-9]+(?:-[0-9A-Za-z.-]+)?$/D', $version) !== 1
-            || $version === $currentVersion
+            || version_compare($version, $currentVersion, '<=')
         ) {
             throw new RuntimeException('Целевая версия пакета обновления некорректна.');
         }
