@@ -195,3 +195,19 @@ Feed generation must:
 - avoid remote callbacks during page publication.
 
 External platforms pull feeds over HTTP. Publishing content must not block while waiting for a third-party service.
+
+
+## Федеративные публикации в общем RSS
+
+Вышестоящий ChurchCMS может включать в обычный `GET /feeds/rss.xml` материалы активных дочерних узлов, уже полученные через federation sync.
+
+Для remote-публикаций действует отдельный provider:
+
+- в RSS попадают только элементы, которые уже прошли фильтры `FederatedPublicationFeedService`: активная связь `child`, разрешающий входящий scope, не tombstone и не будущая публикация;
+- локальный `PublicationSyndicationProvider` не меняется, поэтому редакционные флаги локальных публикаций продолжают действовать как раньше;
+- federation-provider разрешён только для target `rss`; Rambler и другие внешние каналы не получают remote-материал автоматически;
+- GUID формируется из постоянного `instance_id` исходного ChurchCMS и public ID публикации, поэтому одинаковые public ID на разных узлах не сталкиваются;
+- в RSS 2.0 выводится стандартный `<source url="…">…</source>` с именем и canonical URL источника;
+- remote `body_html` не переносится в RSS: используются только безопасные поля агрегированной projection.
+
+Это подключает агрегированную ленту к RSS, но не означает автоматическую публикацию remote-материалов во всех блоках публичной темы.
