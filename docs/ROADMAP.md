@@ -32,7 +32,7 @@ Status: in progress.
 - [ ] Pages/content tree (schema, domain, public API and organization-scoped Admin Shell implemented; public HTML pending).
 - [ ] Navigation/menu.
 - [ ] Media library.
-- [ ] People/clergy (schema/domain foundation и organization ownership назначений реализованы; Admin/public/API остаются).
+- [ ] People/clergy (основа схемы, доменного слоя и организационных связей назначений реализована; Admin Shell, публичная часть и API остаются).
 - [ ] Worship schedule.
 - [ ] Events.
 - [ ] Galleries.
