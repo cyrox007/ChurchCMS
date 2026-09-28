@@ -493,9 +493,12 @@ final class UpdateReleaseDownloader
                 );
             }
 
+            $resolvedAddress = str_contains($address, ':')
+                ? '[' . $address . ']'
+                : $address;
             $resolve = $endpoint['host']
                 . ':' . $endpoint['port']
-                . ':' . $address;
+                . ':' . $resolvedAddress;
 
             curl_setopt_array($ch, [
                 CURLOPT_RETURNTRANSFER => false,
@@ -530,13 +533,16 @@ final class UpdateReleaseDownloader
                 },
             ]);
 
-            $ok = curl_exec($ch);
-            $status = (int) curl_getinfo(
-                $ch,
-                CURLINFO_RESPONSE_CODE,
-            );
-            $error = curl_error($ch);
-            curl_close($ch);
+            try {
+                $ok = curl_exec($ch);
+                $status = (int) curl_getinfo(
+                    $ch,
+                    CURLINFO_RESPONSE_CODE,
+                );
+                $error = curl_error($ch);
+            } finally {
+                curl_close($ch);
+            }
 
             if ($ok !== false && $status === 200) {
                 return;
