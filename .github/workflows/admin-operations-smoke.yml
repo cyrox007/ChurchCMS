@@ -12,6 +12,7 @@ on:
       - 'core/FileRestoreManager.php'
       - 'core/InstallationHealthCheck.php'
       - 'core/UpdatePackageStager.php'
+      - 'core/UpdatePackageTrustVerifier.php'
       - 'core/UpdatePackageApplier.php'
       - 'modules/operations/**'
       - 'themes/default/templates/admin/operations.php'
@@ -29,6 +30,7 @@ on:
       - 'core/FileRestoreManager.php'
       - 'core/InstallationHealthCheck.php'
       - 'core/UpdatePackageStager.php'
+      - 'core/UpdatePackageTrustVerifier.php'
       - 'core/UpdatePackageApplier.php'
       - 'modules/operations/**'
       - 'themes/default/templates/admin/operations.php'
@@ -66,7 +68,7 @@ jobs:
         uses: shivammathur/setup-php@v2
         with:
           php-version: '8.3'
-          extensions: pdo, pdo_pgsql
+          extensions: pdo, pdo_pgsql, sodium
           coverage: none
 
       - name: Проверить PHP и тему
@@ -78,6 +80,7 @@ jobs:
           php -l core/DatabaseRestoreManager.php
           php -l core/FileRestoreManager.php
           php -l core/UpdatePackageStager.php
+          php -l core/UpdatePackageTrustVerifier.php
           php -l modules/operations/OperationsService.php
           php -l modules/operations/OperationsAdminController.php
           php -l modules/operations/runtime.php
@@ -256,12 +259,50 @@ jobs:
           ' "$package"
 
           php -r '
+          $package = $argv[1];
+          $manifestPath = $package . "/manifest.json";
+          $manifest = file_get_contents($manifestPath);
+          if (!is_string($manifest)) {
+              fwrite(STDERR, "Не удалось прочитать тестовый manifest.json.\n");
+              exit(1);
+          }
+
+          $keypair = sodium_crypto_sign_keypair();
+          $secretKey = sodium_crypto_sign_secretkey($keypair);
+          $publicKey = sodium_crypto_sign_publickey($keypair);
+          $signature = sodium_crypto_sign_detached($manifest, $secretKey);
+
+          file_put_contents(
+              $package . "/manifest.sig",
+              json_encode([
+                  "format" => "churchcms-update-signature-v1",
+                  "key_id" => "ci-release-key",
+                  "algorithm" => "ed25519",
+                  "signature" => base64_encode($signature),
+              ], JSON_THROW_ON_ERROR | JSON_PRETTY_PRINT | JSON_UNESCAPED_SLASHES)
+              . PHP_EOL,
+          );
+          file_put_contents(
+              getenv("RUNNER_TEMP") . "/operations-trusted-key",
+              base64_encode($publicKey),
+          );
+          ' "$package"
+
+          php -r '
           require "core.php";
+
+          $trustedKey = trim((string) file_get_contents(
+              getenv("RUNNER_TEMP") . "/operations-trusted-key"
+          ));
+          $verifier = new \ChurchCMS\Core\UpdatePackageTrustVerifier([
+              "ci-release-key" => $trustedKey,
+          ]);
           $stager = new \ChurchCMS\Core\UpdatePackageStager(
               CHURCHCMS_ROOT,
               (string) \ChurchCMS\Core\Config::get("operations.update_staging_path"),
+              $verifier,
           );
-          $stage = $stager->stage($argv[1]);
+          $stage = $stager->stageTrusted($argv[1]);
           $overview = (new \ChurchCMS\Modules\Operations\OperationsService())->overview();
           $package = $overview["packages"][0] ?? null;
 
@@ -270,6 +311,9 @@ jobs:
               || ($package["version"] ?? null) !== "999.2.0-ci"
               || ($package["ready"] ?? false) !== true
               || ($package["code_only"] ?? false) !== true
+              || ($package["trusted"] ?? false) !== true
+              || ($package["trusted_key_id"] ?? null) !== "ci-release-key"
+              || ($stage["trusted_key_id"] ?? null) !== "ci-release-key"
           ) {
               fwrite(
                   STDERR,
@@ -281,7 +325,28 @@ jobs:
           }
 
           file_put_contents(getenv("RUNNER_TEMP") . "/operations-stage-id", $stage["id"]);
-          echo "Operations staging smoke OK\n";
+
+          $manifestPath = $argv[1] . "/manifest.json";
+          $manifest = (string) file_get_contents($manifestPath);
+          file_put_contents(
+              $manifestPath,
+              str_replace("999.2.0-ci", "999.2.1-ci", $manifest),
+          );
+
+          try {
+              $stager->stageTrusted($argv[1]);
+              fwrite(
+                  STDERR,
+                  "Изменённый после подписи manifest.json был принят как доверенный.\n"
+              );
+              exit(1);
+          } catch (RuntimeException $error) {
+              if (!str_contains($error->getMessage(), "Подпись")) {
+                  throw $error;
+              }
+          }
+
+          echo "Доверенный staging-пакет и защита подписи проверены\n";
           ' "$package"
 
       - name: Проверить модульную навигацию и экран
