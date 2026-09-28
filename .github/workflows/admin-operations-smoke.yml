@@ -210,7 +210,7 @@ jobs:
               exit(1);
           }
 
-          echo "Operations backup/restore smoke OK\n";
+          echo "Проверка резервного копирования и восстановления пройдена\n";
           '
 
       - name: Подготовить и проверить staging-пакет
