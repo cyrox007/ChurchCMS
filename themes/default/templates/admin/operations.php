@@ -167,6 +167,8 @@ $checkLabels = [
                     $stageId = (string) ($package['id'] ?? '');
                     $ready = !empty($package['ready']);
                     $codeOnly = !empty($package['code_only']);
+                    $trusted = !empty($package['trusted']);
+                    $trustedKeyId = (string) ($package['trusted_key_id'] ?? '');
                     ?>
                     <article class="admin-operations-row admin-operations-row--update" role="listitem">
                         <div class="admin-operations-row__body">
@@ -184,6 +186,17 @@ $checkLabels = [
                                 </span>
                             <?php else: ?>
                                 <span>Пакет повреждён, устарел или не предназначен для текущей версии.</span>
+                            <?php endif; ?>
+
+                            <?php if ($ready): ?>
+                                <small>
+                                    <?= $trusted
+                                        ? 'Подпись проверена'
+                                            . ($trustedKeyId !== ''
+                                                ? ' · ключ ' . $theme->e($trustedKeyId)
+                                                : '')
+                                        : 'Подпись не проверена' ?>
+                                </small>
                             <?php endif; ?>
 
                             <?php if ($ready && !$codeOnly): ?>
