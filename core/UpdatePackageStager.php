@@ -26,6 +26,26 @@ final class UpdatePackageStager
      */
     public function stage(string $sourceDirectory): array
     {
+        return $this->stagePackage($sourceDirectory, false);
+    }
+
+    /**
+     * Проверяет подпись доверенным ключом и только после этого помещает пакет в staging.
+     *
+     * @return array{id:string, version:string, files:int, deleted_files:int, trusted_key_id:string}
+     */
+    public function stageTrusted(string $sourceDirectory): array
+    {
+        return $this->stagePackage($sourceDirectory, true);
+    }
+
+    /**
+     * @return array{id:string, version:string, files:int, deleted_files:int, trusted_key_id?:string}
+     */
+    private function stagePackage(
+        string $sourceDirectory,
+        bool $requireTrust,
+    ): array {
         $source = $this->sourceDirectory($sourceDirectory);
         $stagingRoot = $this->prepareStagingRoot();
 
@@ -34,6 +54,12 @@ final class UpdatePackageStager
             || $this->pathInside($source, $stagingRoot)
         ) {
             throw new RuntimeException('Источник пакета и staging-каталог не должны быть вложены друг в друга.');
+        }
+
+        $trustedKeyId = null;
+        if ($requireTrust) {
+            $trustedKeyId = (new UpdatePackageTrustVerifier())
+                ->verify($source);
         }
 
         $manifest = $this->readManifest($source);
@@ -71,12 +97,18 @@ final class UpdatePackageStager
                 throw new RuntimeException('Не удалось зафиксировать проверенный staging-пакет.');
             }
 
-            return [
+            $result = [
                 'id' => $id,
                 'version' => (string) $manifest['version'],
                 'files' => count($files),
                 'deleted_files' => count($manifest['deleted_files'] ?? []),
             ];
+
+            if ($trustedKeyId !== null) {
+                $result['trusted_key_id'] = $trustedKeyId;
+            }
+
+            return $result;
         } catch (Throwable $e) {
             $this->deleteTree($temporary);
 
@@ -96,7 +128,9 @@ final class UpdatePackageStager
      *     version:string,
      *     path:string,
      *     files:array<string,array{path:string,bytes:int,sha256:string}>,
-     *     deleted_files:list<string>
+     *     deleted_files:list<string>,
+     *     trusted:bool,
+     *     trusted_key_id:?string
      * }
      */
     public function inspect(string $stageId): array
@@ -119,6 +153,12 @@ final class UpdatePackageStager
 
         $manifest = $this->readManifest($path);
         $files = $this->validateManifest($manifest);
+        $trustedKeyId = null;
+
+        if (is_file($path . DIRECTORY_SEPARATOR . 'manifest.sig')) {
+            $trustedKeyId = (new UpdatePackageTrustVerifier())
+                ->verify($path);
+        }
         $payload = $path . DIRECTORY_SEPARATOR . 'payload';
 
         if (!is_dir($payload) || is_link($payload)) {
@@ -145,6 +185,8 @@ final class UpdatePackageStager
             'path' => $path,
             'files' => $files,
             'deleted_files' => $deleted,
+            'trusted' => $trustedKeyId !== null,
+            'trusted_key_id' => $trustedKeyId,
         ];
     }
 
@@ -155,7 +197,9 @@ final class UpdatePackageStager
      *     files:int,
      *     deleted_files:int,
      *     code_only:bool,
-     *     ready:bool
+     *     ready:bool,
+     *     trusted:bool,
+     *     trusted_key_id:?string
      * }>
      */
     public function packages(int $limit = 20): array
@@ -207,6 +251,8 @@ final class UpdatePackageStager
                     'deleted_files' => count($stage['deleted_files']),
                     'code_only' => $codeOnly,
                     'ready' => true,
+                    'trusted' => $stage['trusted'],
+                    'trusted_key_id' => $stage['trusted_key_id'],
                 ];
             } catch (RuntimeException) {
                 $packages[] = [
@@ -216,6 +262,8 @@ final class UpdatePackageStager
                     'deleted_files' => 0,
                     'code_only' => false,
                     'ready' => false,
+                    'trusted' => false,
+                    'trusted_key_id' => null,
                 ];
             }
         }
@@ -458,7 +506,14 @@ final class UpdatePackageStager
                 ? $entry->getFilename()
                 : $prefix . '/' . $entry->getFilename();
 
-            if ($prefix === '' && $relative === 'manifest.json') {
+            if (
+                $prefix === ''
+                && in_array(
+                    $relative,
+                    ['manifest.json', 'manifest.sig'],
+                    true,
+                )
+            ) {
                 continue;
             }
 
@@ -503,6 +558,21 @@ final class UpdatePackageStager
         }
 
         @chmod($targetPath, 0600);
+
+        $sourceSignature = $source . DIRECTORY_SEPARATOR . 'manifest.sig';
+        if (is_file($sourceSignature) && !is_link($sourceSignature)) {
+            $targetSignature = $targetRoot
+                . DIRECTORY_SEPARATOR
+                . 'manifest.sig';
+
+            if (!copy($sourceSignature, $targetSignature)) {
+                throw new RuntimeException(
+                    'Не удалось скопировать подпись пакета в staging.'
+                );
+            }
+
+            @chmod($targetSignature, 0600);
+        }
     }
 
     /**
