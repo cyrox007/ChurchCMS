@@ -8,6 +8,7 @@ $backups = is_array($backups ?? null) ? $backups : [];
 $packages = is_array($packages ?? null) ? $packages : [];
 $status = is_array($operationStatus ?? null) ? $operationStatus : null;
 $warnings = is_array($operationWarnings ?? null) ? $operationWarnings : [];
+$releaseSourceConfigured = ($releaseSourceConfigured ?? false) === true;
 
 $checkLabels = [
     'php' => 'Версия PHP',
@@ -150,8 +151,26 @@ $checkLabels = [
             <div>
                 <p class="card__eyebrow">Обновления</p>
                 <h2 id="updates-title">Подготовленные пакеты</h2>
-                <p>Здесь отображаются только пакеты, уже помещённые сервером во внешний staging.</p>
+                <p>ChurchCMS принимает только пакет с подтверждённой цифровой подписью.</p>
             </div>
+
+            <?php if ($releaseSourceConfigured): ?>
+                <form
+                    method="post"
+                    action="<?= $theme->e($theme->route(
+                        'admin_operations_update_download'
+                    )) ?>"
+                >
+                    <?= $theme->csrfInput() ?>
+                    <button class="button button--primary" type="submit">
+                        Получить подписанный пакет
+                    </button>
+                </form>
+            <?php else: ?>
+                <small class="admin-operations-warning">
+                    Сетевой источник релизов не настроен локально.
+                </small>
+            <?php endif; ?>
         </div>
 
         <?php if ($packages === []): ?>
