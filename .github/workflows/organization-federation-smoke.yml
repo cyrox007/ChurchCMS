@@ -238,6 +238,8 @@ jobs:
               "name=\"remote_base_url\"",
               "name=\"local_organization_public_id\"",
               "Создать связь",
+              "Проверить состояние",
+              "Последний ответ discovery:",
               "Отозвать доверие",
           ] as $expected) {
               if (!str_contains($html, $expected)) {
