@@ -112,6 +112,82 @@ final class PublicationsApiController
         ]);
     }
 
+    public function partnerTombstones(Request $request): never
+    {
+        ApiAccess::requireScope($request, 'content.read');
+
+        $limit = max(
+            1,
+            min(100, (int) $request->get('limit', 100)),
+        );
+        $updatedSinceRaw = trim(
+            (string) $request->get('updated_since', '')
+        );
+
+        if ($updatedSinceRaw === '') {
+            $updatedSince = new DateTimeImmutable(
+                '1970-01-01T00:00:00Z',
+            );
+        } else {
+            try {
+                $updatedSince = new DateTimeImmutable(
+                    $updatedSinceRaw,
+                );
+            } catch (Exception) {
+                ApiResponse::error(
+                    'invalid_updated_since',
+                    'updated_since must be a valid ISO-8601 timestamp.',
+                    400,
+                );
+            }
+        }
+
+        $tombstones = PublicationPartnerTombstoneRepository
+            ::fromDatabase()
+            ->updatedSince(
+                $updatedSince,
+                'default',
+                $limit,
+            );
+
+        $items = array_map(
+            static fn(array $tombstone): array => [
+                'action' => 'delete',
+                'id' => $tombstone['publication_public_id'],
+                'organization_owner_id' =>
+                    $tombstone['organization_owner_public_id'],
+                'reason' => $tombstone['reason'],
+                'deleted_at' => $tombstone['withdrawn_at']
+                    ->setTimezone(new \DateTimeZone('UTC'))
+                    ->format(DATE_ATOM),
+                'updated_at' => $tombstone['updated_at']
+                    ->setTimezone(new \DateTimeZone('UTC'))
+                    ->format(DATE_ATOM),
+            ],
+            $tombstones,
+        );
+
+        $nextUpdatedSince = null;
+        if ($tombstones !== []) {
+            $last = $tombstones[array_key_last($tombstones)];
+            $nextUpdatedSince = $last['updated_at']
+                ->setTimezone(new \DateTimeZone('UTC'))
+                ->format(DATE_ATOM);
+        }
+
+        ApiResponse::success($items, [
+            'sync' => [
+                'updated_since' => $updatedSinceRaw !== ''
+                    ? $updatedSinceRaw
+                    : null,
+                'next_updated_since' => $nextUpdatedSince,
+                'limit' => $limit,
+                'has_more' => count($tombstones) === $limit,
+            ],
+            'partner' => ApiAccess::partnerId($request),
+        ]);
+    }
+
     /**
      * @param list<Publication> $publications
      * @return list<array<string,mixed>>
