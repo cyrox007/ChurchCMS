@@ -39,6 +39,8 @@ return [
         // По умолчанию служебные данные лежат рядом с каталогом сайта, а не внутри публичного корня.
         'backup_path' => dirname(__DIR__, 2) . '/' . basename(dirname(__DIR__)) . '-backups',
         'update_staging_path' => dirname(__DIR__, 2) . '/' . basename(dirname(__DIR__)) . '-updates',
+        // key_id => base64 Ed25519 public key. Production keys belong in config/local.php.
+        'update_trusted_keys' => [],
     ],
     'database' => [
         'driver' => 'pgsql',
