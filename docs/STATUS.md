@@ -182,6 +182,11 @@ Implemented:
 - admin list/editor;
 - public API;
 - partner API with incremental sync;
+- отдельный `GET /api/v1/partner/publications/tombstones` отдаёт минимальные delete-события для ранее partner-видимых публикаций;
+- `withdraw()` атомарно сохраняет tombstone вместе со сменой статуса, поэтому сбой журнала не оставляет агрегатор без сигнала удаления;
+- tombstone содержит stable public ID публикации, `organization_owner_id`, причину и UTC-время удаления, но не раскрывает body или внутренние DB ID;
+- повторный withdraw не создаёт дубликат; RSS-only материал не попадает в partner tombstones;
+- PostgreSQL HTTP smoke проверяет Bearer scope и JSON-контракт, тот же доменный lifecycle запускается в MySQL 8.4;
 - RSS/Rambler syndication provider;
 - отложенная публикация через статус `scheduled` и UTC-время в `published_at`;
 - Admin Shell позволяет выбрать локальную дату/время установки, опубликовать сейчас или отменить планирование;
