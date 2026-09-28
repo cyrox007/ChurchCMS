@@ -32,7 +32,7 @@ Status: in progress.
 - [ ] Pages/content tree (schema, domain, public API and organization-scoped Admin Shell implemented; public HTML pending).
 - [ ] Navigation/menu.
 - [ ] Media library.
-- [ ] People/clergy.
+- [ ] People/clergy (schema/domain foundation и organization ownership назначений реализованы; Admin/public/API остаются).
 - [ ] Worship schedule.
 - [ ] Events.
 - [ ] Galleries.
@@ -94,7 +94,7 @@ Status: in progress.
 - [x] Admin UI дерева организаций/подразделений.
 - [ ] Federation pairing wizard и отзыв доверия.
 - [x] Organization-scoped RBAC enforcement.
-- [ ] Organization ownership/references для Publications/Pages/People/Worship/Events/Media/Documents (Pages Admin/API RBAC и foundation Publications реализованы; Publications Admin и остальные модули остаются).
+- [ ] Organization ownership/references для Publications/Pages/People/Worship/Events/Media/Documents (Pages Admin/API RBAC, foundation Publications и People/назначений реализованы; Publications Admin, Worship/Events/Media/Documents остаются).
 - [ ] Parent/child aggregation и remote projections/tombstones.
 - [ ] Federation health/sync dashboard.
 
