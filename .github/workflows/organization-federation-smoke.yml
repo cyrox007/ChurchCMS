@@ -11,12 +11,16 @@ on:
       - 'install.php'
       - 'modules/organizations/**'
       - 'modules/publications/PublicationRepository.php'
+      - 'modules/publications/PublicationApiResource.php'
+      - 'modules/publications/FederatedPublicationFeedService.php'
       - 'modules/publications/PublicationsApiController.php'
+      - 'modules/publications/runtime.php'
       - 'bin/federation-sync.php'
       - 'themes/default/templates/admin/federation/**'
       - 'tools/organization-federation-smoke.php'
       - 'tools/federation-remote-projection-smoke.php'
       - 'tools/federation-publication-sync-smoke.php'
+      - 'tools/federated-publication-feed-smoke.php'
       - '.github/workflows/organization-federation-smoke.yml'
   pull_request:
     branches:
@@ -28,12 +32,16 @@ on:
       - 'install.php'
       - 'modules/organizations/**'
       - 'modules/publications/PublicationRepository.php'
+      - 'modules/publications/PublicationApiResource.php'
+      - 'modules/publications/FederatedPublicationFeedService.php'
       - 'modules/publications/PublicationsApiController.php'
+      - 'modules/publications/runtime.php'
       - 'bin/federation-sync.php'
       - 'themes/default/templates/admin/federation/**'
       - 'tools/organization-federation-smoke.php'
       - 'tools/federation-remote-projection-smoke.php'
       - 'tools/federation-publication-sync-smoke.php'
+      - 'tools/federated-publication-feed-smoke.php'
       - '.github/workflows/organization-federation-smoke.yml'
 
 permissions:
@@ -80,7 +88,9 @@ jobs:
           php -l tools/organization-federation-smoke.php
           php -l tools/federation-remote-projection-smoke.php
           php -l tools/federation-publication-sync-smoke.php
+          php -l tools/federated-publication-feed-smoke.php
           php -l modules/publications/PublicationRepository.php
+          php -l modules/publications/FederatedPublicationFeedService.php
           php -l modules/publications/PublicationsApiController.php
           php -l bin/federation-sync.php
           php -l themes/default/templates/admin/federation/index.php
@@ -132,6 +142,9 @@ jobs:
 
       - name: Проверить federation sync публикаций и курсоры
         run: php tools/federation-publication-sync-smoke.php
+
+      - name: Проверить агрегированную ленту публикаций
+        run: php tools/federated-publication-feed-smoke.php
 
       - name: Проверить federation discovery endpoint
         shell: bash
@@ -216,6 +229,38 @@ jobs:
                   !== "http://127.0.0.1:8099"
           ) {
               fwrite(STDERR, "Federation discovery client потерял identity.\n");
+              exit(1);
+          }
+
+          $aggregatedRaw = file_get_contents(
+              "http://127.0.0.1:8099/api/v1/publications/aggregated?limit=5"
+          );
+          if (!is_string($aggregatedRaw)) {
+              fwrite(
+                  STDERR,
+                  "Endpoint агрегированной ленты публикаций недоступен.\n",
+              );
+              exit(1);
+          }
+
+          $aggregated = json_decode(
+              $aggregatedRaw,
+              true,
+              32,
+              JSON_THROW_ON_ERROR,
+          );
+          if (
+              !is_array($aggregated["data"] ?? null)
+              || !is_array(
+                  $aggregated["meta"]["aggregation"] ?? null
+              )
+              || ($aggregated["meta"]["aggregation"]["limit"] ?? null)
+                  !== 5
+          ) {
+              fwrite(
+                  STDERR,
+                  "Endpoint агрегированной ленты вернул неверный контракт.\n",
+              );
               exit(1);
           }
 
