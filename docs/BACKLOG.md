@@ -73,7 +73,7 @@ Priority is ordered within each section.
     - [x] экран «Система» с installation healthcheck без ввода серверных путей;
     - [x] создание, список и повторная проверка резервных копий;
     - [x] список staging-пакетов и подтверждаемое применение готовых code-only обновлений;
-    - [ ] единый безопасный restore БД + config/uploads из Admin Shell;
+    - [x] единый безопасный restore БД + config/uploads из Admin Shell с аварийным снимком и автоматическим возвратом при ошибке;
     - [ ] получение и проверка доверенного релизного пакета без ручного staging;
 - [x] replace dashboard-card prototype with unified Admin Shell;
 - [x] persistent/collapsible admin navigation;
