@@ -44,6 +44,50 @@ final class FederationRepository
         );
     }
 
+    public function findByPublicId(
+        string $publicId,
+        string $siteKey = 'default',
+    ): ?FederationLink {
+        $statement = $this->pdo->prepare(
+            'SELECT * FROM organization_federation_links
+             WHERE public_id = :public_id
+               AND site_key = :site_key
+             LIMIT 1'
+        );
+        $statement->execute([
+            'public_id' => $publicId,
+            'site_key' => $siteKey,
+        ]);
+
+        $row = $statement->fetch();
+
+        return is_array($row)
+            ? $this->hydrate($row)
+            : null;
+    }
+
+    public function findByRemoteInstanceId(
+        string $remoteInstanceId,
+        string $siteKey = 'default',
+    ): ?FederationLink {
+        $statement = $this->pdo->prepare(
+            'SELECT * FROM organization_federation_links
+             WHERE remote_instance_id = :remote_instance_id
+               AND site_key = :site_key
+             LIMIT 1'
+        );
+        $statement->execute([
+            'remote_instance_id' => $remoteInstanceId,
+            'site_key' => $siteKey,
+        ]);
+
+        $row = $statement->fetch();
+
+        return is_array($row)
+            ? $this->hydrate($row)
+            : null;
+    }
+
     public function outboundToken(
         int $linkId,
     ): ?string {
