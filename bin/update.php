@@ -47,14 +47,23 @@ try {
             exit(2);
         }
 
-        $result = (new UpdatePackageStager($root, $stagingPath))->stage($source);
+        $stager = new UpdatePackageStager($root, $stagingPath);
+        $trustedKeys = Config::get('operations.update_trusted_keys', []);
+        $requireTrust = is_array($trustedKeys) && $trustedKeys !== [];
+
+        $result = $requireTrust
+            ? $stager->stageTrusted($source)
+            : $stager->stage($source);
 
         echo sprintf(
-            "Пакет проверен и помещён в staging: %s; версия: %s; файлов: %d; удалений: %d\n",
+            "Пакет проверен и помещён в staging: %s; версия: %s; файлов: %d; удалений: %d%s\n",
             $result['id'],
             $result['version'],
             $result['files'],
             $result['deleted_files'],
+            isset($result['trusted_key_id'])
+                ? '; подпись: ключ ' . $result['trusted_key_id']
+                : '; подпись не требовалась',
         );
         exit(0);
     }
