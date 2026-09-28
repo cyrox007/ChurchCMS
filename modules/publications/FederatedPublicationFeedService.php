@@ -235,6 +235,17 @@ final class FederatedPublicationFeedService
         $publishedAt = self::timestamp(
             $payload['published_at'] ?? null,
         );
+        if (
+            $publishedAt === null
+            || new DateTimeImmutable($publishedAt)
+                > new DateTimeImmutable(
+                    'now',
+                    new DateTimeZone('UTC'),
+                )
+        ) {
+            return null;
+        }
+
         $updatedAt = $projection->remoteUpdatedAt
             ->setTimezone(new DateTimeZone('UTC'))
             ->format(DATE_ATOM);
