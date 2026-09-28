@@ -23,7 +23,7 @@ Priority is ordered within each section.
 - [x] отдельные inbound/outbound scopes и encrypted outbound credential;
 - [x] безопасный public discovery endpoint без секретов;
 - [x] Admin CRUD дерева организаций, отделов и комиссий;
-- [ ] pairing wizard между ChurchCMS-узлами;
+- [x] pairing wizard между ChurchCMS-узлами с discovery, подтверждением и отзывом доверия;
 - [x] organization scopes в RBAC и проверяемое наследование вниз по дереву;
 - [ ] привязка Publications/Pages к organization owner;
   - [x] Publications: nullable migration/backfill, default site-root owner, проверка site boundary и stable public ID в API;
