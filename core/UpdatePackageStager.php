@@ -13,10 +13,15 @@ final class UpdatePackageStager
     private const FORMAT = 'churchcms-update-v1';
     private const STAGE_ID_PATTERN = '/^[0-9]{8}T[0-9]{6}Z-[a-f0-9]{12}$/D';
 
+    private UpdatePackageTrustVerifier $trustVerifier;
+
     public function __construct(
         private readonly string $root,
         private readonly string $stagingRoot,
+        ?UpdatePackageTrustVerifier $trustVerifier = null,
     ) {
+        $this->trustVerifier = $trustVerifier
+            ?? new UpdatePackageTrustVerifier();
     }
 
     /**
@@ -58,8 +63,7 @@ final class UpdatePackageStager
 
         $trustedKeyId = null;
         if ($requireTrust) {
-            $trustedKeyId = (new UpdatePackageTrustVerifier())
-                ->verify($source);
+            $trustedKeyId = $this->trustVerifier->verify($source);
         }
 
         $manifest = $this->readManifest($source);
@@ -156,8 +160,7 @@ final class UpdatePackageStager
         $trustedKeyId = null;
 
         if (is_file($path . DIRECTORY_SEPARATOR . 'manifest.sig')) {
-            $trustedKeyId = (new UpdatePackageTrustVerifier())
-                ->verify($path);
+            $trustedKeyId = $this->trustVerifier->verify($path);
         }
         $payload = $path . DIRECTORY_SEPARATOR . 'payload';
 
