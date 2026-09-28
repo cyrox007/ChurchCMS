@@ -114,52 +114,28 @@ final class FederationRepository
 
     public function saveSyncCursor(
         int $linkId,
+        ?string $expectedCursor,
         string $cursor,
     ): void {
-        if ($linkId <= 0 || trim($cursor) === '') {
-            throw new RuntimeException(
-                'Некорректное состояние курсора federation sync.'
-            );
-        }
-
-        $statement = $this->pdo->prepare(
-            'UPDATE organization_federation_links
-             SET sync_cursor = :sync_cursor,
-                 updated_at = :updated_at
-             WHERE id = :id'
+        $this->writeSyncCursor(
+            $linkId,
+            $expectedCursor,
+            $cursor,
+            false,
         );
-        $statement->execute([
-            'sync_cursor' => $cursor,
-            'updated_at' => gmdate('Y-m-d H:i:s'),
-            'id' => $linkId,
-        ]);
     }
 
     public function recordSyncSuccess(
         int $linkId,
+        ?string $expectedCursor,
         string $cursor,
     ): void {
-        if ($linkId <= 0 || trim($cursor) === '') {
-            throw new RuntimeException(
-                'Некорректное состояние успешного federation sync.'
-            );
-        }
-
-        $now = gmdate('Y-m-d H:i:s');
-        $statement = $this->pdo->prepare(
-            'UPDATE organization_federation_links
-             SET sync_cursor = :sync_cursor,
-                 last_sync_at = :last_sync_at,
-                 last_sync_error = NULL,
-                 updated_at = :updated_at
-             WHERE id = :id'
+        $this->writeSyncCursor(
+            $linkId,
+            $expectedCursor,
+            $cursor,
+            true,
         );
-        $statement->execute([
-            'sync_cursor' => $cursor,
-            'last_sync_at' => $now,
-            'updated_at' => $now,
-            'id' => $linkId,
-        ]);
     }
 
     public function recordSyncFailure(
@@ -186,6 +162,54 @@ final class FederationRepository
             'updated_at' => gmdate('Y-m-d H:i:s'),
             'id' => $linkId,
         ]);
+    }
+
+    private function writeSyncCursor(
+        int $linkId,
+        ?string $expectedCursor,
+        string $cursor,
+        bool $completed,
+    ): void {
+        $cursor = trim($cursor);
+        if ($linkId <= 0 || $cursor === '') {
+            throw new RuntimeException(
+                'Некорректное состояние курсора federation sync.'
+            );
+        }
+
+        $expectedCursor = trim((string) ($expectedCursor ?? ''));
+        $now = gmdate('Y-m-d H:i:s');
+        $syncFields = $completed
+            ? ',
+                 last_sync_at = :last_sync_at,
+                 last_sync_error = NULL'
+            : '';
+
+        $statement = $this->pdo->prepare(
+            'UPDATE organization_federation_links
+             SET sync_cursor = :sync_cursor'
+             . $syncFields
+             . ',
+                 updated_at = :updated_at
+             WHERE id = :id
+               AND COALESCE(sync_cursor, \'\') = :expected_cursor'
+        );
+        $parameters = [
+            'sync_cursor' => $cursor,
+            'updated_at' => $now,
+            'id' => $linkId,
+            'expected_cursor' => $expectedCursor,
+        ];
+        if ($completed) {
+            $parameters['last_sync_at'] = $now;
+        }
+        $statement->execute($parameters);
+
+        if ($statement->rowCount() !== 1) {
+            throw new RuntimeException(
+                'Курсор federation sync уже изменён другим процессом.'
+            );
+        }
     }
 
     private function hydrate(array $row): FederationLink
