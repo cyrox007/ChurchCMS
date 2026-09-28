@@ -20,7 +20,7 @@ Status: in progress.
 - [x] Audit/security event log foundation.
 - [x] Friendly four-step web installer.
 - [x] Installation healthcheck.
-- [ ] Update/backup workflow (verified backup, database/file restore, unified Admin Shell restore with safety snapshot, package staging and code-only apply/rollback implemented; trusted package source and schema-changing migration rollback pending).
+- [ ] Обновления и резервные копии (проверка backup, восстановление БД/файлов, единый restore из Admin Shell с аварийным снимком, staging и code-only apply/rollback реализованы; остаются доверенный источник пакета и rollback миграций со сменой схемы).
 - [x] Anonymous full-page caching foundation.
 - [ ] Load-test release gate (repeatable HTTP scenario and query-plan audit implemented; reference hardware measurements and thresholds pending).
 
