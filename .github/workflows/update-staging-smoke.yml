@@ -7,6 +7,8 @@ on:
       - main
     paths:
       - 'core/UpdatePackageStager.php'
+      - 'core/UpdatePackageSignatureVerifier.php'
+      - 'tools/update-sign.php'
       - 'bin/update.php'
       - 'config/app.php'
       - '.github/workflows/update-staging-smoke.yml'
@@ -16,6 +18,8 @@ on:
       - main
     paths:
       - 'core/UpdatePackageStager.php'
+      - 'core/UpdatePackageSignatureVerifier.php'
+      - 'tools/update-sign.php'
       - 'bin/update.php'
       - 'config/app.php'
       - '.github/workflows/update-staging-smoke.yml'
@@ -35,7 +39,45 @@ jobs:
         uses: shivammathur/setup-php@v2
         with:
           php-version: '8.3'
+          extensions: openssl
           coverage: none
+
+      - name: Проверить синтаксис подписи и staging
+        shell: bash
+        run: |
+          set -euo pipefail
+          php -l core/UpdatePackageSignatureVerifier.php
+          php -l core/UpdatePackageStager.php
+          php -l tools/update-sign.php
+          php -l bin/update.php
+
+      - name: Подготовить тестовый ключ подписи
+        shell: bash
+        run: |
+          set -euo pipefail
+          openssl genpkey             -algorithm RSA             -pkeyopt rsa_keygen_bits:2048             -out "$RUNNER_TEMP/update-private.pem"
+          openssl pkey             -in "$RUNNER_TEMP/update-private.pem"             -pubout             -out "$RUNNER_TEMP/update-public.pem"
+
+          php -r '
+          $public = file_get_contents(
+              getenv("RUNNER_TEMP") . "/update-public.pem"
+          );
+          if (!is_string($public)) {
+              exit(1);
+          }
+          file_put_contents(
+              "config/local.php",
+              "<?php\n\ndeclare(strict_types=1);\n\nreturn "
+              . var_export([
+                  "operations" => [
+                      "update_trusted_public_keys" => [
+                          "ci-release" => $public,
+                      ],
+                  ],
+              ], true)
+              . ";\n"
+          );
+          '
 
       - name: Подготовить тестовый пакет
         shell: bash
@@ -70,6 +112,8 @@ jobs:
           );
           ' "$package"
 
+          php tools/update-sign.php             "$package/manifest.json"             "$RUNNER_TEMP/update-private.pem"             ci-release
+
       - name: Проверить staging валидного пакета
         shell: bash
         run: |
@@ -77,13 +121,145 @@ jobs:
           package="$RUNNER_TEMP/churchcms-update-package"
           staging="$RUNNER_TEMP/churchcms-update-staging"
 
-          php bin/update.php stage "$package" --path="$staging"
+          output="$(php bin/update.php stage "$package" --path="$staging")"
+          printf '%s\n' "$output"
+          grep -q "подпись: ci-release" <<<"$output"
 
           manifest="$(find "$staging" -mindepth 2 -maxdepth 2 -name manifest.json -type f -print -quit)"
           test -n "$manifest"
           stage_dir="$(dirname "$manifest")"
+          stage_id="$(basename "$stage_dir")"
+          printf '%s' "$stage_id" > "$RUNNER_TEMP/update-stage-id"
           test -f "$stage_dir/payload/core/Uuid.php"
           cmp "$package/core/Uuid.php" "$stage_dir/payload/core/Uuid.php"
+
+      - name: Повторно проверить подпись уже staged-пакета
+        shell: bash
+        run: |
+          set -euo pipefail
+          staging="$RUNNER_TEMP/churchcms-update-staging"
+          stage_id="$(cat "$RUNNER_TEMP/update-stage-id")"
+          manifest="$staging/$stage_id/manifest.json"
+          cp "$manifest" "$RUNNER_TEMP/staged-manifest-original.json"
+
+          php -r '
+          $path = $argv[1];
+          $manifest = json_decode(
+              (string) file_get_contents($path),
+              true,
+              64,
+              JSON_THROW_ON_ERROR,
+          );
+          $manifest["version"] = "999.0.9-ci";
+          file_put_contents(
+              $path,
+              json_encode(
+                  $manifest,
+                  JSON_THROW_ON_ERROR
+                  | JSON_PRETTY_PRINT
+                  | JSON_UNESCAPED_SLASHES,
+              ) . PHP_EOL,
+          );
+          ' "$manifest"
+
+          if php -r '
+          require "core.php";
+          (new \ChurchCMS\Core\UpdatePackageStager(
+              CHURCHCMS_ROOT,
+              $argv[1],
+          ))->inspect($argv[2]);
+          ' "$staging" "$stage_id"; then
+            echo "Подменённый staged-манифест ошибочно прошёл inspect." >&2
+            exit 1
+          fi
+
+          cp "$RUNNER_TEMP/staged-manifest-original.json" "$manifest"
+
+      - name: Отклонить неподписанный пакет
+        shell: bash
+        run: |
+          set -euo pipefail
+          source="$RUNNER_TEMP/churchcms-update-package"
+          package="$RUNNER_TEMP/churchcms-update-unsigned"
+          staging="$RUNNER_TEMP/churchcms-update-staging"
+          cp -a "$source" "$package"
+
+          php -r '
+          $path = $argv[1] . "/manifest.json";
+          $manifest = json_decode(
+              (string) file_get_contents($path),
+              true,
+              64,
+              JSON_THROW_ON_ERROR,
+          );
+          unset($manifest["signature"]);
+          file_put_contents(
+              $path,
+              json_encode(
+                  $manifest,
+                  JSON_THROW_ON_ERROR
+                  | JSON_PRETTY_PRINT
+                  | JSON_UNESCAPED_SLASHES,
+              ) . PHP_EOL,
+          );
+          ' "$package"
+
+          if php bin/update.php stage "$package" --path="$staging"; then
+            echo "Неподписанный пакет ошибочно принят." >&2
+            exit 1
+          fi
+
+      - name: Отклонить подменённый подписанный манифест
+        shell: bash
+        run: |
+          set -euo pipefail
+          source="$RUNNER_TEMP/churchcms-update-package"
+          package="$RUNNER_TEMP/churchcms-update-tampered-manifest"
+          staging="$RUNNER_TEMP/churchcms-update-staging"
+          cp -a "$source" "$package"
+
+          php -r '
+          $path = $argv[1] . "/manifest.json";
+          $manifest = json_decode(
+              (string) file_get_contents($path),
+              true,
+              64,
+              JSON_THROW_ON_ERROR,
+          );
+          $manifest["version"] = "999.0.1-ci";
+          file_put_contents(
+              $path,
+              json_encode(
+                  $manifest,
+                  JSON_THROW_ON_ERROR
+                  | JSON_PRETTY_PRINT
+                  | JSON_UNESCAPED_SLASHES,
+              ) . PHP_EOL,
+          );
+          ' "$package"
+
+          if php bin/update.php stage "$package" --path="$staging"; then
+            echo "Подменённый подписанный манифест ошибочно принят." >&2
+            exit 1
+          fi
+
+      - name: Отклонить пакет с неизвестным ключом
+        shell: bash
+        run: |
+          set -euo pipefail
+          source="$RUNNER_TEMP/churchcms-update-package"
+          package="$RUNNER_TEMP/churchcms-update-unknown-key"
+          staging="$RUNNER_TEMP/churchcms-update-staging"
+          cp -a "$source" "$package"
+
+          openssl genpkey             -algorithm RSA             -pkeyopt rsa_keygen_bits:2048             -out "$RUNNER_TEMP/unknown-private.pem"
+
+          php tools/update-sign.php             "$package/manifest.json"             "$RUNNER_TEMP/unknown-private.pem"             unknown-release
+
+          if php bin/update.php stage "$package" --path="$staging"; then
+            echo "Пакет с неизвестным ключом ошибочно принят." >&2
+            exit 1
+          fi
 
       - name: Отклонить повреждённый пакет
         shell: bash

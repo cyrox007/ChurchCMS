@@ -27,7 +27,8 @@ final class UpdatePackageApplier
      *     version:string,
      *     backup_id:string,
      *     files:int,
-     *     deleted_files:int
+     *     deleted_files:int,
+     *     signature_key_id:string
      * }
      */
     public function apply(string $stageId): array
@@ -86,6 +87,7 @@ final class UpdatePackageApplier
             'backup_id' => $backupResult['id'],
             'files' => count($stage['files']),
             'deleted_files' => count($stage['deleted_files']),
+            'signature_key_id' => $stage['signature_key_id'],
         ];
     }
 
@@ -95,7 +97,8 @@ final class UpdatePackageApplier
      *     version:string,
      *     path:string,
      *     files:array<string,array{path:string,bytes:int,sha256:string}>,
-     *     deleted_files:list<string>
+     *     deleted_files:list<string>,
+     *     signature_key_id:string
      * } $stage
      */
     private function assertCodeOnly(array $stage): void
@@ -139,7 +142,8 @@ final class UpdatePackageApplier
      *     version:string,
      *     path:string,
      *     files:array<string,array{path:string,bytes:int,sha256:string}>,
-     *     deleted_files:list<string>
+     *     deleted_files:list<string>,
+     *     signature_key_id:string
      * } $stage
      * @return list<array{
      *     path:string,
@@ -303,7 +307,8 @@ final class UpdatePackageApplier
      *     version:string,
      *     path:string,
      *     files:array<string,array{path:string,bytes:int,sha256:string}>,
-     *     deleted_files:list<string>
+     *     deleted_files:list<string>,
+     *     signature_key_id:string
      * } $stage
      */
     private function verifyAppliedState(array $stage): void

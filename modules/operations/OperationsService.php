@@ -41,7 +41,7 @@ final class OperationsService
      *     }>,
      *     packages:list<array{
      *         id:string,version:string,files:int,deleted_files:int,
-     *         code_only:bool,ready:bool
+     *         code_only:bool,ready:bool,signature_key_id:string
      *     }>,
      *     warnings:list<string>
      * }
@@ -62,6 +62,22 @@ final class OperationsService
             $packages = $this->stager()->packages(20);
         } catch (\Throwable) {
             $warnings[] = 'Каталог подготовленных обновлений сейчас недоступен.';
+        }
+
+        $trustedKeys = Config::get(
+            'operations.update_trusted_public_keys',
+            [],
+        );
+        $hasTrustedKey = is_array($trustedKeys)
+            && array_filter(
+                $trustedKeys,
+                static fn(mixed $key): bool =>
+                    is_string($key) && trim($key) !== '',
+            ) !== [];
+
+        if (!$hasTrustedKey) {
+            $warnings[] = 'Не настроен доверенный публичный ключ релизов. '
+                . 'Проверка и применение обновлений заблокированы.';
         }
 
         return [
@@ -108,7 +124,8 @@ final class OperationsService
 
     /**
      * @return array{
-     *     id:string,version:string,backup_id:string,files:int,deleted_files:int
+     *     id:string,version:string,backup_id:string,files:int,deleted_files:int,
+     *     signature_key_id:string
      * }
      */
     public function applyUpdate(string $stageId): array

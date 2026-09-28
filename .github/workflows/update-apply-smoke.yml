@@ -7,6 +7,8 @@ on:
       - main
     paths:
       - 'core/UpdatePackageStager.php'
+      - 'core/UpdatePackageSignatureVerifier.php'
+      - 'tools/update-sign.php'
       - 'core/UpdatePackageApplier.php'
       - 'bin/update.php'
       - 'core/BackupManager.php'
@@ -19,6 +21,8 @@ on:
       - main
     paths:
       - 'core/UpdatePackageStager.php'
+      - 'core/UpdatePackageSignatureVerifier.php'
+      - 'tools/update-sign.php'
       - 'core/UpdatePackageApplier.php'
       - 'bin/update.php'
       - 'core/BackupManager.php'
@@ -56,7 +60,7 @@ jobs:
         uses: shivammathur/setup-php@v2
         with:
           php-version: '8.3'
-          extensions: pdo, pdo_pgsql
+          extensions: pdo, pdo_pgsql, openssl
           coverage: none
 
       - name: Проверить синтаксис updater
@@ -64,7 +68,9 @@ jobs:
         run: |
           set -euo pipefail
           php -l core/UpdatePackageStager.php
+          php -l core/UpdatePackageSignatureVerifier.php
           php -l core/UpdatePackageApplier.php
+          php -l tools/update-sign.php
           php -l bin/update.php
 
       - name: Подготовить тестовую установку
@@ -73,6 +79,16 @@ jobs:
           set -euo pipefail
           mkdir -p storage/cache storage/logs storage/sessions storage/rate-limits storage/uploads
           printf 'backup-smoke\n' > storage/uploads/smoke.txt
+
+          openssl genpkey \
+            -algorithm RSA \
+            -pkeyopt rsa_keygen_bits:2048 \
+            -out "$RUNNER_TEMP/update-private.pem"
+          openssl pkey \
+            -in "$RUNNER_TEMP/update-private.pem" \
+            -pubout \
+            -out "$RUNNER_TEMP/update-public.pem"
+
           cat > config/local.php <<'PHP'
           <?php
 
@@ -84,6 +100,13 @@ jobs:
               ],
               'security' => [
                   'secret_key' => base64_encode(str_repeat('u', 32)),
+              ],
+              'operations' => [
+                  'update_trusted_public_keys' => [
+                      'ci-release' => file_get_contents(
+                          getenv('RUNNER_TEMP') . '/update-public.pem'
+                      ),
+                  ],
               ],
               'database' => [
                   'driver' => 'pgsql',
@@ -162,6 +185,11 @@ jobs:
               ) . PHP_EOL
           );
           ' "$package"
+
+          php tools/update-sign.php \
+            "$package/manifest.json" \
+            "$RUNNER_TEMP/update-private.pem" \
+            ci-release
 
       - name: Поместить пакет в staging
         shell: bash
@@ -268,6 +296,11 @@ jobs:
           );
           ' "$package"
 
+          php tools/update-sign.php \
+            "$package/manifest.json" \
+            "$RUNNER_TEMP/update-private.pem" \
+            ci-release
+
           staging="$RUNNER_TEMP/update-staging"
           php bin/update.php stage "$package" --path="$staging"
           manifest="$(find "$staging" -mindepth 2 -maxdepth 2 -name manifest.json -type f -newer "$package/manifest.json" -print -quit || true)"
@@ -356,6 +389,11 @@ jobs:
               ], JSON_THROW_ON_ERROR | JSON_PRETTY_PRINT | JSON_UNESCAPED_SLASHES) . PHP_EOL
           );
           ' "$package"
+
+          php tools/update-sign.php \
+            "$package/manifest.json" \
+            "$RUNNER_TEMP/update-private.pem" \
+            ci-release
 
           staging="$RUNNER_TEMP/update-staging"
           php bin/update.php stage "$package" --path="$staging"
