@@ -390,16 +390,56 @@ final class PublicationService
     {
         self::assertUuid($publicId);
 
-        $statement = $this->pdo->prepare(
-            'UPDATE publications
-             SET status = :status, updated_at = :updated_at
-             WHERE public_id = :public_id'
-        );
-        $statement->execute([
-            'status' => PublicationStatus::Withdrawn->value,
-            'updated_at' => gmdate('Y-m-d H:i:s'),
-            'public_id' => $publicId,
-        ]);
+        $publication = (new PublicationRepository($this->pdo))
+            ->findByPublicId($publicId);
+        $partnerVisible = $publication !== null
+            && $publication->status === PublicationStatus::Published
+            && $publication->publishedAt !== null
+            && $publication->publishedAt <= new DateTimeImmutable('now')
+            && in_array(
+                'diocese',
+                $publication->syndicationTargets,
+                true,
+            );
+
+        $ownsTransaction = !$this->pdo->inTransaction();
+        if ($ownsTransaction) {
+            $this->pdo->beginTransaction();
+        }
+
+        try {
+            $updatedAt = gmdate('Y-m-d H:i:s');
+            $statement = $this->pdo->prepare(
+                'UPDATE publications
+                 SET status = :status, updated_at = :updated_at
+                 WHERE public_id = :public_id'
+            );
+            $statement->execute([
+                'status' => PublicationStatus::Withdrawn->value,
+                'updated_at' => $updatedAt,
+                'public_id' => $publicId,
+            ]);
+
+            if ($partnerVisible && $publication !== null) {
+                (new PublicationPartnerTombstoneRepository($this->pdo))
+                    ->record(
+                        $publication,
+                        withdrawnAt: new DateTimeImmutable(
+                            $updatedAt . ' UTC',
+                        ),
+                    );
+            }
+
+            if ($ownsTransaction) {
+                $this->pdo->commit();
+            }
+        } catch (Throwable $error) {
+            if ($ownsTransaction && $this->pdo->inTransaction()) {
+                $this->pdo->rollBack();
+            }
+
+            throw $error;
+        }
 
         PageCache::bumpVersion();
     }
