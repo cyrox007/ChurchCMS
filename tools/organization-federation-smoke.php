@@ -160,6 +160,104 @@ if (
 }
 
 $federation = FederationService::fromDatabase();
+
+$health = $federation->recordHealthSuccess(
+    publicId: $linkId,
+    remoteInstanceId: $remoteInstance,
+    remoteOrganizationPublicId: $remoteOrganization,
+    remoteProfile: 'metropolia',
+    remoteName: 'Тестовая митрополия online',
+);
+$healthy = FederationRepository::fromDatabase()
+    ->findByPublicId($linkId);
+
+if (
+    $health !== 'active'
+    || $healthy === null
+    || $healthy->status !== 'active'
+    || $healthy->lastSeenAt === null
+    || $healthy->lastError !== null
+    || $healthy->remoteName !== 'Тестовая митрополия online'
+    || FederationRepository::fromDatabase()
+        ->outboundToken($healthy->id) !== $token
+) {
+    fwrite(
+        STDERR,
+        "Успешная federation health-проверка сохранена некорректно.\n",
+    );
+    exit(1);
+}
+
+$lastSeenAt = $healthy->lastSeenAt;
+$federation->recordHealthFailure($linkId);
+$failed = FederationRepository::fromDatabase()
+    ->findByPublicId($linkId);
+
+if (
+    $failed === null
+    || $failed->status !== 'error'
+    || $failed->lastError === null
+    || $failed->lastSeenAt !== $lastSeenAt
+    || FederationRepository::fromDatabase()
+        ->outboundToken($failed->id) !== $token
+) {
+    fwrite(
+        STDERR,
+        "Ошибка federation health-проверки сохранена небезопасно.\n",
+    );
+    exit(1);
+}
+
+$conflict = $federation->recordHealthSuccess(
+    publicId: $linkId,
+    remoteInstanceId:
+        '60000000-0000-4000-8000-000000000006',
+    remoteOrganizationPublicId: $remoteOrganization,
+    remoteProfile: 'metropolia',
+    remoteName: 'Подменённая identity',
+);
+$conflicted = FederationRepository::fromDatabase()
+    ->findByPublicId($linkId);
+
+if (
+    $conflict !== 'conflict'
+    || $conflicted === null
+    || $conflicted->status !== 'conflict'
+    || $conflicted->lastError === null
+    || $conflicted->remoteName !== 'Тестовая митрополия online'
+    || FederationRepository::fromDatabase()
+        ->outboundToken($conflicted->id) !== $token
+) {
+    fwrite(
+        STDERR,
+        "Конфликт federation identity обработан некорректно.\n",
+    );
+    exit(1);
+}
+
+$retry = $federation->recordHealthSuccess(
+    publicId: $linkId,
+    remoteInstanceId: $remoteInstance,
+    remoteOrganizationPublicId: $remoteOrganization,
+    remoteProfile: 'metropolia',
+    remoteName: 'Тестовая митрополия восстановлена',
+);
+$recovered = FederationRepository::fromDatabase()
+    ->findByPublicId($linkId);
+
+if (
+    $retry !== 'active'
+    || $recovered === null
+    || $recovered->status !== 'active'
+    || $recovered->lastError !== null
+) {
+    fwrite(
+        STDERR,
+        "Повторная federation health-проверка не восстановила связь.\n",
+    );
+    exit(1);
+}
+
 $federation->revoke($linkId);
 
 $revoked = FederationRepository::fromDatabase()
