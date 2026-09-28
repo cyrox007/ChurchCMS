@@ -29,7 +29,7 @@ $service->publish(
         new DateTimeZone('UTC'),
     ),
 );
-$service->withdraw($publicationId);
+$service->withdraw($publicationId, $siteKey);
 
 $repository = PublicationPartnerTombstoneRepository::fromDatabase();
 $tombstones = $repository->updatedSince(
@@ -52,7 +52,7 @@ if (
 }
 
 $firstUpdatedAt = $tombstones[0]['updated_at']->format('Y-m-d H:i:s');
-$service->withdraw($publicationId);
+$service->withdraw($publicationId, $siteKey);
 
 $afterRepeatedWithdraw = $repository->updatedSince(
     new DateTimeImmutable('2000-01-01T00:00:00Z'),
@@ -83,7 +83,7 @@ $service->publish(
         new DateTimeZone('UTC'),
     ),
 );
-$service->withdraw($secondPartnerId);
+$service->withdraw($secondPartnerId, $siteKey);
 
 $localOnlyId = $service->createDraft(
     title: 'Локальный RSS-материал',
@@ -97,7 +97,7 @@ $service->publish(
         new DateTimeZone('UTC'),
     ),
 );
-$service->withdraw($localOnlyId);
+$service->withdraw($localOnlyId, $siteKey);
 
 $afterLocalWithdraw = $repository->updatedSince(
     new DateTimeImmutable('2000-01-01T00:00:00Z'),
