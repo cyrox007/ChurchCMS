@@ -232,6 +232,38 @@ jobs:
               exit(1);
           }
 
+          $aggregatedRaw = file_get_contents(
+              "http://127.0.0.1:8099/api/v1/publications/aggregated?limit=5"
+          );
+          if (!is_string($aggregatedRaw)) {
+              fwrite(
+                  STDERR,
+                  "Endpoint агрегированной ленты публикаций недоступен.\n",
+              );
+              exit(1);
+          }
+
+          $aggregated = json_decode(
+              $aggregatedRaw,
+              true,
+              32,
+              JSON_THROW_ON_ERROR,
+          );
+          if (
+              !is_array($aggregated["data"] ?? null)
+              || !is_array(
+                  $aggregated["meta"]["aggregation"] ?? null
+              )
+              || ($aggregated["meta"]["aggregation"]["limit"] ?? null)
+                  !== 5
+          ) {
+              fwrite(
+                  STDERR,
+                  "Endpoint агрегированной ленты вернул неверный контракт.\n",
+              );
+              exit(1);
+          }
+
           $entries = \ChurchCMS\App\Services\AdminNavigationRegistry::entries();
           $federationEntry = null;
           foreach ($entries as $entry) {
