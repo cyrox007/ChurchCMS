@@ -7,6 +7,7 @@ use ChurchCMS\Core\Config;
 use ChurchCMS\Core\DatabaseManager;
 use ChurchCMS\Core\UpdatePackageApplier;
 use ChurchCMS\Core\UpdatePackageStager;
+use ChurchCMS\Core\UpdateReleaseDownloader;
 
 $root = dirname(__DIR__);
 require $root . '/core.php';
@@ -60,6 +61,35 @@ try {
         exit(0);
     }
 
+    if ($command === 'download') {
+        $manifestUrl = trim((string) Config::get(
+            'operations.update_release_manifest_url',
+            '',
+        ));
+
+        if ($manifestUrl === '' || $stagingPath === '') {
+            fwrite(
+                STDERR,
+                "Настройте operations.update_release_manifest_url и staging-каталог.\n",
+            );
+            exit(2);
+        }
+
+        $result = (new UpdateReleaseDownloader(
+            $root,
+            $stagingPath,
+        ))->downloadAndStage($manifestUrl);
+
+        echo sprintf(
+            "Подписанный пакет получен и помещён в staging: %s; версия: %s; файлов: %d; подпись: %s\n",
+            $result['id'],
+            $result['version'],
+            $result['files'],
+            $result['signature_key_id'],
+        );
+        exit(0);
+    }
+
     if ($command === 'apply') {
         $stageId = (string) ($positionals[0] ?? '');
 
@@ -101,6 +131,7 @@ try {
         "Использование:\n"
         . "  php bin/update.php stage /абсолютный/путь/к/пакету "
         . "[--path=/абсолютный/staging]\n"
+        . "  php bin/update.php download [--path=/абсолютный/staging]\n"
         . "  php bin/update.php apply <staging-id> --confirm=<staging-id> "
         . "[--path=/абсолютный/staging] [--backup-path=/абсолютный/backups]\n",
     );

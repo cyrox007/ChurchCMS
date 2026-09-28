@@ -1,0 +1,71 @@
+name: Проверка сетевой загрузки обновлений
+
+on:
+  push:
+    branches:
+      - develop
+      - main
+    paths:
+      - 'core/UpdateReleaseDownloader.php'
+      - 'core/UpdateReleaseTransport.php'
+      - 'core/UpdatePackageSignatureVerifier.php'
+      - 'core/UpdatePackageStager.php'
+      - 'bin/update.php'
+      - 'config/app.php'
+      - 'tools/update-release-download-smoke.php'
+      - '.github/workflows/update-download-smoke.yml'
+  pull_request:
+    branches:
+      - develop
+      - main
+    paths:
+      - 'core/UpdateReleaseDownloader.php'
+      - 'core/UpdateReleaseTransport.php'
+      - 'core/UpdatePackageSignatureVerifier.php'
+      - 'core/UpdatePackageStager.php'
+      - 'bin/update.php'
+      - 'config/app.php'
+      - 'tools/update-release-download-smoke.php'
+      - '.github/workflows/update-download-smoke.yml'
+
+permissions:
+  contents: read
+
+jobs:
+  update-download-smoke:
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Получить исходный код
+        uses: actions/checkout@v4
+
+      - name: Подготовить PHP 8.3
+        uses: shivammathur/setup-php@v2
+        with:
+          php-version: '8.3'
+          extensions: curl, openssl
+          coverage: none
+
+      - name: Проверить синтаксис загрузчика
+        shell: bash
+        run: |
+          set -euo pipefail
+          php -l core/UpdateReleaseTransport.php
+          php -l core/UpdateReleaseDownloader.php
+          php -l core/UpdatePackageSignatureVerifier.php
+          php -l core/UpdatePackageStager.php
+          php -l bin/update.php
+          php -l tools/update-release-download-smoke.php
+
+      - name: Проверить полный путь доверенной загрузки
+        shell: bash
+        run: |
+          set -euo pipefail
+          php tools/update-release-download-smoke.php
+
+      - name: Проверить CLI-команду
+        shell: bash
+        run: |
+          set -euo pipefail
+          output="$(php bin/update.php 2>&1 || true)"
+          grep -q 'php bin/update.php download' <<< "$output"

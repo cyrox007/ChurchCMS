@@ -30,6 +30,8 @@ final class OperationsAdminController
                 'health' => $overview['health'],
                 'backups' => $overview['backups'],
                 'packages' => $overview['packages'],
+                'releaseSourceConfigured' =>
+                    $overview['release_source_configured'],
                 'operationWarnings' => $overview['warnings'],
                 'operationStatus' => self::status($request),
             ],
@@ -158,6 +160,43 @@ final class OperationsAdminController
         }
     }
 
+    public function downloadUpdate(Request $request): never
+    {
+        AdminAuthorization::requirePermission(
+            $request,
+            'settings.manage',
+        );
+
+        try {
+            $result = (new OperationsService())->downloadUpdate();
+
+            AuditLog::emit(
+                eventType: 'operations.update.downloaded',
+                actorUserId: self::actorId($request),
+                subjectType: 'update_stage',
+                subjectId: $result['id'],
+                metadata: [
+                    'version' => $result['version'],
+                    'files' => $result['files'],
+                    'signature_key_id' =>
+                        $result['signature_key_id'],
+                ],
+                request: $request,
+            );
+
+            Response::redirectLocal(
+                '/admin/system?status=update-downloaded',
+            );
+        } catch (Throwable $e) {
+            self::failed(
+                $request,
+                'operations.update.download_failed',
+                'update-download-failed',
+                $e,
+            );
+        }
+    }
+
     public function applyUpdate(
         Request $request,
         string $stageId,
@@ -277,6 +316,11 @@ final class OperationsAdminController
                 'title' => 'Нужно подтверждение восстановления',
                 'message' => 'Подтвердите замену БД, локальной конфигурации и uploads выбранной резервной копией.',
             ],
+            'update-downloaded' => [
+                'kind' => 'success',
+                'title' => 'Обновление получено',
+                'message' => 'Подписанный пакет скачан, проверен и помещён в staging.',
+            ],
             'update-applied' => [
                 'kind' => 'success',
                 'title' => 'Обновление применено',
@@ -301,6 +345,11 @@ final class OperationsAdminController
                 'kind' => 'error',
                 'title' => 'Восстановление не завершено',
                 'message' => 'ChurchCMS остановила операцию и попыталась вернуть аварийную копию. Подробность записана в журнал сервера.',
+            ],
+            'update-download-failed' => [
+                'kind' => 'error',
+                'title' => 'Обновление получить не удалось',
+                'message' => 'ChurchCMS не сохранила непроверенный пакет. Подробность записана в журнал сервера.',
             ],
             'update-apply-failed' => [
                 'kind' => 'error',
