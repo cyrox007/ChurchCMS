@@ -205,6 +205,8 @@ jobs:
               || !isset($data[0]["updated_at"])
               || ($payload["meta"]["sync"]["next_updated_since"] ?? null)
                   === null
+              || ($payload["meta"]["sync"]["next_after"] ?? null)
+                  !== $expectedId
           ) {
               fwrite(
                   STDERR,
