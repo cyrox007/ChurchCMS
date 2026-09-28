@@ -386,12 +386,15 @@ final class PublicationService
         PageCache::bumpVersion();
     }
 
-    public function withdraw(string $publicId): void
-    {
+    public function withdraw(
+        string $publicId,
+        string $siteKey = 'default',
+    ): void {
         self::assertUuid($publicId);
+        $siteKey = self::siteKey($siteKey);
 
         $publication = (new PublicationRepository($this->pdo))
-            ->findByPublicId($publicId);
+            ->findByPublicId($publicId, $siteKey);
         $partnerVisible = $publication !== null
             && $publication->status === PublicationStatus::Published
             && $publication->publishedAt !== null
@@ -412,12 +415,14 @@ final class PublicationService
             $statement = $this->pdo->prepare(
                 'UPDATE publications
                  SET status = :status, updated_at = :updated_at
-                 WHERE public_id = :public_id'
+                 WHERE public_id = :public_id
+                   AND site_key = :site_key'
             );
             $statement->execute([
                 'status' => PublicationStatus::Withdrawn->value,
                 'updated_at' => $updatedAt,
                 'public_id' => $publicId,
+                'site_key' => $siteKey,
             ]);
 
             if ($partnerVisible && $publication !== null) {
