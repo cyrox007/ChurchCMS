@@ -150,7 +150,7 @@ final class PublicationPartnerTombstoneRepository
             ? 'updated_at > :updated_since'
             : '(updated_at > :updated_since
                 OR (
-                    updated_at = :updated_since
+                    updated_at = :same_updated_at
                     AND publication_public_id > :after_public_id
                 ))';
 
@@ -170,6 +170,10 @@ final class PublicationPartnerTombstoneRepository
         $statement->bindValue(':site_key', $siteKey);
         $statement->bindValue(':updated_since', $timestamp);
         if ($afterPublicId !== null) {
+            $statement->bindValue(
+                ':same_updated_at',
+                $timestamp,
+            );
             $statement->bindValue(
                 ':after_public_id',
                 $afterPublicId,
