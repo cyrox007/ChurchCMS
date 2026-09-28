@@ -10,6 +10,7 @@ use ChurchCMS\App\Middlewares\RequireAdminMiddleware;
 use ChurchCMS\App\Services\AdminNavigationRegistry;
 use ChurchCMS\Core\ModuleRuntimeProvider;
 use ChurchCMS\Core\Router;
+use ChurchCMS\Modules\Organizations\FederationAdminController;
 use ChurchCMS\Modules\Organizations\FederationApiController;
 use ChurchCMS\Modules\Organizations\OrganizationAdminController;
 
@@ -23,7 +24,9 @@ foreach ([
     'FederationRepository.php',
     'OrganizationService.php',
     'FederationService.php',
+    'FederationDiscoveryClient.php',
     'OrganizationAdminController.php',
+    'FederationAdminController.php',
     'FederationApiController.php',
 ] as $file) {
     require_once $moduleRoot . '/' . $file;
@@ -48,6 +51,13 @@ return new class implements ModuleRuntimeProvider {
             route: 'admin_organizations',
             permission: 'organizations.manage',
             priority: 30,
+        );
+        AdminNavigationRegistry::register(
+            id: 'federation',
+            label: 'Связи',
+            route: 'admin_federation',
+            permission: 'settings.manage',
+            priority: 35,
         );
 
         $router = Router::getInstance();
@@ -100,6 +110,35 @@ return new class implements ModuleRuntimeProvider {
             [OrganizationAdminController::class, 'restore'],
             [RequireAdminMiddleware::class, CsrfMiddleware::class],
             'admin_organization_restore',
+        );
+
+        $router->add(
+            'GET',
+            '/admin/federation',
+            [FederationAdminController::class, 'index'],
+            [RequireAdminMiddleware::class],
+            'admin_federation',
+        );
+        $router->add(
+            'POST',
+            '/admin/federation/discover',
+            [FederationAdminController::class, 'discover'],
+            [RequireAdminMiddleware::class, CsrfMiddleware::class],
+            'admin_federation_discover',
+        );
+        $router->add(
+            'POST',
+            '/admin/federation/connect',
+            [FederationAdminController::class, 'connect'],
+            [RequireAdminMiddleware::class, CsrfMiddleware::class],
+            'admin_federation_connect',
+        );
+        $router->add(
+            'POST',
+            '/admin/federation/{publicId}/revoke',
+            [FederationAdminController::class, 'revoke'],
+            [RequireAdminMiddleware::class, CsrfMiddleware::class],
+            'admin_federation_revoke',
         );
 
         $router->add(

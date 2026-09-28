@@ -10,6 +10,7 @@ on:
       - 'config/app.php'
       - 'install.php'
       - 'modules/organizations/**'
+      - 'themes/default/templates/admin/federation/**'
       - 'tools/organization-federation-smoke.php'
       - '.github/workflows/organization-federation-smoke.yml'
   pull_request:
@@ -21,6 +22,7 @@ on:
       - 'config/app.php'
       - 'install.php'
       - 'modules/organizations/**'
+      - 'themes/default/templates/admin/federation/**'
       - 'tools/organization-federation-smoke.php'
       - '.github/workflows/organization-federation-smoke.yml'
 
@@ -54,7 +56,7 @@ jobs:
         uses: shivammathur/setup-php@v2
         with:
           php-version: '8.3'
-          extensions: pdo, pdo_pgsql, openssl, mbstring
+          extensions: pdo, pdo_pgsql, openssl, mbstring, curl
           coverage: none
 
       - name: Проверить PHP и installer
@@ -66,6 +68,7 @@ jobs:
           find modules/organizations -type f -name '*.php' -print0 \
             | xargs -0 -n1 php -l
           php -l tools/organization-federation-smoke.php
+          php -l themes/default/templates/admin/federation/index.php
           php bin/migrate.php validate
 
       - name: Подготовить тестовую установку
@@ -92,6 +95,7 @@ jobs:
               'federation' => [
                   'enabled' => true,
                   'instance_id' => '50000000-0000-4000-8000-000000000005',
+                  'allow_private_discovery' => true,
               ],
               'database' => [
                   'driver' => 'pgsql',
@@ -118,6 +122,8 @@ jobs:
           sleep 1
 
           php -r '
+          require "core.php";
+
           $raw = file_get_contents(
               "http://127.0.0.1:8099/api/v1/federation/meta"
           );
@@ -160,5 +166,88 @@ jobs:
               exit(1);
           }
 
-          echo "Federation discovery smoke OK\n";
+          $discovery = (new \ChurchCMS\Modules\Organizations\FederationDiscoveryClient())
+              ->discover("http://127.0.0.1:8099");
+
+          foreach ([
+              "http://operator:secret@127.0.0.1:8099",
+              "http://127.0.0.1:8099?token=secret",
+              "http://127.0.0.1:8099#metadata",
+          ] as $unsafeBaseUrl) {
+              try {
+                  (new \ChurchCMS\Modules\Organizations\FederationDiscoveryClient())
+                      ->discover($unsafeBaseUrl);
+                  fwrite(
+                      STDERR,
+                      "Federation discovery разрешил URL с userinfo/query/fragment.\n",
+                  );
+                  exit(1);
+              } catch (\InvalidArgumentException) {
+              }
+          }
+
+          if (
+              ($discovery["instance_id"] ?? null)
+                  !== "50000000-0000-4000-8000-000000000005"
+              || ($discovery["organization"]["name"] ?? null)
+                  !== "Тестовая епархия"
+              || ($discovery["base_url"] ?? null)
+                  !== "http://127.0.0.1:8099"
+          ) {
+              fwrite(STDERR, "Federation discovery client потерял identity.\n");
+              exit(1);
+          }
+
+          $entries = \ChurchCMS\App\Services\AdminNavigationRegistry::entries();
+          $federationEntry = null;
+          foreach ($entries as $entry) {
+              if (($entry["id"] ?? null) === "federation") {
+                  $federationEntry = $entry;
+                  break;
+              }
+          }
+
+          if (
+              !is_array($federationEntry)
+              || ($federationEntry["route"] ?? null)
+                  !== "admin_federation"
+              || ($federationEntry["permission"] ?? null)
+                  !== "settings.manage"
+          ) {
+              fwrite(STDERR, "Federation wizard не зарегистрирован в Admin Shell.\n");
+              exit(1);
+          }
+
+          $renderer = \ChurchCMS\Core\ThemeRenderer::fromConfig();
+          $html = $renderer->capture(
+              "admin.federation.index",
+              [
+                  "links" => \ChurchCMS\Modules\Organizations\FederationRepository::fromDatabase()->links(),
+                  "organizations" => \ChurchCMS\Modules\Organizations\OrganizationRepository::fromDatabase()->tree(),
+                  "preview" => $discovery,
+                  "federationError" => null,
+                  "federationForm" => [
+                      "remote_base_url" => $discovery["base_url"],
+                  ],
+                  "federationStatus" => null,
+              ],
+          );
+
+          foreach ([
+              "Связи между самостоятельными сайтами",
+              "name=\"remote_base_url\"",
+              "name=\"local_organization_public_id\"",
+              "Создать связь",
+              "Отозвать доверие",
+          ] as $expected) {
+              if (!str_contains($html, $expected)) {
+                  fwrite(
+                      STDERR,
+                      "Federation wizard не содержит: {$expected}\n",
+                  );
+                  exit(1);
+              }
+          }
+
+          echo "Federation discovery + pairing UI smoke OK\n";
           '

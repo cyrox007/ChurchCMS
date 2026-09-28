@@ -37,6 +37,12 @@ Implemented:
 - federation link содержит remote instance/root IDs, URL, status, sync cursor, inbound/outbound scopes и encrypted outbound credential;
 - организационное подчинение не создаёт federation link и не выдаёт remote admin access;
 - `GET /api/v1/federation/meta` публикует безопасную discovery-информацию без credentials и внутренних DB ID;
+- Admin Shell содержит отдельный раздел «Связи» с правом `settings.manage` и двухшаговым federation pairing;
+- мастер сначала выполняет discovery и показывает identity удалённого узла, а непосредственно перед сохранением повторяет discovery и не доверяет hidden-полям формы;
+- публичный discovery разрешён только по HTTPS; частные/локальные адреса по умолчанию запрещены и включаются явной настройкой `federation.allow_private_discovery` для закрытой сети;
+- DNS-адрес проверяется до запроса, смешанные public/private ответы и link-local/служебные адреса отклоняются;
+- revoke переводит связь в `revoked`, очищает encrypted credential и sync cursor, но сохраняет запись для аудита и безопасного переподключения;
+- повторное pairing ранее отозванного instance ID переиспользует существующий federation link вместо создания дубля;
 - Admin Shell содержит раздел «Структура» с отдельным правом `organizations.manage`;
 - администратор может создавать благочиния, приходы, монастыри, отделы, комиссии и другие типы, менять родителя/slug/порядок и описание;
 - при изменении slug или родителя canonical path всего поддерева пересчитывается транзакционно;
@@ -55,7 +61,6 @@ Implemented:
 
 Дальше:
 
-- безопасный pairing/revoke workflow;
 - выбор publication owner в Admin Shell с organization-scoped RBAC и ownership для Worship/Events/Media/Documents;
 - Admin/public/API слой People и расширенные сведения о духовенстве;
 - incremental aggregation/sync с canonical ownership и tombstones.
