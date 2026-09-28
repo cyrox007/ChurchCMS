@@ -269,9 +269,10 @@ nullable до явного назначения владельца.
 
 Pages используют тот же invariant `(site_key, owner_organization_public_id)`.
 Новая страница получает site root владельцем, а domain service позволяет
-назначить активную локальную organization unit. Публичная/Admin/API проекция и
-organization-scoped выбор владельца будут добавлены вместе с вертикальным
-срезом Pages.
+назначить активную локальную organization unit. Public API страниц возвращает
+stable `organization_owner_id`, `parent_id` и canonical `path`, не раскрывая
+внутренние DB ID. Выбор владельца в Admin Shell, публичный HTML и
+organization-scoped RBAC остаются следующим вертикальным срезом Pages.
 
 ## Источники исследования
 
