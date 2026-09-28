@@ -289,6 +289,150 @@ final class FederationService
     }
 
     /**
+     * Фиксирует результат успешного discovery и проверяет неизменность
+     * постоянной identity удалённого узла.
+     *
+     * @return 'active'|'conflict'
+     */
+    public function recordHealthSuccess(
+        string $publicId,
+        string $remoteInstanceId,
+        string $remoteOrganizationPublicId,
+        ?string $remoteProfile = null,
+        ?string $remoteName = null,
+        string $siteKey = 'default',
+    ): string {
+        $link = $this->mutableLink(
+            $publicId,
+            $siteKey,
+        );
+
+        self::assertUuid(
+            $remoteInstanceId,
+            'remote instance ID',
+        );
+        self::assertUuid(
+            $remoteOrganizationPublicId,
+            'remote organization ID',
+        );
+
+        $now = gmdate('Y-m-d H:i:s');
+        $identityMatches = hash_equals(
+            strtolower($link->remoteInstanceId),
+            strtolower($remoteInstanceId),
+        ) && hash_equals(
+            strtolower($link->remoteOrganizationPublicId),
+            strtolower($remoteOrganizationPublicId),
+        );
+
+        if (!$identityMatches) {
+            $statement = $this->pdo->prepare(
+                'UPDATE organization_federation_links
+                 SET status = :status,
+                     last_seen_at = :last_seen_at,
+                     last_error = :last_error,
+                     updated_at = :updated_at
+                 WHERE id = :id'
+            );
+            $statement->execute([
+                'status' => 'conflict',
+                'last_seen_at' => $now,
+                'last_error' =>
+                    'Удалённый узел вернул другую постоянную identity.',
+                'updated_at' => $now,
+                'id' => $link->id,
+            ]);
+
+            return 'conflict';
+        }
+
+        $statement = $this->pdo->prepare(
+            'UPDATE organization_federation_links
+             SET status = :status,
+                 remote_profile = :remote_profile,
+                 remote_name = :remote_name,
+                 last_seen_at = :last_seen_at,
+                 last_error = NULL,
+                 updated_at = :updated_at
+             WHERE id = :id'
+        );
+        $statement->execute([
+            'status' => 'active',
+            'remote_profile' => self::optional(
+                $remoteProfile,
+                64,
+            ),
+            'remote_name' => self::optional(
+                $remoteName,
+                255,
+            ),
+            'last_seen_at' => $now,
+            'updated_at' => $now,
+            'id' => $link->id,
+        ]);
+
+        return 'active';
+    }
+
+    /**
+     * Фиксирует безопасное сообщение о неуспешной проверке связи.
+     * Credential, scopes и sync cursor при этом не изменяются.
+     */
+    public function recordHealthFailure(
+        string $publicId,
+        string $message = 'Удалённый узел недоступен или вернул некорректный discovery-ответ.',
+        string $siteKey = 'default',
+    ): void {
+        $link = $this->mutableLink(
+            $publicId,
+            $siteKey,
+        );
+        $message = trim($message);
+
+        if ($message === '' || strlen($message) > 500) {
+            $message = 'Удалённый узел недоступен или вернул некорректный discovery-ответ.';
+        }
+
+        $statement = $this->pdo->prepare(
+            'UPDATE organization_federation_links
+             SET status = :status,
+                 last_error = :last_error,
+                 updated_at = :updated_at
+             WHERE id = :id'
+        );
+        $statement->execute([
+            'status' => 'error',
+            'last_error' => $message,
+            'updated_at' => gmdate('Y-m-d H:i:s'),
+            'id' => $link->id,
+        ]);
+    }
+
+    private function mutableLink(
+        string $publicId,
+        string $siteKey,
+    ): FederationLink {
+        $link = $this->links->findByPublicId(
+            trim($publicId),
+            $siteKey,
+        );
+
+        if ($link === null) {
+            throw new InvalidArgumentException(
+                'Federation link не найден.'
+            );
+        }
+
+        if ($link->status === 'revoked') {
+            throw new InvalidArgumentException(
+                'Отозванную federation-связь нельзя проверять.'
+            );
+        }
+
+        return $link;
+    }
+
+    /**
      * @param list<string> $values
      * @return list<string>
      */

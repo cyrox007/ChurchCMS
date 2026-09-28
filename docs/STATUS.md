@@ -43,6 +43,10 @@ Implemented:
 - DNS-адрес проверяется до запроса, смешанные public/private ответы и link-local/служебные адреса отклоняются;
 - revoke переводит связь в `revoked`, очищает encrypted credential и sync cursor, но сохраняет запись для аудита и безопасного переподключения;
 - повторное pairing ранее отозванного instance ID переиспользует существующий federation link вместо создания дубля;
+- Admin Shell позволяет вручную проверить состояние неотозванной federation-связи без передачи сохранённого credential в discovery;
+- совпадение постоянных remote instance/organization ID переводит связь в `active`, сетевой/протокольный сбой — в `error`, а смена identity — в `conflict`;
+- `last_seen_at` и безопасный `last_error` показываются оператору; повторная проверка служит штатным retry и не меняет scopes, credential или sync cursor;
+- health-переходы записываются в audit log, а PostgreSQL smoke проверяет success/error/conflict/retry и сохранность credential;
 - Admin Shell содержит раздел «Структура» с отдельным правом `organizations.manage`;
 - администратор может создавать благочиния, приходы, монастыри, отделы, комиссии и другие типы, менять родителя/slug/порядок и описание;
 - при изменении slug или родителя canonical path всего поддерева пересчитывается транзакционно;
@@ -226,11 +230,12 @@ Implemented:
 - список владельцев, родительские страницы и изменяющие действия не выходят за доступную ветку; операции над поддеревом требуют доступа ко всем затрагиваемым узлам;
 - содержимое, родитель, canonical path, порядок и владелец сохраняются атомарно;
 - PostgreSQL smoke проверяет create/rename/move/cycle/collision/rollback, publish/unpublish, API/Admin projection, маршруты и границы RBAC; общий MySQL runtime проверяет schema compatibility.
+- опубликованные страницы доступны по canonical path, включая вложенные wildcard-маршруты; черновики публично не выдаются;
+- публичный HTML получает canonical/meta, хлебные крошки и стабильный URL из Page API; профильный smoke покрывает canonical routing.
 
 Next:
 
-- публичный HTML по canonical path;
-- menu integration после стабилизации публичного Pages contract.
+- menu integration на основе стабилизированного публичного Pages contract.
 
 ## Comments
 

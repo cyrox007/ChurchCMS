@@ -135,6 +135,14 @@ return new class implements ModuleRuntimeProvider {
         );
         $router->add(
             'POST',
+            '/admin/federation/{publicId}/check',
+            [FederationAdminController::class, 'check'],
+            [RequireAdminMiddleware::class, CsrfMiddleware::class],
+            'admin_federation_check',
+        );
+
+        $router->add(
+            'POST',
             '/admin/federation/{publicId}/revoke',
             [FederationAdminController::class, 'revoke'],
             [RequireAdminMiddleware::class, CsrfMiddleware::class],

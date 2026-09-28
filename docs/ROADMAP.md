@@ -29,7 +29,7 @@ Status: in progress.
 - [x] Unified Admin Shell for non-technical operators.
 - [x] Admin navigation/search/notifications foundation.
 - [ ] Публикации (основной процесс, public/admin/API/синдикация, категории/теги и отложенная публикация реализованы; остаются ревизии и связь с Media).
-- [ ] Pages/content tree (schema, domain, public API and organization-scoped Admin Shell implemented; public HTML pending).
+- [x] Pages/content tree (schema, domain, public API, organization-scoped Admin Shell and public canonical HTML implemented).
 - [ ] Navigation/menu.
 - [ ] Media library.
 - [ ] People/clergy (основа схемы, доменного слоя и организационных связей назначений реализована; Admin Shell, публичная часть и API остаются).
@@ -96,7 +96,7 @@ Status: in progress.
 - [x] Organization-scoped RBAC enforcement.
 - [ ] Organization ownership/references для Publications/Pages/People/Worship/Events/Media/Documents (Publications Admin/RBAC, Pages Admin/API RBAC и foundation People/назначений реализованы; Worship/Events/Media/Documents остаются).
 - [ ] Parent/child aggregation и remote projections/tombstones.
-- [ ] Federation health/sync dashboard.
+- [ ] Federation health/sync dashboard (health/retry/conflict UI implemented; sync progress/metrics dashboard pending).
 
 ## Cross-cutting — External channels
 

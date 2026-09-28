@@ -25,20 +25,20 @@ Priority is ordered within each section.
 - [x] Admin CRUD дерева организаций, отделов и комиссий;
 - [x] pairing wizard между ChurchCMS-узлами с discovery, подтверждением и отзывом доверия;
 - [x] organization scopes в RBAC и проверяемое наследование вниз по дереву;
-- [ ] привязка Publications/Pages к organization owner;
+- [x] привязка Publications/Pages к organization owner;
   - [x] Publications: nullable migration/backfill, default site-root owner, проверка site boundary и stable public ID в API;
   - [x] Publications: выбор owner в Admin Shell с organization-scoped RBAC;
   - [x] Pages: nullable migration/backfill, default site-root owner и проверка site boundary в domain/service;
-  - [ ] Pages: Admin/public/API vertical slice с organization-scoped RBAC;
+  - [x] Pages: Admin/public/API vertical slice с organization-scoped RBAC;
     - [x] безопасный publish/unpublish поддерева и public API projection с `organization_owner_id`;
     - [x] выбор owner, дерево и publish/unpublish в Admin Shell с organization-scoped RBAC;
-    - [ ] публичный HTML по canonical path;
+    - [x] публичный HTML по canonical path;
 - [ ] привязка People/назначений, Worship, Events, Media и Documents к organization unit;
   - [x] People/назначения: основа схемы и доменного слоя, обязательный владелец-организация карточки и отдельная ссылка на организацию каждого назначения;
   - [ ] Worship, Events, Media и Documents: organization binding;
 - [ ] incremental federation sync с canonical owner и tombstones;
 - [ ] агрегированные ленты вышестоящих узлов без потери источника;
-- [ ] federation health/retry/conflict UI.
+- [x] federation health/retry/conflict UI.
 
 ## P0 — Installation and operator UX
 
@@ -100,10 +100,10 @@ Priority is ordered within each section.
 
 ## P1 — Content
 
-- [ ] content tree/pages;
+- [x] content tree/pages;
   - [x] PostgreSQL/MySQL schema foundation with stable public IDs, site-scoped canonical paths, parent links and ordered-tree indexes;
   - [x] domain repository/service and safe subtree moves;
-  - [ ] public/admin/API vertical slice (Admin Shell и API реализованы; публичный HTML остаётся);
+  - [x] public/admin/API vertical slice;
 - [x] publication categories/tags with site-scoped normalized storage, editor fields, public/API/syndication projections and PostgreSQL/MySQL smoke coverage;
 - menus;
 - content revisions;

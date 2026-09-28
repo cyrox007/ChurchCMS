@@ -33,6 +33,14 @@ $relationLabels = [
     'child' => 'Нижестоящий узел',
     'peer' => 'Равноправный узел',
 ];
+
+$statusLabels = [
+    'pending' => 'Ожидает проверки',
+    'active' => 'Доступен',
+    'error' => 'Ошибка связи',
+    'conflict' => 'Конфликт identity',
+    'revoked' => 'Доверие отозвано',
+];
 ?>
 <section class="admin-shell">
     <header class="admin-heading">
@@ -296,8 +304,15 @@ $relationLabels = [
                                     $relationLabels[$link->relation]
                                     ?? $link->relation
                                 ) ?></span>
-                                <span class="status-pill<?= $link->status === 'revoked' ? ' status-pill--withdrawn' : '' ?>">
-                                    <?= $theme->e($link->status) ?>
+                                <span class="status-pill<?= in_array(
+                                    $link->status,
+                                    ['revoked', 'error', 'conflict'],
+                                    true,
+                                ) ? ' status-pill--withdrawn' : '' ?>">
+                                    <?= $theme->e(
+                                        $statusLabels[$link->status]
+                                        ?? $link->status
+                                    ) ?>
                                 </span>
                             </div>
 
@@ -340,41 +355,82 @@ $relationLabels = [
                                     ) ?>
                                 </p>
                             <?php endif; ?>
+
+                            <p>
+                                Последний ответ discovery:
+                                <?= $theme->e(
+                                    $link->lastSeenAt
+                                    ?? 'ещё не получен'
+                                ) ?>
+                            </p>
+
+                            <?php if ($link->lastError !== null): ?>
+                                <p>
+                                    <strong>Состояние:</strong>
+                                    <?= $theme->e($link->lastError) ?>
+                                </p>
+                            <?php endif; ?>
+
+                            <?php if ($link->syncCursor !== null): ?>
+                                <small>
+                                    Курсор синхронизации сохранён.
+                                </small>
+                            <?php endif; ?>
                         </div>
 
                         <?php if ($link->status !== 'revoked'): ?>
-                            <form
-                                method="post"
-                                action="<?= $theme->e(
-                                    $theme->route(
-                                        'admin_federation_revoke',
-                                        ['publicId' => $link->publicId],
-                                    )
-                                ) ?>"
-                            >
-                                <?= $theme->csrfInput() ?>
-
-                                <label class="field">
-                                    <span>
-                                        <input
-                                            type="checkbox"
-                                            name="confirm_link"
-                                            value="<?= $theme->e(
-                                                $link->publicId
-                                            ) ?>"
-                                            required
-                                        >
-                                        Подтверждаю отзыв доверия
-                                    </span>
-                                </label>
-
-                                <button
-                                    class="button button--quiet"
-                                    type="submit"
+                            <div>
+                                <form
+                                    method="post"
+                                    action="<?= $theme->e(
+                                        $theme->route(
+                                            'admin_federation_check',
+                                            ['publicId' => $link->publicId],
+                                        )
+                                    ) ?>"
                                 >
-                                    Отозвать доверие
-                                </button>
-                            </form>
+                                    <?= $theme->csrfInput() ?>
+                                    <button
+                                        class="button button--primary"
+                                        type="submit"
+                                    >
+                                        Проверить состояние
+                                    </button>
+                                </form>
+
+                                <form
+                                    method="post"
+                                    action="<?= $theme->e(
+                                        $theme->route(
+                                            'admin_federation_revoke',
+                                            ['publicId' => $link->publicId],
+                                        )
+                                    ) ?>"
+                                >
+                                    <?= $theme->csrfInput() ?>
+
+                                    <label class="field">
+                                        <span>
+                                            <input
+                                                type="checkbox"
+                                                name="confirm_link"
+                                                value="<?= $theme->e(
+                                                    $link->publicId
+                                                ) ?>"
+                                                required
+                                            >
+                                            Подтверждаю отзыв доверия
+                                        </span>
+                                    </label>
+
+                                    <button
+                                        class="button button--quiet"
+                                        type="submit"
+                                    >
+                                        Отозвать доверие
+                                    </button>
+                                </form>
+                            </div>
                         <?php endif; ?>
                     </article>
                 <?php endforeach; ?>
