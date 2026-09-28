@@ -41,7 +41,7 @@ final class OperationsService
      *     }>,
      *     packages:list<array{
      *         id:string,version:string,files:int,deleted_files:int,
-     *         code_only:bool,ready:bool
+     *         code_only:bool,ready:bool,signature_key_id:string
      *     }>,
      *     warnings:list<string>
      * }
@@ -108,7 +108,8 @@ final class OperationsService
 
     /**
      * @return array{
-     *     id:string,version:string,backup_id:string,files:int,deleted_files:int
+     *     id:string,version:string,backup_id:string,files:int,deleted_files:int,
+     *     signature_key_id:string
      * }
      */
     public function applyUpdate(string $stageId): array
