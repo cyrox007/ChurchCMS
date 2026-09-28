@@ -30,6 +30,7 @@ foreach ([
     'Publication.php',
     'PublicationRepository.php',
     'PublicationPartnerTombstoneRepository.php',
+    'PublicationPartnerTombstoneApiResource.php',
     'PublicationTaxonomyRepository.php',
     'PublicationTaxonomyService.php',
     'PublicationService.php',
