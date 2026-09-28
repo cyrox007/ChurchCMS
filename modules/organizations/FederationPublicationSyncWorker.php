@@ -94,20 +94,6 @@ final class FederationPublicationSyncWorker
                     'ChurchCMS federation sync публикаций: '
                     . $error->getMessage()
                 );
-
-                try {
-                    $this->links->recordSyncFailure(
-                        $link->id,
-                        'Синхронизация публикаций не выполнена. '
-                        . 'Повторите попытку после проверки связи.',
-                    );
-                } catch (Throwable $storageError) {
-                    error_log(
-                        'ChurchCMS не сохранила ошибку federation sync: '
-                        . $storageError->getMessage()
-                    );
-                }
-
                 $result['failed']++;
             }
         }
@@ -126,6 +112,45 @@ final class FederationPublicationSyncWorker
         FederationLink $link,
         int $pageSize,
     ): array {
+        $storedCursor = $link->syncCursor;
+
+        try {
+            return $this->syncLinkPages(
+                $link,
+                $pageSize,
+                $storedCursor,
+            );
+        } catch (Throwable $error) {
+            try {
+                $this->links->recordSyncFailure(
+                    $link->id,
+                    'Синхронизация публикаций не выполнена. '
+                    . 'Повторите попытку после проверки связи.',
+                    $storedCursor,
+                );
+            } catch (Throwable $storageError) {
+                error_log(
+                    'ChurchCMS не сохранила ошибку federation sync: '
+                    . $storageError->getMessage()
+                );
+            }
+
+            throw $error;
+        }
+    }
+
+    /**
+     * @return array{
+     *     projections:int,
+     *     tombstones:int,
+     *     pending:bool
+     * }
+     */
+    private function syncLinkPages(
+        FederationLink $link,
+        int $pageSize,
+        ?string &$storedCursor,
+    ): array {
         $token = $this->links->outboundToken($link->id);
         if ($token === null) {
             throw new RuntimeException(
@@ -133,7 +158,6 @@ final class FederationPublicationSyncWorker
             );
         }
 
-        $storedCursor = $link->syncCursor;
         $cursor = self::decodeCursor(
             $storedCursor,
         );
@@ -163,12 +187,14 @@ final class FederationPublicationSyncWorker
         $cursor['publications'] =
             $publicationPage['cursor'];
         $publicationCursor = self::encodeCursor($cursor);
-        $this->links->saveSyncCursor(
-            $link->id,
-            $storedCursor,
-            $publicationCursor,
-        );
-        $storedCursor = $publicationCursor;
+        if ($publicationCursor !== $storedCursor) {
+            $this->links->saveSyncCursor(
+                $link->id,
+                $storedCursor,
+                $publicationCursor,
+            );
+            $storedCursor = $publicationCursor;
+        }
 
         $tombstonePage = $this->page(
             $link,
