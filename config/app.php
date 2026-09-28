@@ -56,6 +56,9 @@ return [
         // Постоянный ID конкретной установки генерируется installer в config/local.php.
         'instance_id' => '',
         'enabled' => true,
+        // Частные/локальные адреса discovery выключены по умолчанию как защита от SSRF.
+        // Для закрытой сети оператор может явно включить это в config/local.php.
+        'allow_private_discovery' => false,
     ],
     'seo' => [
         'default_description' => '',
