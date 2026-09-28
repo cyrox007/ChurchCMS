@@ -41,7 +41,7 @@ final class OperationsService
      *     }>,
      *     packages:list<array{
      *         id:string,version:string,files:int,deleted_files:int,
-     *         code_only:bool,ready:bool
+     *         code_only:bool,ready:bool,trusted:bool,trusted_key_id:?string
      *     }>,
      *     warnings:list<string>
      * }
