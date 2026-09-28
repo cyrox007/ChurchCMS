@@ -64,6 +64,22 @@ final class OperationsService
             $warnings[] = 'Каталог подготовленных обновлений сейчас недоступен.';
         }
 
+        $trustedKeys = Config::get(
+            'operations.update_trusted_public_keys',
+            [],
+        );
+        $hasTrustedKey = is_array($trustedKeys)
+            && array_filter(
+                $trustedKeys,
+                static fn(mixed $key): bool =>
+                    is_string($key) && trim($key) !== '',
+            ) !== [];
+
+        if (!$hasTrustedKey) {
+            $warnings[] = 'Не настроен доверенный публичный ключ релизов. '
+                . 'Проверка и применение обновлений заблокированы.';
+        }
+
         return [
             'health' => (new InstallationHealthCheck(
                 $this->database,
