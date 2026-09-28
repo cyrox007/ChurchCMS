@@ -37,6 +37,8 @@ Priority is ordered within each section.
   - [x] People/назначения: основа схемы и доменного слоя, обязательный владелец-организация карточки и отдельная ссылка на организацию каждого назначения;
   - [ ] Worship, Events, Media и Documents: organization binding;
 - [ ] incremental federation sync с canonical owner и tombstones;
+  - [x] Publications: устойчивый tombstone при снятии ранее опубликованного материала с target `diocese` и отдельный partner endpoint;
+  - [ ] remote projections, применение tombstone на принимающем узле и общий sync worker;
 - [ ] агрегированные ленты вышестоящих узлов без потери источника;
 - [x] federation health/retry/conflict UI.
 

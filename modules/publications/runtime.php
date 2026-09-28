@@ -29,6 +29,8 @@ foreach ([
     'PublicationType.php',
     'Publication.php',
     'PublicationRepository.php',
+    'PublicationPartnerTombstoneRepository.php',
+    'PublicationPartnerTombstoneApiResource.php',
     'PublicationTaxonomyRepository.php',
     'PublicationTaxonomyService.php',
     'PublicationService.php',
@@ -196,6 +198,19 @@ return new class implements ModuleRuntimeProvider {
                 ApiPartnerRateLimitMiddleware::class,
             ],
             'api_v1_partner_publications',
+        );
+
+        $router->add(
+            'GET',
+            '/api/v1/partner/publications/tombstones',
+            [PublicationsApiController::class, 'partnerTombstones'],
+            [
+                ApiEnabledMiddleware::class,
+                ApiCorsMiddleware::class,
+                PartnerApiMiddleware::class,
+                ApiPartnerRateLimitMiddleware::class,
+            ],
+            'api_v1_partner_publication_tombstones',
         );
     }
 };

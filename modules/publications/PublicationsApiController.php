@@ -112,6 +112,96 @@ final class PublicationsApiController
         ]);
     }
 
+    public function partnerTombstones(Request $request): never
+    {
+        ApiAccess::requireScope($request, 'content.read');
+
+        $limit = max(
+            1,
+            min(100, (int) $request->get('limit', 100)),
+        );
+        $updatedSinceRaw = trim(
+            (string) $request->get('updated_since', '')
+        );
+        $afterPublicId = trim(
+            (string) $request->get('after', '')
+        );
+        $afterPublicId = $afterPublicId !== ''
+            ? $afterPublicId
+            : null;
+
+        if (
+            $afterPublicId !== null
+            && preg_match(
+                '/^[a-f0-9]{8}-[a-f0-9]{4}-4[a-f0-9]{3}-[89ab][a-f0-9]{3}-[a-f0-9]{12}$/Di',
+                $afterPublicId,
+            ) !== 1
+        ) {
+            ApiResponse::error(
+                'invalid_tombstone_cursor',
+                'after должен содержать корректный public ID публикации.',
+                400,
+            );
+        }
+
+        if ($updatedSinceRaw === '') {
+            $updatedSince = new DateTimeImmutable(
+                '1970-01-01T00:00:00Z',
+            );
+        } else {
+            try {
+                $updatedSince = new DateTimeImmutable(
+                    $updatedSinceRaw,
+                );
+            } catch (Exception) {
+                ApiResponse::error(
+                    'invalid_updated_since',
+                    'updated_since must be a valid ISO-8601 timestamp.',
+                    400,
+                );
+            }
+        }
+
+        $tombstones = PublicationPartnerTombstoneRepository::fromDatabase()
+            ->updatedSince(
+                $updatedSince,
+                'default',
+                $limit,
+                $afterPublicId,
+            );
+
+        $items = array_map(
+            static fn(array $tombstone): array =>
+                (new PublicationPartnerTombstoneApiResource(
+                    $tombstone,
+                ))->toApiArray(),
+            $tombstones,
+        );
+
+        $nextUpdatedSince = null;
+        $nextAfter = null;
+        if ($tombstones !== []) {
+            $last = $tombstones[array_key_last($tombstones)];
+            $nextUpdatedSince = $last['updated_at']
+                ->setTimezone(new \DateTimeZone('UTC'))
+                ->format(DATE_ATOM);
+            $nextAfter = $last['publication_public_id'];
+        }
+
+        ApiResponse::success($items, [
+            'sync' => [
+                'updated_since' => $updatedSinceRaw !== ''
+                    ? $updatedSinceRaw
+                    : null,
+                'next_updated_since' => $nextUpdatedSince,
+                'next_after' => $nextAfter,
+                'limit' => $limit,
+                'has_more' => count($tombstones) === $limit,
+            ],
+            'partner' => ApiAccess::partnerId($request),
+        ]);
+    }
+
     /**
      * @param list<Publication> $publications
      * @return list<array<string,mixed>>

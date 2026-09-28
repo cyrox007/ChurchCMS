@@ -13,11 +13,13 @@ on:
       - 'modules/publications/PublicationTaxonomyRepository.php'
       - 'modules/publications/PublicationTaxonomyService.php'
       - 'modules/publications/PublicationRepository.php'
+      - 'modules/publications/PublicationPartnerTombstoneRepository.php'
       - 'modules/pages/PageService.php'
       - 'modules/pages/PageRepository.php'
       - 'modules/organizations/**'
       - 'modules/people/**'
       - 'tools/publication-organization-owner-smoke.php'
+      - 'tools/publication-partner-tombstone-smoke.php'
       - 'tools/people-organization-smoke.php'
       - 'tools/page-organization-owner-smoke.php'
       - '.github/workflows/mysql-runtime-smoke.yml'
@@ -33,12 +35,14 @@ on:
       - 'modules/publications/PublicationTaxonomyRepository.php'
       - 'modules/publications/PublicationTaxonomyService.php'
       - 'modules/publications/PublicationRepository.php'
+      - 'modules/publications/PublicationPartnerTombstoneRepository.php'
       - 'modules/pages/PageService.php'
       - 'modules/pages/PageRepository.php'
       - 'modules/organizations/**'
       - 'modules/people/**'
       - 'tools/people-organization-smoke.php'
       - 'tools/publication-organization-owner-smoke.php'
+      - 'tools/publication-partner-tombstone-smoke.php'
       - 'tools/page-organization-owner-smoke.php'
       - '.github/workflows/mysql-runtime-smoke.yml'
 
@@ -197,6 +201,9 @@ jobs:
 
           echo "MySQL runtime smoke OK\n";
           '
+
+      - name: Проверить tombstone partner-публикаций в MySQL
+        run: php tools/publication-partner-tombstone-smoke.php
 
       - name: Проверить organization owner публикации в MySQL
         run: php tools/publication-organization-owner-smoke.php

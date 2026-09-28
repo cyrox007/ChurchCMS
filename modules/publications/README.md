@@ -1,95 +1,104 @@
-# Publications module
+# Модуль публикаций
 
-Initial read-only public slice of the ChurchCMS publication domain.
+Модуль `publications` отвечает за редакционный цикл публикаций, публичную
+выдачу, API и передачу материалов внешним системам.
 
-## Current capabilities
+## Реализовано
 
-- publication workflow states;
-- publication types;
-- database migration;
-- internal write service;
-- safe rich HTML sanitization on draft creation;
-- published-list repository;
-- public site list/detail pages;
-- public API;
-- trusted partner incremental sync API;
-- syndication provider for RSS/aggregator targets;
-- стабильная ссылка на organization owner для локальной и федеративной атрибуции;
-- выбор активного organization owner в Admin Shell с ограничением списка и
-  действий по scope разрешений `publications.read/create/edit/publish`;
-- per-publication `comments_enabled` toggle, disabled by default.
+- статусы и типы публикаций;
+- создание и редактирование через внутренний сервис;
+- очистка HTML при сохранении;
+- публичные список и карточка материала;
+- публичный API;
+- partner API с incremental-синхронизацией;
+- stable `organization_owner_id` для локальной и федеративной атрибуции;
+- категории и теги;
+- отложенная публикация;
+- включение/выключение комментариев для отдельного материала;
+- RSS/Rambler и явные targets распространения;
+- organization-scoped RBAC в Admin Shell;
+- tombstone-поток для снятых partner-публикаций.
 
-## Public routes
+## Публичные маршруты
 
 ```
 GET /publications
 GET /publications/{slug}
 ```
 
-Only records with:
+Публично видны только записи со статусом `published`, заполненным
+`published_at` и наступившим временем публикации.
 
-- `status = published`;
-- non-null `published_at`;
-- `published_at <= now`
-
-are visible.
-
-## API routes
+## API
 
 ```
 GET /api/v1/publications
 GET /api/v1/publications/{slug}
 GET /api/v1/partner/publications
+GET /api/v1/partner/publications/tombstones
 ```
 
-Partner sync requires the `content.read` scope.
+Partner-маршруты требуют scope `content.read`.
 
-`organization_owner_id` содержит stable public ID локальной organization unit,
-которая владеет материалом. Новый draft автоматически получает корневую
-организацию текущего сайта, если она создана. Сервис отклоняет владельца из
-другого `site_key` и архивную организацию. Legacy-строки могут временно
-оставаться без владельца до явного назначения.
-
-Ограниченная роль видит в списке, глобальном Admin-поиске, редакционных задачах
-и редакторе только публикации и организации своего поддерева. Создание,
-редактирование, смена статуса и смена владельца за границами scope завершаются
-отказом. Публикации без владельца доступны только роли с глобальным
-разрешением.
-
-Incremental sync:
+Основной incremental-поток:
 
 ```
 GET /api/v1/partner/publications?updated_since=2026-09-26T00:00:00Z
 ```
 
-## Syndication targets
+Tombstone-поток:
 
-A publication stores an explicit target list such as:
+```
+GET /api/v1/partner/publications/tombstones?updated_since=2026-09-26T00:00:00Z
+```
+
+Если ответ tombstone-потока содержит `has_more=true`, следующий запрос должен
+передать одновременно `next_updated_since` и `next_after`:
+
+```
+?updated_since=<next_updated_since>&after=<next_after>
+```
+
+`next_after` содержит stable public ID публикации и нужен только как
+tie-breaker для нескольких событий с одинаковой секундой `updated_at`.
+Внутренние числовые ID БД наружу не выдаются.
+
+При `withdraw()` ранее опубликованного материала с target `diocese`
+tombstone записывается в одной транзакции со сменой статуса. Повторный withdraw
+не создаёт дубликат. Материалы без partner target в этот поток не попадают.
+
+## Владение и области доступа
+
+`organization_owner_id` содержит stable public ID локальной organization unit,
+которая является каноническим владельцем материала. Новый draft по умолчанию
+получает корневую организацию текущего `site_key`, если она существует.
+
+Сервис отклоняет владельца из другого сайта и архивную организацию.
+Ограниченная роль видит и изменяет только публикации своего разрешённого
+поддерева. Legacy-записи без владельца доступны только глобальной роли.
+
+## Targets распространения
+
+Публикация хранит явный список, например:
 
 ```json
 ["rss", "diocese", "rambler"]
 ```
 
-The local publication workflow and external distribution are intentionally separate.
+Редакционный статус и внешнее распространение намеренно разделены.
 
-## Write access
+## Запись
 
-`PublicationService` already supports internal draft creation, publication, withdrawal, syndication-target changes and enabling/disabling comments per publication.
+`PublicationService` поддерживает создание draft, редактирование, публикацию,
+снятие с публикации, планирование, изменение targets, владельца и настройки
+комментариев.
 
-No HTTP write routes are exposed yet.
+Публичных HTTP-маршрутов записи нет. Изменяющие действия выполняются через
+Admin Shell с аутентификацией, RBAC, CSRF и audit log.
 
-They must not be added until ChurchCMS has:
+## Контракт темы
 
-- administrator authentication;
-- RBAC;
-- CSRF protection;
-- audit logging.
-
-This prevents an insecure temporary admin API from becoming part of the product.
-
-## Theme contracts
-
-The module currently expects:
+Модуль использует:
 
 ```
 publication.index
@@ -97,15 +106,11 @@ publication.show
 layout.article
 ```
 
-A child theme can override any of them.
+Дочерняя тема может переопределить эти шаблоны.
 
-## Planned next steps
+## Следующие задачи
 
-- categories/tags;
-- revisions;
-- scheduled publication execution;
-- editor/admin UI after Auth/RBAC;
-- stable tombstones for partner sync;
-- media/cover relation;
-- SEO metadata;
-- syndication export log and target-specific overrides.
+- ревизии/история изменений;
+- связь с Media/cover;
+- полноценный federation sync worker и remote projections;
+- журнал фактического экспорта по внешним targets.

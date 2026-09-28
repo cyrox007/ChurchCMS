@@ -209,11 +209,52 @@ The contract will use UTC ISO-8601 timestamps.
 
 A later phase may add cursor-based sync for large installations.
 
-## Deletions
+## Удаления и tombstone публикаций
 
-Consumers also need to know when syndicated content was withdrawn.
+Агрегатору недостаточно получать только текущие опубликованные материалы:
+после снятия публикации источник должен явно сообщить, что ранее
+синхронизированную запись нужно убрать.
 
-The API design therefore reserves a deletion/tombstone mechanism so an external site can remove a previously synchronized publication instead of keeping stale copies forever.
+Для публикаций доступен отдельный partner endpoint:
+
+```
+GET /api/v1/partner/publications/tombstones?updated_since=2026-09-26T00:00:00Z
+```
+
+Он требует scope `content.read` и возвращает только минимальный delete-проектор:
+
+```json
+{
+  "action": "delete",
+  "id": "stable-publication-id",
+  "organization_owner_id": "stable-organization-public-id",
+  "reason": "withdrawn",
+  "deleted_at": "2026-09-28T13:00:00+00:00",
+  "updated_at": "2026-09-28T13:00:00+00:00"
+}
+```
+
+Tombstone создаётся только для материала, который на момент снятия имел
+статус `published` и target `diocese`. Запись tombstone выполняется в одной
+транзакции со сменой статуса публикации. Повторный `withdraw` не создаёт
+дубликат.
+
+Tombstone хранится отдельно от основной публикации. Поэтому последующее
+редактирование или повторная публикация не стирают факт предыдущего удаления.
+При объединении обычного incremental-потока и tombstone-потока принимающая
+сторона должна сравнивать `updated_at` и применять более новое состояние.
+
+Чтобы не потерять несколько tombstone с одинаковой секундой `updated_at`,
+ответ дополнительно содержит `meta.sync.next_after` — stable public ID
+последней записи страницы. Если `has_more=true`, следующий запрос должен
+передать одновременно оба значения:
+
+```
+?updated_since=<next_updated_since>&after=<next_after>
+```
+
+Внутренний числовой ID БД в курсор не попадает. Полноценный общий cursor-based
+sync для всех типов федеративных объектов остаётся следующим этапом.
 
 ## Response envelope
 
