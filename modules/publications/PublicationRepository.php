@@ -23,17 +23,27 @@ final class PublicationRepository
     /**
      * @return list<Publication>
      */
-    public function adminList(string $siteKey = 'default', int $limit = 100): array
-    {
+    public function adminList(
+        string $siteKey = 'default',
+        int $limit = 100,
+        ?array $ownerPublicIds = null,
+    ): array {
         $limit = max(1, min(200, $limit));
+        [$ownerSql, $ownerParameters] = self::ownerFilter(
+            $ownerPublicIds,
+        );
 
         $statement = $this->pdo->prepare(
             'SELECT * FROM publications
              WHERE site_key = :site_key
+             ' . $ownerSql . '
              ORDER BY updated_at DESC, id DESC
              LIMIT :limit'
         );
         $statement->bindValue(':site_key', $siteKey);
+        foreach ($ownerParameters as $parameter => $value) {
+            $statement->bindValue($parameter, $value);
+        }
         $statement->bindValue(':limit', $limit, PDO::PARAM_INT);
         $statement->execute();
 
@@ -50,6 +60,7 @@ final class PublicationRepository
         string $query,
         string $siteKey = 'default',
         int $limit = 8,
+        ?array $ownerPublicIds = null,
     ): array {
         $query = trim($query);
         $limit = max(1, min(20, $limit));
@@ -64,10 +75,14 @@ final class PublicationRepository
             $query,
         );
         $pattern = '%' . $escaped . '%';
+        [$ownerSql, $ownerParameters] = self::ownerFilter(
+            $ownerPublicIds,
+        );
 
         $statement = $this->pdo->prepare(
             "SELECT * FROM publications
              WHERE site_key = :site_key
+               {$ownerSql}
                AND (
                     LOWER(title) LIKE LOWER(:title_pattern) ESCAPE '!'
                     OR LOWER(slug) LIKE LOWER(:slug_pattern) ESCAPE '!'
@@ -77,6 +92,9 @@ final class PublicationRepository
              LIMIT :limit"
         );
         $statement->bindValue(':site_key', $siteKey);
+        foreach ($ownerParameters as $parameter => $value) {
+            $statement->bindValue($parameter, $value);
+        }
         $statement->bindValue(':title_pattern', $pattern);
         $statement->bindValue(':slug_pattern', $pattern);
         $statement->bindValue(':excerpt_pattern', $pattern);
@@ -279,18 +297,28 @@ final class PublicationRepository
         return $published;
     }
 
-    public function countEditorialWork(string $siteKey = 'default'): int
-    {
+    public function countEditorialWork(
+        string $siteKey = 'default',
+        ?array $ownerPublicIds = null,
+    ): int {
+        [$ownerSql, $ownerParameters] = self::ownerFilter(
+            $ownerPublicIds,
+        );
         $statement = $this->pdo->prepare(
             'SELECT COUNT(*) FROM publications
              WHERE site_key = :site_key
+               ' . $ownerSql . '
                AND status IN (:draft, :review)'
         );
-        $statement->execute([
+        $parameters = [
             'site_key' => $siteKey,
             'draft' => PublicationStatus::Draft->value,
             'review' => PublicationStatus::Review->value,
-        ]);
+        ];
+        foreach ($ownerParameters as $parameter => $value) {
+            $parameters[ltrim($parameter, ':')] = $value;
+        }
+        $statement->execute($parameters);
 
         return (int) $statement->fetchColumn();
     }
@@ -325,6 +353,43 @@ final class PublicationRepository
             static fn(Publication $publication): bool =>
                 in_array($target, $publication->syndicationTargets, true),
         ));
+    }
+
+    /**
+     * @param list<string>|null $ownerPublicIds
+     * @return array{0:string,1:array<string,string>}
+     */
+    private static function ownerFilter(?array $ownerPublicIds): array
+    {
+        if ($ownerPublicIds === null) {
+            return ['', []];
+        }
+
+        $ownerPublicIds = array_values(array_unique(array_filter(
+            $ownerPublicIds,
+            static fn(mixed $value): bool =>
+                is_string($value) && trim($value) !== '',
+        )));
+
+        if ($ownerPublicIds === []) {
+            return ['AND 1 = 0', []];
+        }
+
+        $parameters = [];
+        $placeholders = [];
+
+        foreach ($ownerPublicIds as $index => $publicId) {
+            $parameter = ':owner_' . $index;
+            $placeholders[] = $parameter;
+            $parameters[$parameter] = $publicId;
+        }
+
+        return [
+            'AND owner_organization_public_id IN ('
+                . implode(', ', $placeholders)
+                . ')',
+            $parameters,
+        ];
     }
 
     private function hydrate(array $row): Publication
