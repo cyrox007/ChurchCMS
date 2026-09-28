@@ -141,12 +141,10 @@ try {
 
     @chmod($temporary, 0600);
 
-    if (!rename($temporary, $manifestPath)) {
-        @unlink($temporary);
-        throw new RuntimeException(
-            'Не удалось атомарно заменить манифест подписью.'
-        );
-    }
+    replaceManifest(
+        $temporary,
+        $manifestPath,
+    );
 
     echo sprintf(
         "Манифест подписан доверенным ключом %s.\n",
@@ -227,4 +225,49 @@ function pathInside(
             $path . '/',
             $parent . '/',
         );
+}
+
+
+function replaceManifest(
+    string $temporary,
+    string $manifestPath,
+): void {
+    if (@rename($temporary, $manifestPath)) {
+        return;
+    }
+
+    // Windows не гарантирует замену существующего файла через rename().
+    // Поэтому старый манифест временно отводится в сторону, а при сбое
+    // возвращается обратно.
+    $backup = $manifestPath
+        . '.churchcms-sign-old-'
+        . bin2hex(random_bytes(6));
+
+    if (!@rename($manifestPath, $backup)) {
+        @unlink($temporary);
+        throw new RuntimeException(
+            'Не удалось подготовить безопасную замену манифеста.'
+        );
+    }
+
+    if (@rename($temporary, $manifestPath)) {
+        @unlink($backup);
+        return;
+    }
+
+    $restored = @rename(
+        $backup,
+        $manifestPath,
+    );
+    @unlink($temporary);
+
+    if (!$restored) {
+        throw new RuntimeException(
+            'Не удалось записать подписанный манифест и вернуть исходный файл.'
+        );
+    }
+
+    throw new RuntimeException(
+        'Не удалось атомарно заменить манифест подписью.'
+    );
 }
