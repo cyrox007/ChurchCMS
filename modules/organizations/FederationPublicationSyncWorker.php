@@ -133,8 +133,9 @@ final class FederationPublicationSyncWorker
             );
         }
 
+        $storedCursor = $link->syncCursor;
         $cursor = self::decodeCursor(
-            $link->syncCursor,
+            $storedCursor,
         );
         $projectionCount = 0;
         $tombstoneCount = 0;
@@ -161,10 +162,13 @@ final class FederationPublicationSyncWorker
 
         $cursor['publications'] =
             $publicationPage['cursor'];
+        $publicationCursor = self::encodeCursor($cursor);
         $this->links->saveSyncCursor(
             $link->id,
-            self::encodeCursor($cursor),
+            $storedCursor,
+            $publicationCursor,
         );
+        $storedCursor = $publicationCursor;
 
         $tombstonePage = $this->page(
             $link,
@@ -192,6 +196,7 @@ final class FederationPublicationSyncWorker
 
         $this->links->recordSyncSuccess(
             $link->id,
+            $storedCursor,
             $encoded,
         );
 
@@ -256,14 +261,25 @@ final class FederationPublicationSyncWorker
             $normalized[] = $item;
         }
 
+        $nextCursor = self::nextCursor(
+            $cursor,
+            $sync,
+        );
+        $hasMore = ($sync['has_more'] ?? false) === true;
+
+        if (
+            ($normalized !== [] || $hasMore)
+            && $nextCursor === $cursor
+        ) {
+            throw new RuntimeException(
+                'Partner API вернул данные без продвижения курсора.'
+            );
+        }
+
         return [
             'items' => $normalized,
-            'cursor' => self::nextCursor(
-                $cursor,
-                $sync,
-            ),
-            'has_more' =>
-                ($sync['has_more'] ?? false) === true,
+            'cursor' => $nextCursor,
+            'has_more' => $hasMore,
         ];
     }
 
