@@ -18,8 +18,10 @@ final class CommentsAdminTaskProvider implements AdminTaskProvider
         return 'comments.moderate';
     }
 
-    public function tasks(int $limit): array
-    {
+    public function tasks(
+        int $limit,
+        int $userId = 0,
+    ): array {
         $count = CommentRepository::fromDatabase()->countPending();
 
         if ($count < 1) {
