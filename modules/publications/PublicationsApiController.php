@@ -171,19 +171,10 @@ final class PublicationsApiController
             );
 
         $items = array_map(
-            static fn(array $tombstone): array => [
-                'action' => 'delete',
-                'id' => $tombstone['publication_public_id'],
-                'organization_owner_id' =>
-                    $tombstone['organization_owner_public_id'],
-                'reason' => $tombstone['reason'],
-                'deleted_at' => $tombstone['withdrawn_at']
-                    ->setTimezone(new \DateTimeZone('UTC'))
-                    ->format(DATE_ATOM),
-                'updated_at' => $tombstone['updated_at']
-                    ->setTimezone(new \DateTimeZone('UTC'))
-                    ->format(DATE_ATOM),
-            ],
+            static fn(array $tombstone): array =>
+                (new PublicationPartnerTombstoneApiResource(
+                    $tombstone,
+                ))->toApiArray(),
             $tombstones,
         );
 
