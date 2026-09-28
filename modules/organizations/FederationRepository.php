@@ -112,6 +112,82 @@ final class FederationRepository
         return SecretVault::decrypt($encrypted);
     }
 
+    public function saveSyncCursor(
+        int $linkId,
+        string $cursor,
+    ): void {
+        if ($linkId <= 0 || trim($cursor) === '') {
+            throw new RuntimeException(
+                'Некорректное состояние курсора federation sync.'
+            );
+        }
+
+        $statement = $this->pdo->prepare(
+            'UPDATE organization_federation_links
+             SET sync_cursor = :sync_cursor,
+                 updated_at = :updated_at
+             WHERE id = :id'
+        );
+        $statement->execute([
+            'sync_cursor' => $cursor,
+            'updated_at' => gmdate('Y-m-d H:i:s'),
+            'id' => $linkId,
+        ]);
+    }
+
+    public function recordSyncSuccess(
+        int $linkId,
+        string $cursor,
+    ): void {
+        if ($linkId <= 0 || trim($cursor) === '') {
+            throw new RuntimeException(
+                'Некорректное состояние успешного federation sync.'
+            );
+        }
+
+        $now = gmdate('Y-m-d H:i:s');
+        $statement = $this->pdo->prepare(
+            'UPDATE organization_federation_links
+             SET sync_cursor = :sync_cursor,
+                 last_sync_at = :last_sync_at,
+                 last_sync_error = NULL,
+                 updated_at = :updated_at
+             WHERE id = :id'
+        );
+        $statement->execute([
+            'sync_cursor' => $cursor,
+            'last_sync_at' => $now,
+            'updated_at' => $now,
+            'id' => $linkId,
+        ]);
+    }
+
+    public function recordSyncFailure(
+        int $linkId,
+        string $message,
+    ): void {
+        if ($linkId <= 0) {
+            return;
+        }
+
+        $message = trim($message);
+        if ($message === '' || strlen($message) > 500) {
+            $message = 'Синхронизация с удалённым узлом не выполнена.';
+        }
+
+        $statement = $this->pdo->prepare(
+            'UPDATE organization_federation_links
+             SET last_sync_error = :last_sync_error,
+                 updated_at = :updated_at
+             WHERE id = :id'
+        );
+        $statement->execute([
+            'last_sync_error' => $message,
+            'updated_at' => gmdate('Y-m-d H:i:s'),
+            'id' => $linkId,
+        ]);
+    }
+
     private function hydrate(array $row): FederationLink
     {
         return new FederationLink(
@@ -141,6 +217,14 @@ final class FederationRepository
             syncCursor: isset($row['sync_cursor'])
                 && $row['sync_cursor'] !== ''
                 ? (string) $row['sync_cursor']
+                : null,
+            lastSyncAt: isset($row['last_sync_at'])
+                && $row['last_sync_at'] !== ''
+                ? (string) $row['last_sync_at']
+                : null,
+            lastSyncError: isset($row['last_sync_error'])
+                && $row['last_sync_error'] !== ''
+                ? (string) $row['last_sync_error']
                 : null,
             lastSeenAt: isset($row['last_seen_at'])
                 && $row['last_seen_at'] !== ''
