@@ -38,6 +38,37 @@ final class PublicationsApiController
         ], cacheSeconds: 60);
     }
 
+    public function aggregated(Request $request): never
+    {
+        $limit = max(
+            1,
+            min(50, (int) $request->get('limit', 20)),
+        );
+        $items = FederatedPublicationFeedService::fromDatabase()
+            ->latest(
+                'default',
+                $limit,
+            );
+        $remote = count(array_filter(
+            $items,
+            static fn(array $item): bool =>
+                ($item['source']['kind'] ?? null)
+                === 'federation',
+        ));
+
+        ApiResponse::success(
+            $items,
+            [
+                'aggregation' => [
+                    'limit' => $limit,
+                    'local' => count($items) - $remote,
+                    'remote' => $remote,
+                ],
+            ],
+            cacheSeconds: 60,
+        );
+    }
+
     public function show(Request $request, string $slug): never
     {
         if (preg_match('/^[a-z0-9]+(?:-[a-z0-9]+)*$/D', $slug) !== 1) {

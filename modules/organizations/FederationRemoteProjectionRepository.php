@@ -312,6 +312,77 @@ final class FederationRemoteProjectionRepository
     }
 
     /**
+     * Возвращает активные проекции сразу для нескольких federation link.
+     *
+     * @param list<int> $federationLinkIds
+     * @return list<FederationRemoteProjection>
+     */
+    public function activeFromLinks(
+        array $federationLinkIds,
+        string $objectType,
+        int $limit = 100,
+    ): array {
+        $federationLinkIds = array_values(array_unique(array_filter(
+            $federationLinkIds,
+            static fn(mixed $id): bool =>
+                is_int($id) && $id > 0,
+        )));
+        $limit = max(1, min(200, $limit));
+
+        if ($federationLinkIds === []) {
+            return [];
+        }
+
+        if (
+            preg_match(
+                '/^[a-z][a-z0-9_.:-]{1,63}$/D',
+                $objectType,
+            ) !== 1
+        ) {
+            throw new InvalidArgumentException(
+                'Некорректный тип remote projection.'
+            );
+        }
+
+        $placeholders = [];
+        foreach ($federationLinkIds as $index => $id) {
+            $placeholders[] = ':link_' . $index;
+        }
+
+        $statement = $this->pdo->prepare(
+            'SELECT *
+             FROM federation_remote_projections
+             WHERE federation_link_id IN ('
+             . implode(', ', $placeholders)
+             . ')
+               AND object_type = :object_type
+               AND state = :state
+             ORDER BY remote_updated_at DESC,
+                      remote_public_id DESC
+             LIMIT :limit'
+        );
+
+        foreach ($federationLinkIds as $index => $id) {
+            $statement->bindValue(
+                ':link_' . $index,
+                $id,
+                PDO::PARAM_INT,
+            );
+        }
+
+        $statement->bindValue(':object_type', $objectType);
+        $statement->bindValue(':state', 'active');
+        $statement->bindValue(':limit', $limit, PDO::PARAM_INT);
+        $statement->execute();
+
+        return array_map(
+            fn(array $row): FederationRemoteProjection =>
+                $this->hydrate($row),
+            $statement->fetchAll(),
+        );
+    }
+
+    /**
      * @return array<string,mixed>|null
      */
     private function existingRow(

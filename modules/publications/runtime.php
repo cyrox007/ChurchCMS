@@ -37,6 +37,7 @@ foreach ([
     'PublicationOrganizationAccessService.php',
     'PublicationScheduleWorker.php',
     'PublicationApiResource.php',
+    'FederatedPublicationFeedService.php',
     'PublicationSyndicationProvider.php',
     'PublicationAdminSearchProvider.php',
     'PublicationAdminTaskProvider.php',
@@ -180,6 +181,18 @@ return new class implements ModuleRuntimeProvider {
             [ApiEnabledMiddleware::class, ApiCorsMiddleware::class, ApiPublicRateLimitMiddleware::class],
             'api_v1_publications',
         );
+        $router->add(
+            'GET',
+            '/api/v1/publications/aggregated',
+            [PublicationsApiController::class, 'aggregated'],
+            [
+                ApiEnabledMiddleware::class,
+                ApiCorsMiddleware::class,
+                ApiPublicRateLimitMiddleware::class,
+            ],
+            'api_v1_publications_aggregated',
+        );
+
         $router->add(
             'GET',
             '/api/v1/publications/{slug}',
