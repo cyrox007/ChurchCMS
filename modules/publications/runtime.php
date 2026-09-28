@@ -32,6 +32,7 @@ foreach ([
     'PublicationTaxonomyRepository.php',
     'PublicationTaxonomyService.php',
     'PublicationService.php',
+    'PublicationOrganizationAccessService.php',
     'PublicationScheduleWorker.php',
     'PublicationApiResource.php',
     'PublicationSyndicationProvider.php',
