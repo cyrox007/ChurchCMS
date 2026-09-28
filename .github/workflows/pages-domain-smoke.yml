@@ -7,11 +7,15 @@ on:
       - main
     paths:
       - 'modules/pages/**'
+      - 'core/RouteTemplate.php'
+      - 'core/Router.php'
       - 'modules/organizations/**'
       - 'tools/page-organization-owner-smoke.php'
       - 'tools/page-api-smoke.php'
       - 'tools/page-admin-owner-smoke.php'
       - 'themes/default/theme.json'
+      - 'themes/default/assets/css/site.css'
+      - 'themes/default/templates/pages/show.php'
       - 'themes/default/templates/admin/pages/**'
       - '.github/workflows/pages-domain-smoke.yml'
   pull_request:
@@ -20,11 +24,15 @@ on:
       - main
     paths:
       - 'modules/pages/**'
+      - 'core/RouteTemplate.php'
+      - 'core/Router.php'
       - 'modules/organizations/**'
       - 'tools/page-organization-owner-smoke.php'
       - 'tools/page-api-smoke.php'
       - 'tools/page-admin-owner-smoke.php'
       - 'themes/default/theme.json'
+      - 'themes/default/assets/css/site.css'
+      - 'themes/default/templates/pages/show.php'
       - 'themes/default/templates/admin/pages/**'
       - '.github/workflows/pages-domain-smoke.yml'
 
@@ -65,17 +73,21 @@ jobs:
         shell: bash
         run: |
           set -euo pipefail
+          php -l core/RouteTemplate.php
+          php -l core/Router.php
           php -l modules/pages/PageStatus.php
           php -l modules/pages/Page.php
           php -l modules/pages/PageRepository.php
           php -l modules/pages/PageService.php
           php -l modules/pages/PageOrganizationAccessService.php
           php -l modules/pages/PageApiResource.php
+          php -l modules/pages/PagesController.php
           php -l modules/pages/PagesApiController.php
           php -l modules/pages/PagesAdminController.php
           php -l modules/pages/migrations/20260927_121000_add_page_organization_owner.php
           php -l modules/pages/migrations/20260928_090000_add_page_permissions.php
           php -l modules/pages/runtime.php
+          php -l themes/default/templates/pages/show.php
           php -l themes/default/templates/admin/pages/index.php
           php -l themes/default/templates/admin/pages/editor.php
           php -l tools/page-organization-owner-smoke.php
