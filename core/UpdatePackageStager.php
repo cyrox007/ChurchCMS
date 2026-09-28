@@ -13,10 +13,15 @@ final class UpdatePackageStager
     private const FORMAT = 'churchcms-update-v1';
     private const STAGE_ID_PATTERN = '/^[0-9]{8}T[0-9]{6}Z-[a-f0-9]{12}$/D';
 
+    private UpdatePackageSignatureVerifier $signatureVerifier;
+
     public function __construct(
         private readonly string $root,
         private readonly string $stagingRoot,
+        ?UpdatePackageSignatureVerifier $signatureVerifier = null,
     ) {
+        $this->signatureVerifier = $signatureVerifier
+            ?? new UpdatePackageSignatureVerifier();
     }
 
     /**
@@ -43,8 +48,7 @@ final class UpdatePackageStager
         }
 
         $manifest = $this->readManifest($source);
-        $signature = (new UpdatePackageSignatureVerifier())
-            ->verify($manifest);
+        $signature = $this->signatureVerifier->verify($manifest);
         $files = $this->validateManifest($manifest);
         $this->assertPackageFilesMatch($source, $files);
         $this->verifySourceFiles($source, $files);
@@ -128,8 +132,7 @@ final class UpdatePackageStager
         }
 
         $manifest = $this->readManifest($path);
-        $signature = (new UpdatePackageSignatureVerifier())
-            ->verify($manifest);
+        $signature = $this->signatureVerifier->verify($manifest);
         $files = $this->validateManifest($manifest);
         $payload = $path . DIRECTORY_SEPARATOR . 'payload';
 
