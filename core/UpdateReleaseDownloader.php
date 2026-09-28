@@ -18,6 +18,7 @@ final class UpdateReleaseDownloader
     public function __construct(
         private readonly string $root,
         private readonly string $stagingRoot,
+        private readonly ?UpdateReleaseTransport $transport = null,
     ) {
     }
 
@@ -36,7 +37,9 @@ final class UpdateReleaseDownloader
     public function downloadAndStage(string $manifestUrl): array
     {
         $manifestUrl = $this->manifestUrl($manifestUrl);
-        $endpoint = $this->endpoint($manifestUrl);
+        $endpoint = $this->transport === null
+            ? $this->endpoint($manifestUrl)
+            : null;
 
         $temporary = rtrim(
             sys_get_temp_dir(),
@@ -342,32 +345,45 @@ final class UpdateReleaseDownloader
     }
 
     /**
-     * @param array{host:string,port:int,addresses:list<string>} $endpoint
+     * @param array{host:string,port:int,addresses:list<string>}|null $endpoint
      */
     private function downloadText(
         string $url,
-        array $endpoint,
+        ?array $endpoint,
         int $limit,
     ): string {
         $buffer = '';
+        $consumer = static function (string $chunk) use (&$buffer): void {
+            $buffer .= $chunk;
+        };
+
+        if ($this->transport !== null) {
+            $this->transport->get($url, $limit, $consumer);
+            return $buffer;
+        }
+
+        if ($endpoint === null) {
+            throw new RuntimeException(
+                'Не определён безопасный endpoint источника обновления.'
+            );
+        }
+
         $this->request(
             $url,
             $endpoint,
             $limit,
-            static function (string $chunk) use (&$buffer): void {
-                $buffer .= $chunk;
-            },
+            $consumer,
         );
 
         return $buffer;
     }
 
     /**
-     * @param array{host:string,port:int,addresses:list<string>} $endpoint
+     * @param array{host:string,port:int,addresses:list<string>}|null $endpoint
      */
     private function downloadFile(
         string $url,
-        array $endpoint,
+        ?array $endpoint,
         string $target,
         int $expectedBytes,
         string $expectedSha256,
@@ -392,25 +408,41 @@ final class UpdateReleaseDownloader
 
         try {
             $written = 0;
-            $this->request(
-                $url,
-                $endpoint,
-                $expectedBytes + 1,
-                static function (string $chunk) use (
-                    $handle,
-                    &$written,
-                ): void {
-                    $length = strlen($chunk);
-                    $result = fwrite($handle, $chunk);
-                    if ($result !== $length) {
-                        throw new RuntimeException(
-                            'Не удалось записать загруженный файл обновления.'
-                        );
-                    }
+            $consumer = static function (string $chunk) use (
+                $handle,
+                &$written,
+            ): void {
+                $length = strlen($chunk);
+                $result = fwrite($handle, $chunk);
+                if ($result !== $length) {
+                    throw new RuntimeException(
+                        'Не удалось записать загруженный файл обновления.'
+                    );
+                }
 
-                    $written += $length;
-                },
-            );
+                $written += $length;
+            };
+
+            if ($this->transport !== null) {
+                $this->transport->get(
+                    $url,
+                    $expectedBytes + 1,
+                    $consumer,
+                );
+            } else {
+                if ($endpoint === null) {
+                    throw new RuntimeException(
+                        'Не определён безопасный endpoint источника обновления.'
+                    );
+                }
+
+                $this->request(
+                    $url,
+                    $endpoint,
+                    $expectedBytes + 1,
+                    $consumer,
+                );
+            }
         } finally {
             fclose($handle);
         }
