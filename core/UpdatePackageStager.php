@@ -22,7 +22,13 @@ final class UpdatePackageStager
     /**
      * Проверяет пакет и копирует его в изолированный staging без изменения приложения.
      *
-     * @return array{id:string, version:string, files:int, deleted_files:int}
+     * @return array{
+     *     id:string,
+     *     version:string,
+     *     files:int,
+     *     deleted_files:int,
+     *     signature_key_id:string
+     * }
      */
     public function stage(string $sourceDirectory): array
     {
@@ -37,6 +43,8 @@ final class UpdatePackageStager
         }
 
         $manifest = $this->readManifest($source);
+        $signature = (new UpdatePackageSignatureVerifier())
+            ->verify($manifest);
         $files = $this->validateManifest($manifest);
         $this->assertPackageFilesMatch($source, $files);
         $this->verifySourceFiles($source, $files);
@@ -76,6 +84,7 @@ final class UpdatePackageStager
                 'version' => (string) $manifest['version'],
                 'files' => count($files),
                 'deleted_files' => count($manifest['deleted_files'] ?? []),
+                'signature_key_id' => $signature['key_id'],
             ];
         } catch (Throwable $e) {
             $this->deleteTree($temporary);
@@ -96,7 +105,8 @@ final class UpdatePackageStager
      *     version:string,
      *     path:string,
      *     files:array<string,array{path:string,bytes:int,sha256:string}>,
-     *     deleted_files:list<string>
+     *     deleted_files:list<string>,
+     *     signature_key_id:string
      * }
      */
     public function inspect(string $stageId): array
@@ -118,6 +128,8 @@ final class UpdatePackageStager
         }
 
         $manifest = $this->readManifest($path);
+        $signature = (new UpdatePackageSignatureVerifier())
+            ->verify($manifest);
         $files = $this->validateManifest($manifest);
         $payload = $path . DIRECTORY_SEPARATOR . 'payload';
 
@@ -145,6 +157,7 @@ final class UpdatePackageStager
             'path' => $path,
             'files' => $files,
             'deleted_files' => $deleted,
+            'signature_key_id' => $signature['key_id'],
         ];
     }
 
@@ -207,6 +220,8 @@ final class UpdatePackageStager
                     'deleted_files' => count($stage['deleted_files']),
                     'code_only' => $codeOnly,
                     'ready' => true,
+                    'signature_key_id' =>
+                        $stage['signature_key_id'],
                 ];
             } catch (RuntimeException) {
                 $packages[] = [
@@ -216,6 +231,7 @@ final class UpdatePackageStager
                     'deleted_files' => 0,
                     'code_only' => false,
                     'ready' => false,
+                    'signature_key_id' => '',
                 ];
             }
         }
