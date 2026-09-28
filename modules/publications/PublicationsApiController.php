@@ -139,7 +139,7 @@ final class PublicationsApiController
         ) {
             ApiResponse::error(
                 'invalid_tombstone_cursor',
-                'after must be a valid publication public ID.',
+                'after должен содержать корректный public ID публикации.',
                 400,
             );
         }
@@ -162,8 +162,7 @@ final class PublicationsApiController
             }
         }
 
-        $tombstones = PublicationPartnerTombstoneRepository
-            ::fromDatabase()
+        $tombstones = PublicationPartnerTombstoneRepository::fromDatabase()
             ->updatedSince(
                 $updatedSince,
                 'default',
