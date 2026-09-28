@@ -141,6 +141,7 @@ final class FederationRepository
     public function recordSyncFailure(
         int $linkId,
         string $message,
+        ?string $expectedCursor = null,
     ): void {
         if ($linkId <= 0) {
             return;
@@ -155,12 +156,16 @@ final class FederationRepository
             'UPDATE organization_federation_links
              SET last_sync_error = :last_sync_error,
                  updated_at = :updated_at
-             WHERE id = :id'
+             WHERE id = :id
+               AND COALESCE(sync_cursor, \'\') = :expected_cursor'
         );
         $statement->execute([
             'last_sync_error' => $message,
             'updated_at' => gmdate('Y-m-d H:i:s'),
             'id' => $linkId,
+            'expected_cursor' => trim(
+                (string) ($expectedCursor ?? '')
+            ),
         ]);
     }
 
@@ -205,11 +210,41 @@ final class FederationRepository
         }
         $statement->execute($parameters);
 
-        if ($statement->rowCount() !== 1) {
+        if ($statement->rowCount() === 1) {
+            return;
+        }
+
+        $current = $this->currentSyncCursor($linkId);
+        if (
+            $cursor === $expectedCursor
+            && $current === $expectedCursor
+        ) {
+            return;
+        }
+
+        throw new RuntimeException(
+            'Курсор federation sync уже изменён другим процессом.'
+        );
+    }
+
+    private function currentSyncCursor(int $linkId): string
+    {
+        $statement = $this->pdo->prepare(
+            'SELECT COALESCE(sync_cursor, \'\')
+             FROM organization_federation_links
+             WHERE id = :id
+             LIMIT 1'
+        );
+        $statement->execute(['id' => $linkId]);
+        $cursor = $statement->fetchColumn();
+
+        if (!is_string($cursor)) {
             throw new RuntimeException(
-                'Курсор federation sync уже изменён другим процессом.'
+                'Federation link для сохранения курсора не найден.'
             );
         }
+
+        return $cursor;
     }
 
     private function hydrate(array $row): FederationLink
