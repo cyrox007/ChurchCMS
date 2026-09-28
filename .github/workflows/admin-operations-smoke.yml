@@ -7,6 +7,10 @@ on:
       - main
     paths:
       - 'core/BackupManager.php'
+      - 'core/BackupRestoreOrchestrator.php'
+      - 'core/DatabaseRestoreManager.php'
+      - 'core/FileRestoreManager.php'
+      - 'core/InstallationHealthCheck.php'
       - 'core/UpdatePackageStager.php'
       - 'core/UpdatePackageApplier.php'
       - 'modules/operations/**'
@@ -20,6 +24,10 @@ on:
       - main
     paths:
       - 'core/BackupManager.php'
+      - 'core/BackupRestoreOrchestrator.php'
+      - 'core/DatabaseRestoreManager.php'
+      - 'core/FileRestoreManager.php'
+      - 'core/InstallationHealthCheck.php'
       - 'core/UpdatePackageStager.php'
       - 'core/UpdatePackageApplier.php'
       - 'modules/operations/**'
@@ -66,6 +74,9 @@ jobs:
         run: |
           set -euo pipefail
           php -l core/BackupManager.php
+          php -l core/BackupRestoreOrchestrator.php
+          php -l core/DatabaseRestoreManager.php
+          php -l core/FileRestoreManager.php
           php -l core/UpdatePackageStager.php
           php -l modules/operations/OperationsService.php
           php -l modules/operations/OperationsAdminController.php
@@ -107,34 +118,99 @@ jobs:
           PHP
           php bin/migrate.php
 
-      - name: Проверить backup через OperationsService
+      - name: Проверить backup и единое восстановление через OperationsService
         shell: bash
         run: |
           php -r '
           require "core.php";
 
+          $organization = \ChurchCMS\Modules\Organizations\OrganizationService::fromDatabase()
+              ->ensureSiteRoot(
+                  "Состояние до резервной копии",
+                  "parish",
+                  "default",
+              );
+
           $service = new \ChurchCMS\Modules\Operations\OperationsService();
           $created = $service->createBackup();
           $service->verifyBackup($created["id"]);
-          $overview = $service->overview();
 
-          $first = $overview["backups"][0] ?? null;
+          $configHash = hash_file("sha256", "config/local.php");
+          if (!is_string($configHash)) {
+              fwrite(STDERR, "Не удалось вычислить SHA-256 config/local.php.\n");
+              exit(1);
+          }
+
+          $pdo = \ChurchCMS\Core\DatabaseManager::getInstance()->connection();
+          $statement = $pdo->prepare(
+              "UPDATE organization_units "
+              . "SET name = :name "
+              . "WHERE public_id = :public_id"
+          );
+          $statement->execute([
+              "name" => "Изменено после резервной копии",
+              "public_id" => $organization->publicId,
+          ]);
+
+          file_put_contents(
+              "config/local.php",
+              "\n// изменено после резервной копии\n",
+              FILE_APPEND,
+          );
+          file_put_contents(
+              "storage/uploads/operations-smoke.txt",
+              "изменено\n",
+          );
+          file_put_contents(
+              "storage/uploads/extra-after-backup.txt",
+              "лишний файл\n",
+          );
+
+          $restored = $service->restoreBackup($created["id"]);
+
+          $nameStatement = $pdo->prepare(
+              "SELECT name FROM organization_units "
+              . "WHERE public_id = :public_id"
+          );
+          $nameStatement->execute([
+              "public_id" => $organization->publicId,
+          ]);
+          $restoredName = $nameStatement->fetchColumn();
+
+          $overview = $service->overview();
+          $backupIds = array_column($overview["backups"], "id");
+
           if (
               ($overview["health"]["ready"] ?? false) !== true
-              || ($first["id"] ?? null) !== $created["id"]
-              || ($first["files"] ?? 0) < 2
-              || ($first["tables"] ?? 0) < 1
+              || !in_array($created["id"], $backupIds, true)
+              || !in_array($restored["safety_backup_id"], $backupIds, true)
+              || $restored["safety_backup_id"] === $created["id"]
+              || ($restored["tables"] ?? 0) < 1
+              || ($restored["files"] ?? 0) < 2
+              || $restoredName !== "Состояние до резервной копии"
+              || hash_file("sha256", "config/local.php") !== $configHash
+              || trim((string) file_get_contents(
+                  "storage/uploads/operations-smoke.txt"
+              )) !== "operations-smoke"
+              || file_exists("storage/uploads/extra-after-backup.txt")
           ) {
               fwrite(
                   STDERR,
-                  "OperationsService не показал созданную проверенную копию: "
-                  . json_encode($overview, JSON_UNESCAPED_UNICODE | JSON_UNESCAPED_SLASHES)
+                  "Единое восстановление через OperationsService выполнено некорректно: "
+                  . json_encode(
+                      [
+                          "restore" => $restored,
+                          "name" => $restoredName,
+                          "backups" => $backupIds,
+                      ],
+                      JSON_UNESCAPED_UNICODE | JSON_UNESCAPED_SLASHES,
+                  )
                   . "\n",
               );
               exit(1);
           }
 
-          echo "Operations backup smoke OK\n";
+          echo "Проверка резервного копирования и восстановления пройдена\n";
           '
 
       - name: Подготовить и проверить staging-пакет
@@ -246,8 +322,12 @@ jobs:
               "Резервные копии",
               "Подготовленные пакеты",
               "Создать копию",
+              "confirm_restore",
+              "Восстановить",
+              "аварийный снимок",
               "confirm_stage",
               "/admin/system/backups/create",
+              "/admin/system/backups/",
               "/admin/system/updates/",
           ] as $expected) {
               if (!str_contains($html, $expected)) {
@@ -260,6 +340,7 @@ jobs:
               "backup_path",
               "update_staging_path",
               "name=\"path\"",
+              "Восстановление не запускается из браузера автоматически",
           ] as $forbidden) {
               if (str_contains($html, $forbidden)) {
                   fwrite(STDERR, "UI раскрывает технический путь: {$forbidden}\n");
