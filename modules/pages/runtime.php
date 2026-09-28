@@ -11,6 +11,7 @@ use ChurchCMS\App\Services\AdminNavigationRegistry;
 use ChurchCMS\Core\ModuleRuntimeProvider;
 use ChurchCMS\Core\Router;
 use ChurchCMS\Modules\Pages\PagesApiController;
+use ChurchCMS\Modules\Pages\PagesController;
 use ChurchCMS\Modules\Pages\PagesAdminController;
 
 $moduleRoot = __DIR__;
@@ -21,6 +22,7 @@ foreach ([
     'PageService.php',
     'PageOrganizationAccessService.php',
     'PageApiResource.php',
+    'PagesController.php',
     'PagesApiController.php',
     'PagesAdminController.php',
 ] as $file) {
@@ -103,6 +105,14 @@ return new class implements ModuleRuntimeProvider {
             [PagesAdminController::class, 'unpublish'],
             [RequireAdminMiddleware::class, CsrfMiddleware::class],
             'admin_page_unpublish',
+        );
+
+        $router->add(
+            'GET',
+            '/pages/{path*}',
+            [PagesController::class, 'show'],
+            [],
+            'page_show',
         );
 
         $router->add(

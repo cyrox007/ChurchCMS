@@ -5,6 +5,7 @@ declare(strict_types=1);
 namespace ChurchCMS\Modules\Pages;
 
 use ChurchCMS\Core\ApiResource;
+use ChurchCMS\Core\Config;
 
 final class PageApiResource implements ApiResource
 {
@@ -16,6 +17,11 @@ final class PageApiResource implements ApiResource
 
     public function toApiArray(): array
     {
+        $base = rtrim(
+            (string) Config::get('syndication.site_url', ''),
+            '/',
+        );
+
         return [
             'id' => $this->page->publicId,
             'parent_id' => $this->parentPublicId,
@@ -33,6 +39,9 @@ final class PageApiResource implements ApiResource
             'updated_at' => $this->page->updatedAt
                 ->setTimezone(new \DateTimeZone('UTC'))
                 ->format(DATE_ATOM),
+            'url' => $base !== ''
+                ? $base . '/pages' . $this->page->path
+                : null,
         ];
     }
 }

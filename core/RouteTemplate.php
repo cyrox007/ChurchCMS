@@ -25,16 +25,66 @@ final class RouteTemplate
     public static function compile(string $path): string
     {
         $normalized = self::normalize($path);
-        $quoted = preg_quote($normalized, '#');
 
-        $pattern = preg_replace_callback(
-            '/\\\{([A-Za-z_][A-Za-z0-9_]*)\\\}/',
-            static fn(array $m): string => '(?P<' . $m[1] . '>[^/]+)',
-            $quoted,
+        $wildcardCount = preg_match_all(
+            '/\{[A-Za-z_][A-Za-z0-9_]*\*\}/',
+            $normalized,
+        );
+        if (
+            $wildcardCount === false
+            || $wildcardCount > 1
+            || (
+                $wildcardCount === 1
+                && preg_match(
+                    '/\/\{[A-Za-z_][A-Za-z0-9_]*\*\}$/D',
+                    $normalized,
+                ) !== 1
+            )
+        ) {
+            throw new InvalidArgumentException(
+                'Wildcard route parameter must be the final segment.'
+            );
+        }
+
+        $parts = preg_split(
+            '/(\{[A-Za-z_][A-Za-z0-9_]*\*?\})/',
+            $normalized,
+            -1,
+            PREG_SPLIT_DELIM_CAPTURE,
         );
 
-        if (!is_string($pattern)) {
-            throw new InvalidArgumentException('Unable to compile route.');
+        if (!is_array($parts)) {
+            throw new InvalidArgumentException(
+                'Unable to compile route.'
+            );
+        }
+
+        $pattern = '';
+        $names = [];
+
+        foreach ($parts as $part) {
+            if (
+                preg_match(
+                    '/^\{([A-Za-z_][A-Za-z0-9_]*)(\*)?\}$/D',
+                    $part,
+                    $matches,
+                ) !== 1
+            ) {
+                $pattern .= preg_quote($part, '#');
+                continue;
+            }
+
+            $name = $matches[1];
+            if (isset($names[$name])) {
+                throw new InvalidArgumentException(
+                    'Duplicate route parameter.'
+                );
+            }
+            $names[$name] = true;
+
+            $pattern .= ($matches[2] ?? '') === '*'
+                ? '(?P<' . $name . '>.+)'
+                : '(?P<' . $name . '>[^/]+)';
         }
 
         return '#^' . $pattern . '$#D';
