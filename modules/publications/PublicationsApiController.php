@@ -123,6 +123,26 @@ final class PublicationsApiController
         $updatedSinceRaw = trim(
             (string) $request->get('updated_since', '')
         );
+        $afterPublicId = trim(
+            (string) $request->get('after', '')
+        );
+        $afterPublicId = $afterPublicId !== ''
+            ? $afterPublicId
+            : null;
+
+        if (
+            $afterPublicId !== null
+            && preg_match(
+                '/^[a-f0-9]{8}-[a-f0-9]{4}-4[a-f0-9]{3}-[89ab][a-f0-9]{3}-[a-f0-9]{12}$/Di',
+                $afterPublicId,
+            ) !== 1
+        ) {
+            ApiResponse::error(
+                'invalid_tombstone_cursor',
+                'after must be a valid publication public ID.',
+                400,
+            );
+        }
 
         if ($updatedSinceRaw === '') {
             $updatedSince = new DateTimeImmutable(
@@ -148,6 +168,7 @@ final class PublicationsApiController
                 $updatedSince,
                 'default',
                 $limit,
+                $afterPublicId,
             );
 
         $items = array_map(
@@ -168,11 +189,13 @@ final class PublicationsApiController
         );
 
         $nextUpdatedSince = null;
+        $nextAfter = null;
         if ($tombstones !== []) {
             $last = $tombstones[array_key_last($tombstones)];
             $nextUpdatedSince = $last['updated_at']
                 ->setTimezone(new \DateTimeZone('UTC'))
                 ->format(DATE_ATOM);
+            $nextAfter = $last['publication_public_id'];
         }
 
         ApiResponse::success($items, [
@@ -181,6 +204,7 @@ final class PublicationsApiController
                     ? $updatedSinceRaw
                     : null,
                 'next_updated_since' => $nextUpdatedSince,
+                'next_after' => $nextAfter,
                 'limit' => $limit,
                 'has_more' => count($tombstones) === $limit,
             ],
