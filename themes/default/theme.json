@@ -1,7 +1,7 @@
 {
   "id": "default",
   "name": "ChurchCMS Default",
-  "version": "0.8.9",
+  "version": "0.8.10",
   "profiles": [
     "small-parish",
     "parish",
@@ -38,6 +38,7 @@
     "admin.operations": "admin/operations",
     "admin.account_password": "admin/account-password",
     "admin.organizations.index": "admin/organizations/index",
-    "admin.organizations.editor": "admin/organizations/editor"
+    "admin.organizations.editor": "admin/organizations/editor",
+    "admin.federation.index": "admin/federation/index"
   }
 }
