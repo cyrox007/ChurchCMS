@@ -47,6 +47,11 @@ Implemented:
 - совпадение постоянных remote instance/organization ID переводит связь в `active`, сетевой/протокольный сбой — в `error`, а смена identity — в `conflict`;
 - `last_seen_at` и безопасный `last_error` показываются оператору; повторная проверка служит штатным retry и не меняет scopes, credential или sync cursor;
 - health-переходы записываются в audit log, а PostgreSQL smoke проверяет success/error/conflict/retry и сохранность credential;
+- принимающая сторона federation sync хранит удалённые объекты отдельно в `federation_remote_projections`, не смешивая их с локальными каноническими сущностями;
+- remote projection идентифицируется по federation link, типу объекта и stable public ID источника; сохраняются canonical URL, remote owner, удалённое время изменения и ограниченный JSON payload;
+- upsert принимается только от активной доверенной связи, устаревшие события игнорируются, tombstone с тем же временем имеет приоритет над active-состоянием, а более новая повторная публикация может безопасно восстановить projection;
+- tombstone без предварительного full sync сохраняется как deleted projection, поэтому удаление не теряется при частичной синхронизации;
+- PostgreSQL и MySQL smoke проверяют lifecycle remote projection, порядок событий и запрет записи после revoke;
 - Admin Shell содержит раздел «Структура» с отдельным правом `organizations.manage`;
 - администратор может создавать благочиния, приходы, монастыри, отделы, комиссии и другие типы, менять родителя/slug/порядок и описание;
 - при изменении slug или родителя canonical path всего поддерева пересчитывается транзакционно;
@@ -67,7 +72,8 @@ Implemented:
 
 - organization ownership для Worship/Events/Media/Documents;
 - Admin/public/API слой People и расширенные сведения о духовенстве;
-- incremental aggregation/sync с canonical ownership и tombstones.
+- общий federation sync worker с курсорами/повторами поверх уже реализованных source tombstones и принимающих remote projections;
+- агрегированные ленты вышестоящих узлов без потери источника.
 
 ## Installation
 
