@@ -92,7 +92,7 @@ Status: in progress.
 - [x] Federation link foundation: `parent/child/peer`, scopes, encrypted outbound credential, sync state.
 - [x] Public federation discovery metadata endpoint.
 - [x] Admin UI дерева организаций/подразделений.
-- [ ] Federation pairing wizard и отзыв доверия.
+- [x] Federation pairing wizard и отзыв доверия.
 - [x] Organization-scoped RBAC enforcement.
 - [ ] Organization ownership/references для Publications/Pages/People/Worship/Events/Media/Documents (Pages Admin/API RBAC, foundation Publications и People/назначений реализованы; Publications Admin, Worship/Events/Media/Documents остаются).
 - [ ] Parent/child aggregation и remote projections/tombstones.
