@@ -93,6 +93,7 @@ final class FederationRemoteProjectionRepository
                  SET remote_owner_organization_public_id = :owner,
                      canonical_url = :canonical_url,
                      state = :state,
+                     delete_reason = NULL,
                      payload_json = :payload_json,
                      remote_updated_at = :remote_updated_at,
                      updated_at = :updated_at
@@ -120,6 +121,7 @@ final class FederationRemoteProjectionRepository
                 remote_owner_organization_public_id,
                 canonical_url,
                 state,
+                delete_reason,
                 payload_json,
                 remote_updated_at,
                 created_at,
@@ -132,6 +134,7 @@ final class FederationRemoteProjectionRepository
                 :owner,
                 :canonical_url,
                 :state,
+                NULL,
                 :payload_json,
                 :remote_updated_at,
                 :created_at,
@@ -166,7 +169,19 @@ final class FederationRemoteProjectionRepository
         string $remotePublicId,
         ?string $remoteOwnerOrganizationPublicId,
         DateTimeImmutable $remoteUpdatedAt,
+        string $reason = 'withdrawn',
     ): string {
+        if (
+            preg_match(
+                '/^[a-z][a-z0-9_-]{1,31}$/D',
+                $reason,
+            ) !== 1
+        ) {
+            throw new InvalidArgumentException(
+                'Некорректная причина tombstone remote projection.'
+            );
+        }
+
         $remoteTimestamp = self::utcTimestamp(
             $remoteUpdatedAt,
         );
@@ -197,6 +212,7 @@ final class FederationRemoteProjectionRepository
                 'UPDATE federation_remote_projections
                  SET remote_owner_organization_public_id = :owner,
                      state = :state,
+                     delete_reason = :delete_reason,
                      payload_json = NULL,
                      remote_updated_at = :remote_updated_at,
                      updated_at = :updated_at
@@ -205,6 +221,7 @@ final class FederationRemoteProjectionRepository
             $statement->execute([
                 'owner' => $owner,
                 'state' => 'deleted',
+                'delete_reason' => $reason,
                 'remote_updated_at' => $remoteTimestamp,
                 'updated_at' => $now,
                 'id' => (int) $existing['id'],
@@ -222,6 +239,7 @@ final class FederationRemoteProjectionRepository
                 remote_owner_organization_public_id,
                 canonical_url,
                 state,
+                delete_reason,
                 payload_json,
                 remote_updated_at,
                 created_at,
@@ -234,6 +252,7 @@ final class FederationRemoteProjectionRepository
                 :owner,
                 NULL,
                 :state,
+                :delete_reason,
                 NULL,
                 :remote_updated_at,
                 :created_at,
@@ -247,6 +266,7 @@ final class FederationRemoteProjectionRepository
             'remote_public_id' => $remotePublicId,
             'owner' => $remoteOwnerOrganizationPublicId,
             'state' => 'deleted',
+            'delete_reason' => $reason,
             'remote_updated_at' => $remoteTimestamp,
             'created_at' => $now,
             'updated_at' => $now,
@@ -401,6 +421,9 @@ final class FederationRemoteProjectionRepository
                 $row['canonical_url'] ?? null,
             ),
             state: (string) $row['state'],
+            deleteReason: self::nullableString(
+                $row['delete_reason'] ?? null,
+            ),
             payload: $payload,
             remoteUpdatedAt: new DateTimeImmutable(
                 (string) $row['remote_updated_at'],
