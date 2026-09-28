@@ -294,6 +294,7 @@ jobs:
           export CHURCHCMS_TEST_UPDATE_KEY="$(
               cat "$RUNNER_TEMP/operations-trusted-key"
           )"
+          echo "CHURCHCMS_TEST_UPDATE_KEY=$CHURCHCMS_TEST_UPDATE_KEY" >> "$GITHUB_ENV"
 
           php -r '
           require "core.php";
@@ -398,6 +399,7 @@ jobs:
               "Восстановить",
               "аварийный снимок",
               "confirm_stage",
+              "Подпись проверена",
               "/admin/system/backups/create",
               "/admin/system/backups/",
               "/admin/system/updates/",
