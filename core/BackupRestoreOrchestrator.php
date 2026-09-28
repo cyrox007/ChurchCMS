@@ -92,14 +92,14 @@ final class BackupRestoreOrchestrator
 
         if (($health['ready'] ?? false) !== true) {
             throw new RuntimeException(
-                'После восстановления installation healthcheck не пройден.'
+                'После восстановления проверка готовности установки не пройдена.'
             );
         }
     }
 
     /**
-     * Browser restore не должен незаметно переключить установку на другую БД
-     * или потерять каталог аварийной копии после следующего запроса.
+     * Восстановление из админки не должно незаметно переключить установку
+     * на другую БД или потерять каталог аварийной копии после следующего запроса.
      */
     private function assertBrowserSafeConfiguration(
         string $backupId,
