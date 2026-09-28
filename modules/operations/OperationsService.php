@@ -11,6 +11,7 @@ use ChurchCMS\Core\DatabaseManager;
 use ChurchCMS\Core\InstallationHealthCheck;
 use ChurchCMS\Core\UpdatePackageApplier;
 use ChurchCMS\Core\UpdatePackageStager;
+use ChurchCMS\Core\UpdateReleaseDownloader;
 
 final class OperationsService
 {
@@ -43,6 +44,7 @@ final class OperationsService
      *         id:string,version:string,files:int,deleted_files:int,
      *         code_only:bool,ready:bool,signature_key_id:string
      *     }>,
+     *     release_source_configured:bool,
      *     warnings:list<string>
      * }
      */
@@ -80,6 +82,11 @@ final class OperationsService
                 . 'Проверка и применение обновлений заблокированы.';
         }
 
+        $releaseManifestUrl = trim((string) Config::get(
+            'operations.update_release_manifest_url',
+            '',
+        ));
+
         return [
             'health' => (new InstallationHealthCheck(
                 $this->database,
@@ -87,6 +94,7 @@ final class OperationsService
             ))->check(),
             'backups' => $backups,
             'packages' => $packages,
+            'release_source_configured' => $releaseManifestUrl !== '',
             'warnings' => $warnings,
         ];
     }
@@ -120,6 +128,31 @@ final class OperationsService
             $this->root,
             $this->backupRoot,
         ))->restore($backupId);
+    }
+
+    /**
+     * @return array{
+     *     id:string,version:string,files:int,deleted_files:int,
+     *     signature_key_id:string
+     * }
+     */
+    public function downloadUpdate(): array
+    {
+        $manifestUrl = trim((string) Config::get(
+            'operations.update_release_manifest_url',
+            '',
+        ));
+
+        if ($manifestUrl === '') {
+            throw new \RuntimeException(
+                'Источник релизных обновлений не настроен.'
+            );
+        }
+
+        return (new UpdateReleaseDownloader(
+            $this->root,
+            $this->stagingRoot,
+        ))->downloadAndStage($manifestUrl);
     }
 
     /**

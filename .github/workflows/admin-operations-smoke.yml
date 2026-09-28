@@ -13,6 +13,8 @@ on:
       - 'core/InstallationHealthCheck.php'
       - 'core/UpdatePackageStager.php'
       - 'core/UpdatePackageSignatureVerifier.php'
+      - 'core/UpdateReleaseTransport.php'
+      - 'core/UpdateReleaseDownloader.php'
       - 'tools/update-sign.php'
       - 'core/UpdatePackageApplier.php'
       - 'modules/operations/**'
@@ -32,6 +34,8 @@ on:
       - 'core/InstallationHealthCheck.php'
       - 'core/UpdatePackageStager.php'
       - 'core/UpdatePackageSignatureVerifier.php'
+      - 'core/UpdateReleaseTransport.php'
+      - 'core/UpdateReleaseDownloader.php'
       - 'tools/update-sign.php'
       - 'core/UpdatePackageApplier.php'
       - 'modules/operations/**'
@@ -83,6 +87,8 @@ jobs:
           php -l core/FileRestoreManager.php
           php -l core/UpdatePackageStager.php
           php -l core/UpdatePackageSignatureVerifier.php
+          php -l core/UpdateReleaseTransport.php
+          php -l core/UpdateReleaseDownloader.php
           php -l tools/update-sign.php
           php -l modules/operations/OperationsService.php
           php -l modules/operations/OperationsAdminController.php
@@ -343,6 +349,7 @@ jobs:
               "health" => $overview["health"],
               "backups" => $overview["backups"],
               "packages" => $overview["packages"],
+              "releaseSourceConfigured" => true,
               "operationStatus" => null,
           ]);
 
@@ -356,6 +363,7 @@ jobs:
               "Восстановить",
               "аварийный снимок",
               "confirm_stage",
+              "Получить подписанный пакет",
               "/admin/system/backups/create",
               "/admin/system/backups/",
               "/admin/system/updates/",

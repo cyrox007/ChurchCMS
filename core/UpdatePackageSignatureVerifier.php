@@ -13,6 +13,17 @@ final class UpdatePackageSignatureVerifier
     private const KEY_ID_PATTERN = '/^[A-Za-z0-9][A-Za-z0-9._-]{0,63}$/D';
     private const MAX_SIGNATURE_BYTES = 16384;
 
+    /** @var array<string,mixed>|null */
+    private ?array $trustedKeys;
+
+    /**
+     * @param array<string,mixed>|null $trustedKeys
+     */
+    public function __construct(?array $trustedKeys = null)
+    {
+        $this->trustedKeys = $trustedKeys;
+    }
+
     /**
      * Проверяет происхождение манифеста по закреплённому публичному ключу.
      *
@@ -66,10 +77,11 @@ final class UpdatePackageSignatureVerifier
             );
         }
 
-        $trustedKeys = Config::get(
-            'operations.update_trusted_public_keys',
-            [],
-        );
+        $trustedKeys = $this->trustedKeys
+            ?? Config::get(
+                'operations.update_trusted_public_keys',
+                [],
+            );
         if (!is_array($trustedKeys)) {
             throw new RuntimeException(
                 'Список доверенных ключей обновления настроен некорректно.'

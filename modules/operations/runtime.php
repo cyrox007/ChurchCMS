@@ -74,6 +74,14 @@ return new class implements ModuleRuntimeProvider {
 
         $router->add(
             'POST',
+            '/admin/system/updates/download',
+            [OperationsAdminController::class, 'downloadUpdate'],
+            [RequireAdminMiddleware::class, CsrfMiddleware::class],
+            'admin_operations_update_download',
+        );
+
+        $router->add(
+            'POST',
             '/admin/system/updates/{stageId}/apply',
             [OperationsAdminController::class, 'applyUpdate'],
             [RequireAdminMiddleware::class, CsrfMiddleware::class],
