@@ -20,6 +20,7 @@ final readonly class FederationRemoteProjection
         public ?string $remoteOwnerOrganizationPublicId,
         public ?string $canonicalUrl,
         public string $state,
+        public ?string $deleteReason,
         public array $payload,
         public DateTimeImmutable $remoteUpdatedAt,
         public DateTimeImmutable $createdAt,
