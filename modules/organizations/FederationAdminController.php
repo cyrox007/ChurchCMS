@@ -184,6 +184,85 @@ final class FederationAdminController
         }
     }
 
+    public function check(
+        Request $request,
+        string $publicId,
+    ): never {
+        AdminAuthorization::requirePermission(
+            $request,
+            'settings.manage',
+        );
+
+        $repository = FederationRepository::fromDatabase();
+        $link = $repository->findByPublicId($publicId);
+
+        if ($link === null || $link->status === 'revoked') {
+            Response::redirectLocal(
+                '/admin/federation?status=health-unavailable',
+            );
+        }
+
+        try {
+            $preview = (new FederationDiscoveryClient())
+                ->discover($link->remoteBaseUrl);
+
+            $health = FederationService::fromDatabase()
+                ->recordHealthSuccess(
+                    publicId: $publicId,
+                    remoteInstanceId: $preview['instance_id'],
+                    remoteOrganizationPublicId:
+                        $preview['organization']['id'],
+                    remoteProfile: $preview['profile'],
+                    remoteName: $preview['organization']['name'],
+                );
+
+            AuditLog::emit(
+                eventType: $health === 'active'
+                    ? 'federation.link.health_ok'
+                    : 'federation.link.health_conflict',
+                actorUserId: self::actorId($request),
+                subjectType: 'federation_link',
+                subjectId: $publicId,
+                metadata: ['health' => $health],
+                request: $request,
+            );
+
+            Response::redirectLocal(
+                '/admin/federation?status='
+                . ($health === 'active'
+                    ? 'health-ok'
+                    : 'health-conflict'),
+            );
+        } catch (Throwable $error) {
+            error_log(
+                'ChurchCMS federation health check failed: '
+                . $error->getMessage()
+            );
+
+            try {
+                FederationService::fromDatabase()
+                    ->recordHealthFailure($publicId);
+
+                AuditLog::emit(
+                    eventType: 'federation.link.health_failed',
+                    actorUserId: self::actorId($request),
+                    subjectType: 'federation_link',
+                    subjectId: $publicId,
+                    request: $request,
+                );
+            } catch (Throwable $storageError) {
+                error_log(
+                    'ChurchCMS federation health state failed: '
+                    . $storageError->getMessage()
+                );
+            }
+
+            Response::redirectLocal(
+                '/admin/federation?status=health-failed',
+            );
+        }
+    }
+
     public function revoke(
         Request $request,
         string $publicId,
@@ -362,6 +441,26 @@ final class FederationAdminController
                 'kind' => 'success',
                 'title' => 'Доверие отозвано',
                 'message' => 'Credential удалён, связь сохранена в истории со статусом revoked.',
+            ],
+            'health-ok' => [
+                'kind' => 'success',
+                'title' => 'Связь доступна',
+                'message' => 'Discovery подтверждает прежнюю identity удалённого ChurchCMS.',
+            ],
+            'health-conflict' => [
+                'kind' => 'error',
+                'title' => 'Конфликт identity',
+                'message' => 'По сохранённому адресу ответил другой ChurchCMS-узел. Credential и scopes не изменены.',
+            ],
+            'health-failed' => [
+                'kind' => 'error',
+                'title' => 'Связь недоступна',
+                'message' => 'Повторная проверка не выполнена. Можно безопасно запустить её ещё раз.',
+            ],
+            'health-unavailable' => [
+                'kind' => 'error',
+                'title' => 'Проверка недоступна',
+                'message' => 'Связь не найдена или доверие уже отозвано.',
             ],
             'connect-rejected' => [
                 'kind' => 'error',
