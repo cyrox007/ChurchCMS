@@ -127,11 +127,32 @@ final class PublicationPartnerTombstoneRepository
         DateTimeImmutable $updatedSince,
         string $siteKey = 'default',
         int $limit = 100,
+        ?string $afterPublicId = null,
     ): array {
         $limit = max(1, min(100, $limit));
         $timestamp = $updatedSince
             ->setTimezone(new DateTimeZone('UTC'))
             ->format('Y-m-d H:i:s');
+
+        if (
+            $afterPublicId !== null
+            && preg_match(
+                '/^[a-f0-9]{8}-[a-f0-9]{4}-4[a-f0-9]{3}-[89ab][a-f0-9]{3}-[a-f0-9]{12}$/Di',
+                $afterPublicId,
+            ) !== 1
+        ) {
+            throw new InvalidArgumentException(
+                'Некорректный public ID курсора tombstone.'
+            );
+        }
+
+        $cursorSql = $afterPublicId === null
+            ? 'updated_at > :updated_since'
+            : '(updated_at > :updated_since
+                OR (
+                    updated_at = :updated_since
+                    AND publication_public_id > :after_public_id
+                ))';
 
         $statement = $this->pdo->prepare(
             'SELECT id,
@@ -142,12 +163,18 @@ final class PublicationPartnerTombstoneRepository
                     updated_at
              FROM publication_partner_tombstones
              WHERE site_key = :site_key
-               AND updated_at > :updated_since
-             ORDER BY updated_at ASC, id ASC
+               AND ' . $cursorSql . '
+             ORDER BY updated_at ASC, publication_public_id ASC
              LIMIT :limit'
         );
         $statement->bindValue(':site_key', $siteKey);
         $statement->bindValue(':updated_since', $timestamp);
+        if ($afterPublicId !== null) {
+            $statement->bindValue(
+                ':after_public_id',
+                $afterPublicId,
+            );
+        }
         $statement->bindValue(':limit', $limit, PDO::PARAM_INT);
         $statement->execute();
 
