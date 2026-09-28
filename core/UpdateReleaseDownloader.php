@@ -507,6 +507,8 @@ final class UpdateReleaseDownloader
                 CURLOPT_TIMEOUT => 30,
                 CURLOPT_PROTOCOLS => CURLPROTO_HTTPS,
                 CURLOPT_REDIR_PROTOCOLS => CURLPROTO_HTTPS,
+                CURLOPT_SSL_VERIFYPEER => true,
+                CURLOPT_SSL_VERIFYHOST => 2,
                 CURLOPT_USERAGENT => 'ChurchCMS Updater/0.1',
                 CURLOPT_HTTPHEADER => [
                     'Accept: application/json, application/octet-stream',
