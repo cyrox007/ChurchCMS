@@ -26,6 +26,8 @@ final class SyndicationEntry
         public readonly ?string $imageUrl = null,
         public readonly ?string $imageMime = null,
         public readonly array $targets = [],
+        public readonly ?string $sourceName = null,
+        public readonly ?string $sourceUrl = null,
     ) {
         if ($id === '' || $url === '' || $title === '') {
             throw new InvalidArgumentException('Syndication entry id, url and title are required.');
@@ -42,7 +44,16 @@ final class SyndicationEntry
         }
 
         if ($imageUrl !== null && filter_var($imageUrl, FILTER_VALIDATE_URL) === false) {
-            throw new InvalidArgumentException('Syndication image URL must be absolute.');
+            throw new InvalidArgumentException('URL изображения синдикации должен быть абсолютным.');
+        }
+
+        if (
+            $sourceUrl !== null
+            && filter_var($sourceUrl, FILTER_VALIDATE_URL) === false
+        ) {
+            throw new InvalidArgumentException(
+                'URL исходного источника синдикации должен быть абсолютным.'
+            );
         }
     }
 
