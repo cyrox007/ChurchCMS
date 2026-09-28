@@ -19,6 +19,7 @@ final class UpdateReleaseDownloader
         private readonly string $root,
         private readonly string $stagingRoot,
         private readonly ?UpdateReleaseTransport $transport = null,
+        private readonly ?UpdatePackageSignatureVerifier $signatureVerifier = null,
     ) {
     }
 
@@ -64,8 +65,9 @@ final class UpdateReleaseDownloader
 
             // Подпись проверяется до загрузки payload:
             // недоверенный источник не заставляет установку скачивать файлы.
-            (new UpdatePackageSignatureVerifier())
-                ->verify($manifest);
+            $verifier = $this->signatureVerifier
+                ?? new UpdatePackageSignatureVerifier();
+            $verifier->verify($manifest);
 
             $entries = $this->downloadEntries($manifest);
             $totalBytes = 0;
@@ -108,6 +110,7 @@ final class UpdateReleaseDownloader
             return (new UpdatePackageStager(
                 $this->root,
                 $this->stagingRoot,
+                $verifier,
             ))->stage($temporary);
         } finally {
             $this->deleteTree($temporary);
