@@ -59,6 +59,12 @@ Implemented:
 - `php bin/federation-sync.php` выполняет ограниченный проход по активным связям и подходит для cron; один сбой не останавливает обработку остальных связей;
 - Admin Shell показывает время последней успешной синхронизации и безопасное сообщение последней sync-ошибки;
 - PostgreSQL/MySQL smoke проверяет частичный сетевой сбой, сохранение безопасного курсора, повторный запуск и tie-breaker публикаций с одинаковым `updated_at`;
+- `FederatedPublicationFeedService` объединяет локальные опубликованные материалы с active remote projections только от доверенных `child`-связей, у которых разрешён входящий `content.read` или `publications.read`;
+- публичный `GET /api/v1/publications/aggregated` отдаёт ограниченную общую ленту, где каждый элемент содержит явный блок `source` с видом источника, исходным `instance_id`, organization owner, названием и canonical URL;
+- remote projection в агрегированную ленту нормализуется по белому списку полей списка; сохранённый `body_html` и произвольные поля удалённого payload наружу не копируются;
+- remote projection без корректного `published_at` или с временем публикации в будущем не показывается;
+- tombstone, revoked/error связь, `parent`/`peer` и child-связь без входящего publication scope не попадают в агрегированную ленту;
+- PostgreSQL/MySQL smoke проверяет локальный + child материал, сохранность canonical source и исключение tombstone/peer/parent/no-scope источников; HTTP smoke отдельно проверяет публичный контракт endpoint;
 - Admin Shell содержит раздел «Структура» с отдельным правом `organizations.manage`;
 - администратор может создавать благочиния, приходы, монастыри, отделы, комиссии и другие типы, менять родителя/slug/порядок и описание;
 - при изменении slug или родителя canonical path всего поддерева пересчитывается транзакционно;
@@ -80,7 +86,7 @@ Implemented:
 - organization ownership для Worship/Events/Media/Documents;
 - Admin/public/API слой People и расширенные сведения о духовенстве;
 - обобщить синхронизацию на остальные типы remote projections и общий планировщик;
-- агрегированные ленты вышестоящих узлов без потери источника.
+- подключить агрегированную Publications-ленту к публичной теме/RSS и расширить тот же source-preserving контракт на Events/Worship/Media/Documents.
 
 ## Installation
 
