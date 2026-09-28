@@ -35,6 +35,8 @@ Examples planned for content modules:
 ```
 GET /api/v1/publications
 GET /api/v1/publications/{slug}
+GET /api/v1/pages
+GET /api/v1/pages/{public_id}
 GET /api/v1/events
 GET /api/v1/worship-services
 GET /api/v1/people
@@ -172,6 +174,11 @@ Public objects will receive stable external identifiers or canonical slugs. This
 Публикации передают `organization_owner_id` как stable public ID локальной
 organization unit. Агрегаторы должны сохранять его вместе с материалом и не
 подменять владельца сайтом, который только ретранслировал публикацию.
+
+Страницы передают тот же `organization_owner_id`, canonical `path` и
+`parent_id` как stable public ID родительской страницы. В коллекцию и detail
+endpoint попадают только страницы со статусом `published` и наступившим
+`published_at`; внутренние числовые ID наружу не выдаются.
 
 ## Pagination
 

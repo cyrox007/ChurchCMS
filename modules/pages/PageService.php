@@ -167,6 +167,81 @@ final class PageService
         PageCache::bumpVersion();
     }
 
+    public function publish(
+        string $publicId,
+        string $siteKey = 'default',
+    ): void {
+        self::assertUuid($publicId);
+        $siteKey = self::siteKey($siteKey);
+        $page = $this->requiredPage($publicId, $siteKey);
+
+        if ($page->parentId !== null) {
+            $parent = $this->repository->findById(
+                $page->parentId,
+                $siteKey,
+            );
+
+            if (
+                $parent === null
+                || $parent->status !== PageStatus::Published
+                || $parent->publishedAt === null
+            ) {
+                throw new InvalidArgumentException(
+                    'Сначала опубликуйте родительскую страницу.'
+                );
+            }
+        }
+
+        $now = gmdate('Y-m-d H:i:s');
+        $statement = $this->pdo->prepare(
+            'UPDATE pages
+             SET status = :status,
+                 published_at = COALESCE(published_at, :published_at),
+                 updated_at = :updated_at
+             WHERE id = :id'
+        );
+        $statement->execute([
+            'status' => PageStatus::Published->value,
+            'published_at' => $now,
+            'updated_at' => $now,
+            'id' => $page->id,
+        ]);
+
+        PageCache::bumpVersion();
+    }
+
+    /**
+     * Снятие раздела с публикации также скрывает всё его поддерево.
+     */
+    public function unpublish(
+        string $publicId,
+        string $siteKey = 'default',
+    ): void {
+        self::assertUuid($publicId);
+        $siteKey = self::siteKey($siteKey);
+        $page = $this->requiredPage($publicId, $siteKey);
+        $statement = $this->pdo->prepare(
+            'UPDATE pages
+             SET status = :status,
+                 published_at = NULL,
+                 updated_at = :updated_at
+             WHERE site_key = :site_key
+               AND (
+                    id = :id
+                    OR path LIKE :path_prefix
+               )'
+        );
+        $statement->execute([
+            'status' => PageStatus::Draft->value,
+            'updated_at' => gmdate('Y-m-d H:i:s'),
+            'site_key' => $siteKey,
+            'id' => $page->id,
+            'path_prefix' => $page->path . '/%',
+        ]);
+
+        PageCache::bumpVersion();
+    }
+
     public function updateContent(
         string $publicId,
         string $title,
@@ -297,6 +372,18 @@ final class PageService
                 ) {
                     throw new InvalidArgumentException(
                         'Нельзя переместить страницу внутрь её собственного подраздела.'
+                    );
+                }
+
+                if (
+                    $page->status === PageStatus::Published
+                    && (
+                        $parent->status !== PageStatus::Published
+                        || $parent->publishedAt === null
+                    )
+                ) {
+                    throw new InvalidArgumentException(
+                        'Нельзя переместить опубликованную страницу под черновик.'
                     );
                 }
             }
