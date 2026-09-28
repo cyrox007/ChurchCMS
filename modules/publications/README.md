@@ -15,6 +15,8 @@ Initial read-only public slice of the ChurchCMS publication domain.
 - trusted partner incremental sync API;
 - syndication provider for RSS/aggregator targets;
 - стабильная ссылка на organization owner для локальной и федеративной атрибуции;
+- выбор активного organization owner в Admin Shell с ограничением списка и
+  действий по scope разрешений `publications.read/create/edit/publish`;
 - per-publication `comments_enabled` toggle, disabled by default.
 
 ## Public routes
@@ -47,6 +49,12 @@ Partner sync requires the `content.read` scope.
 организацию текущего сайта, если она создана. Сервис отклоняет владельца из
 другого `site_key` и архивную организацию. Legacy-строки могут временно
 оставаться без владельца до явного назначения.
+
+Ограниченная роль видит в списке, глобальном Admin-поиске, редакционных задачах
+и редакторе только публикации и организации своего поддерева. Создание,
+редактирование, смена статуса и смена владельца за границами scope завершаются
+отказом. Публикации без владельца доступны только роли с глобальным
+разрешением.
 
 Incremental sync:
 
