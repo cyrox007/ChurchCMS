@@ -123,8 +123,6 @@ jobs:
 
           php -r '
           require "core.php";
-          $runtime = require "modules/organizations/runtime.php";
-          $runtime->boot();
 
           $raw = file_get_contents(
               "http://127.0.0.1:8099/api/v1/federation/meta"
