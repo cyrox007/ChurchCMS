@@ -48,12 +48,16 @@ Implemented:
 - Admin Shell показывает и разрешает изменять только доступное поддерево; перенос узла за границу scope и действия над чужой веткой запрещены;
 - единственная доступная граница автоматически используется как родитель при создании, а родитель выше границы доступа блокируется от изменения;
 - отдельный PostgreSQL smoke проверяет domain operations, organization-scoped RBAC, permissions и рендер Admin Shell;
+- модуль `people` хранит карточку человека с обязательным каноническим organization owner и отдельные назначения в конкретные organization units;
+- `PeopleService` по умолчанию назначает владельцем site root, запрещает cross-site владельцев/назначения и валидирует период назначения;
+- составные внешние ключи `(site_key, public_id)` дополнительно запрещают cross-site связи на уровне PostgreSQL/MySQL;
 - `docs/ORGANIZATIONS_AND_FEDERATION.md` фиксирует результаты анализа епархиальных/митрополичьих сайтов и общий domain contract.
 
 Дальше:
 
 - безопасный pairing/revoke workflow;
-- выбор publication owner в Admin Shell с organization-scoped RBAC и ownership для остальных контентных модулей;
+- выбор publication owner в Admin Shell с organization-scoped RBAC и ownership для Worship/Events/Media/Documents;
+- Admin/public/API слой People и расширенные сведения о духовенстве;
 - incremental aggregation/sync с canonical ownership и tombstones.
 
 ## Installation

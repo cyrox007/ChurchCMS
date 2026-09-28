@@ -34,6 +34,8 @@ Priority is ordered within each section.
     - [x] выбор owner, дерево и publish/unpublish в Admin Shell с organization-scoped RBAC;
     - [ ] публичный HTML по canonical path;
 - [ ] привязка People/назначений, Worship, Events, Media и Documents к organization unit;
+  - [x] People/назначения: основа схемы и доменного слоя, обязательный владелец-организация карточки и отдельная ссылка на организацию каждого назначения;
+  - [ ] Worship, Events, Media и Documents: organization binding;
 - [ ] incremental federation sync с canonical owner и tombstones;
 - [ ] агрегированные ленты вышестоящих узлов без потери источника;
 - [ ] federation health/retry/conflict UI.
