@@ -108,6 +108,9 @@ jobs:
               'operations' => [
                   'backup_path' => getenv('RUNNER_TEMP') . '/operations-backups',
                   'update_staging_path' => getenv('RUNNER_TEMP') . '/operations-staging',
+                  'update_trusted_keys' => [
+                      'ci-release-key' => getenv('CHURCHCMS_TEST_UPDATE_KEY') ?: '',
+                  ],
               ],
               'database' => [
                   'driver' => 'pgsql',
@@ -287,6 +290,10 @@ jobs:
               base64_encode($publicKey),
           );
           ' "$package"
+
+          export CHURCHCMS_TEST_UPDATE_KEY="$(
+              cat "$RUNNER_TEMP/operations-trusted-key"
+          )"
 
           php -r '
           require "core.php";
