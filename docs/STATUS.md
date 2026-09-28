@@ -204,11 +204,16 @@ Implemented:
 - запрещены self-parent, перемещение внутрь собственного потомка и collision с существующим canonical path;
 - при ошибке перемещения транзакция не оставляет частично изменённое дерево;
 - body страницы проходит общий HTML sanitizer;
+- страница хранит stable public ID локальной organization unit владельца;
+- новый draft автоматически получает корневую организацию своего `site_key`, если она создана;
+- `PageService` запрещает назначать владельца из другого сайта или архивной ветки;
+- migration backfill существующих страниц через `organization_site_roots`, сохраняя nullable для legacy-строк без корня;
 - PostgreSQL smoke проверяет create/rename/move/cycle/collision/rollback, общий MySQL runtime проверяет schema compatibility.
 
 Next:
 
 - public/admin/API vertical slice;
+- выбор organization owner в Admin Shell и API с organization-scoped RBAC;
 - publish/unpublish workflow в пользовательском интерфейсе;
 - menu integration после стабилизации публичного Pages contract.
 
