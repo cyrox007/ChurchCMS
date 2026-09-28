@@ -35,13 +35,22 @@ final class AdminTaskCenter
 
         $tasks = [];
         $count = 0;
+        $user = $request->attribute('admin.user');
+        $userId = is_array($user)
+            ? (int) ($user['id'] ?? 0)
+            : 0;
 
         foreach (AdminTaskRegistry::providers() as $provider) {
             if (!AdminAuthorization::can($request, $provider->permission())) {
                 continue;
             }
 
-            foreach ($provider->tasks(self::TASKS_PER_PROVIDER) as $task) {
+            foreach (
+                $provider->tasks(
+                    self::TASKS_PER_PROVIDER,
+                    $userId,
+                ) as $task
+            ) {
                 $normalized = self::normalizeTask($provider->id(), $task);
                 if ($normalized === null) {
                     continue;

@@ -165,6 +165,7 @@ final class PublicationService
         string $siteKey = 'default',
         array $categoryNames = [],
         array $tagNames = [],
+        ?string $ownerOrganizationPublicId = null,
     ): void {
         self::assertUuid($publicId);
 
@@ -185,6 +186,13 @@ final class PublicationService
         $tags = PublicationTaxonomyService::tagsFromNames(
             $tagNames,
         );
+        $ownerOrganizationPublicId =
+            $ownerOrganizationPublicId !== null
+                ? $this->organizationOwner(
+                    $ownerOrganizationPublicId,
+                    $data['site_key'],
+                )
+                : null;
 
         $ownsTransaction = !$this->pdo->inTransaction();
         if ($ownsTransaction) {
@@ -197,6 +205,9 @@ final class PublicationService
                 $data['site_key'],
             );
 
+            $ownerAssignment = $ownerOrganizationPublicId !== null
+                ? 'owner_organization_public_id = :owner_organization_public_id,'
+                : '';
             $statement = $this->pdo->prepare(
                 'UPDATE publications
                  SET type = :type,
@@ -205,12 +216,13 @@ final class PublicationService
                      excerpt = :excerpt,
                      body_html = :body_html,
                      author_name = :author_name,
+                     ' . $ownerAssignment . '
                      syndication_targets = :syndication_targets,
                      comments_enabled = :comments_enabled,
                      updated_at = :updated_at
                  WHERE id = :id'
             );
-            $statement->execute([
+            $parameters = [
                 'type' => $data['type'],
                 'slug' => $data['slug'],
                 'title' => $data['title'],
@@ -224,7 +236,14 @@ final class PublicationService
                 'comments_enabled' => $data['comments_enabled'] ? 1 : 0,
                 'updated_at' => gmdate('Y-m-d H:i:s'),
                 'id' => $publicationId,
-            ]);
+            ];
+
+            if ($ownerOrganizationPublicId !== null) {
+                $parameters['owner_organization_public_id'] =
+                    $ownerOrganizationPublicId;
+            }
+
+            $statement->execute($parameters);
 
             (new PublicationTaxonomyService($this->pdo))
                 ->replaceForPublication(

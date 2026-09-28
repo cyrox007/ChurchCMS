@@ -41,6 +41,10 @@ final class AdminSearchService
         }
 
         $groups = [];
+        $user = $request->attribute('admin.user');
+        $userId = is_array($user)
+            ? (int) ($user['id'] ?? 0)
+            : 0;
 
         foreach (AdminSearchRegistry::providers() as $provider) {
             if (!AdminAuthorization::can($request, $provider->permission())) {
@@ -50,6 +54,7 @@ final class AdminSearchService
             $results = $provider->search(
                 $query,
                 self::RESULTS_PER_PROVIDER,
+                $userId,
             );
 
             if ($results === []) {

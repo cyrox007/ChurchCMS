@@ -18,8 +18,10 @@ final class SocialAdminTaskProvider implements AdminTaskProvider
         return 'social.manage';
     }
 
-    public function tasks(int $limit): array
-    {
+    public function tasks(
+        int $limit,
+        int $userId = 0,
+    ): array {
         $outbound = SocialPostRepository::fromDatabase()->failedCount();
         $sync = ChannelSyncStateRepository::fromDatabase()->failedCount();
         $count = $outbound + $sync;

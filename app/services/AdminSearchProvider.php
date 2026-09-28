@@ -20,5 +20,9 @@ interface AdminSearchProvider
      *     route_params:array<string,string>
      * }>
      */
-    public function search(string $query, int $limit): array;
+    public function search(
+        string $query,
+        int $limit,
+        int $userId = 0,
+    ): array;
 }

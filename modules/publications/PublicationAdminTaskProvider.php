@@ -18,10 +18,18 @@ final class PublicationAdminTaskProvider implements AdminTaskProvider
         return 'publications.read';
     }
 
-    public function tasks(int $limit): array
-    {
+    public function tasks(
+        int $limit,
+        int $userId = 0,
+    ): array {
+        $ownerPublicIds =
+            PublicationOrganizationAccessService::fromDatabase()
+                ->visibleOwnerPublicIds(
+                    $userId,
+                    'publications.read',
+                );
         $count = PublicationRepository::fromDatabase()
-            ->countEditorialWork('default');
+            ->countEditorialWork('default', $ownerPublicIds);
 
         if ($count < 1) {
             return [];

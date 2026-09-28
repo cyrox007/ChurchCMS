@@ -66,6 +66,22 @@ $formAction = $isEdit
                 </label>
             </div>
 
+            <label class="field">
+                <span>Организация-владелец</span>
+                <select name="owner_organization_public_id" required>
+                    <option value="">Выберите организацию</option>
+                    <?php foreach (($organizationUnits ?? []) as $organization): ?>
+                        <option
+                            value="<?= $theme->e($organization->publicId) ?>"
+                            <?= ($form['owner_organization_public_id'] ?? '') === $organization->publicId ? 'selected' : '' ?>
+                        >
+                            <?= $theme->e($organization->name . ' · ' . $organization->path) ?>
+                        </option>
+                    <?php endforeach; ?>
+                </select>
+                <small>Доступны только активные организации в пределах ваших полномочий.</small>
+            </label>
+
             <div class="editor-grid">
                 <label class="field">
                     <span>Категории <small>через запятую</small></span>

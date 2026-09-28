@@ -21,5 +21,8 @@ interface AdminTaskProvider
      *     route_params:array<string,string>
      * }>
      */
-    public function tasks(int $limit): array;
+    public function tasks(
+        int $limit,
+        int $userId = 0,
+    ): array;
 }

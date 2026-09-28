@@ -23,15 +23,25 @@ final class PublicationAdminSearchProvider implements AdminSearchProvider
         return 'publications.read';
     }
 
-    public function search(string $query, int $limit): array
-    {
+    public function search(
+        string $query,
+        int $limit,
+        int $userId = 0,
+    ): array {
         $results = [];
+        $ownerPublicIds =
+            PublicationOrganizationAccessService::fromDatabase()
+                ->visibleOwnerPublicIds(
+                    $userId,
+                    'publications.read',
+                );
 
         foreach (
             PublicationRepository::fromDatabase()->adminSearch(
                 $query,
                 'default',
                 $limit,
+                $ownerPublicIds,
             ) as $publication
         ) {
             $results[] = [

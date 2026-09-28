@@ -61,7 +61,7 @@ Implemented:
 
 Дальше:
 
-- выбор publication owner в Admin Shell с organization-scoped RBAC и ownership для Worship/Events/Media/Documents;
+- organization ownership для Worship/Events/Media/Documents;
 - Admin/public/API слой People и расширенные сведения о духовенстве;
 - incremental aggregation/sync с canonical ownership и tombstones.
 
@@ -189,11 +189,13 @@ Implemented:
 - публикация хранит stable public ID локальной organization unit владельца;
 - новый draft автоматически получает корневую организацию своего `site_key`, если она создана;
 - `PublicationService` запрещает назначать владельца из другого сайта или архивной ветки, а public/partner API возвращает `organization_owner_id`;
-- migration безопасно backfill существующих публикаций через `organization_site_roots`, оставляя nullable только legacy-строки без корня.
+- migration безопасно backfill существующих публикаций через `organization_site_roots`, оставляя nullable только legacy-строки без корня;
+- Admin Shell позволяет выбрать только активного владельца из доступного organization scope;
+- `publications.read/create/edit/publish` ограничивают список, глобальный Admin-поиск, счётчик редакционных задач и изменяющие действия поддеревом назначения роли; legacy-публикация без владельца доступна только глобальной роли;
+- PostgreSQL/MySQL smoke проверяет owner control, фильтрацию списка, наследование scope и атомарную смену владельца.
 
 Next:
 
-- выбор organization owner в Admin Shell с organization-scoped RBAC;
 - revisions;
 - Media/cover relation.
 

@@ -21,9 +21,20 @@ final class PublicationsAdminController
     {
         AdminAuthorization::requirePermission($request, 'publications.read');
 
+        $userId = self::requiredUserId($request);
+        $organizationAccess =
+            PublicationOrganizationAccessService::fromDatabase();
+        $ownerPublicIds = $organizationAccess->visibleOwnerPublicIds(
+            $userId,
+            'publications.read',
+        );
+        $publications = PublicationRepository::fromDatabase()->adminList(
+            ownerPublicIds: $ownerPublicIds,
+        );
+
         AdminShell::page($request, 'admin.publications.index', [
             'title' => 'Публикации',
-            'publications' => PublicationRepository::fromDatabase()->adminList(),
+            'publications' => $publications,
             'canCreate' => AdminAuthorization::can($request, 'publications.create'),
             'canEdit' => AdminAuthorization::can($request, 'publications.edit'),
             'canPublish' => AdminAuthorization::can($request, 'publications.publish'),
@@ -34,10 +45,17 @@ final class PublicationsAdminController
     {
         AdminAuthorization::requirePermission($request, 'publications.create');
 
+        $userId = self::requiredUserId($request);
+        $defaultOwner = PublicationOrganizationAccessService::fromDatabase()
+            ->defaultOwnerPublicId(
+                $userId,
+                'publications.create',
+            );
+
         $this->renderEditor(
             request: $request,
             publication: null,
-            form: $this->emptyForm(),
+            form: $this->emptyForm($defaultOwner),
         );
     }
 
@@ -50,6 +68,25 @@ final class PublicationsAdminController
 
         if ($type === null) {
             $this->renderEditor($request, null, $form, 'Выберите тип публикации.');
+        }
+
+        if ($form['owner_organization_public_id'] === '') {
+            $this->renderEditor(
+                $request,
+                null,
+                $form,
+                'Выберите организацию-владельца.',
+            );
+        }
+
+        $owner = PublicationOrganizationAccessService::fromDatabase()
+            ->assignableOwner(
+                self::requiredUserId($request),
+                'publications.create',
+                $form['owner_organization_public_id'],
+            );
+        if ($owner === null) {
+            Response::text('403 Forbidden', 403);
         }
 
         try {
@@ -69,6 +106,7 @@ final class PublicationsAdminController
                 tagNames: PublicationTaxonomyService::tagsFromInput(
                     $form['tags'],
                 ),
+                ownerOrganizationPublicId: $owner->publicId,
             );
 
             $publication = $repository->findByPublicId($publicId);
@@ -97,6 +135,12 @@ final class PublicationsAdminController
             Response::text('404 Not Found', 404);
         }
 
+        $this->requirePublicationAccess(
+            $request,
+            $publication,
+            'publications.edit',
+        );
+
         $this->renderEditor(
             request: $request,
             publication: $publication,
@@ -115,11 +159,37 @@ final class PublicationsAdminController
             Response::text('404 Not Found', 404);
         }
 
+        $this->requirePublicationAccess(
+            $request,
+            $publication,
+            'publications.edit',
+        );
+
         $form = $this->formFromRequest($request);
         $type = PublicationType::tryFrom($form['type']);
 
         if ($type === null) {
             $this->renderEditor($request, $publication, $form, 'Выберите тип публикации.');
+        }
+
+        if ($form['owner_organization_public_id'] === '') {
+            $this->renderEditor(
+                $request,
+                $publication,
+                $form,
+                'Выберите организацию-владельца.',
+            );
+        }
+
+        $owner = PublicationOrganizationAccessService::fromDatabase()
+            ->assignableOwner(
+                self::requiredUserId($request),
+                'publications.edit',
+                $form['owner_organization_public_id'],
+                $publication->siteKey,
+            );
+        if ($owner === null) {
+            Response::text('403 Forbidden', 403);
         }
 
         try {
@@ -139,6 +209,7 @@ final class PublicationsAdminController
                 tagNames: PublicationTaxonomyService::tagsFromInput(
                     $form['tags'],
                 ),
+                ownerOrganizationPublicId: $owner->publicId,
             );
 
             $updated = $repository->findByPublicId($publicId);
@@ -162,9 +233,16 @@ final class PublicationsAdminController
     {
         AdminAuthorization::requirePermission($request, 'publications.publish');
 
-        if (PublicationRepository::fromDatabase()->findByPublicId($publicId) === null) {
+        $publication = PublicationRepository::fromDatabase()
+            ->findByPublicId($publicId);
+        if ($publication === null) {
             Response::text('404 Not Found', 404);
         }
+        $this->requirePublicationAccess(
+            $request,
+            $publication,
+            'publications.publish',
+        );
 
         PublicationService::fromDatabase()->publish($publicId);
         $this->audit($request, 'publication.published', $publicId);
@@ -186,6 +264,11 @@ final class PublicationsAdminController
         if ($publication === null) {
             Response::text('404 Not Found', 404);
         }
+        $this->requirePublicationAccess(
+            $request,
+            $publication,
+            'publications.publish',
+        );
 
         $raw = trim((string) $request->post(
             'scheduled_at',
@@ -243,12 +326,16 @@ final class PublicationsAdminController
             'publications.publish',
         );
 
-        if (
-            PublicationRepository::fromDatabase()
-                ->findByPublicId($publicId) === null
-        ) {
+        $publication = PublicationRepository::fromDatabase()
+            ->findByPublicId($publicId);
+        if ($publication === null) {
             Response::text('404 Not Found', 404);
         }
+        $this->requirePublicationAccess(
+            $request,
+            $publication,
+            'publications.publish',
+        );
 
         try {
             PublicationService::fromDatabase()->unschedule(
@@ -277,9 +364,16 @@ final class PublicationsAdminController
     {
         AdminAuthorization::requirePermission($request, 'publications.publish');
 
-        if (PublicationRepository::fromDatabase()->findByPublicId($publicId) === null) {
+        $publication = PublicationRepository::fromDatabase()
+            ->findByPublicId($publicId);
+        if ($publication === null) {
             Response::text('404 Not Found', 404);
         }
+        $this->requirePublicationAccess(
+            $request,
+            $publication,
+            'publications.publish',
+        );
 
         PublicationService::fromDatabase()->withdraw($publicId);
         $this->audit($request, 'publication.withdrawn', $publicId);
@@ -294,13 +388,41 @@ final class PublicationsAdminController
         ?string $error = null,
         ?string $success = null,
     ): never {
+        $permission = $publication === null
+            ? 'publications.create'
+            : 'publications.edit';
+        $organizationAccess =
+            PublicationOrganizationAccessService::fromDatabase();
+        $organizationUnits = $organizationAccess->availableOwners(
+            self::requiredUserId($request),
+            $permission,
+            $publication?->siteKey ?? 'default',
+        );
+
+        if ($organizationUnits === []) {
+            Response::text('403 Forbidden', 403);
+        }
+
+        $canPublish = AdminAuthorization::can(
+            $request,
+            'publications.publish',
+        );
+        if ($canPublish && $publication !== null) {
+            $canPublish = $organizationAccess->canAccess(
+                self::requiredUserId($request),
+                'publications.publish',
+                $publication,
+            );
+        }
+
         AdminShell::page($request, 'admin.publications.editor', [
             'title' => $publication === null ? 'Новая публикация' : 'Редактирование публикации',
             'publication' => $publication,
             'form' => $form,
             'error' => $error,
             'success' => $success,
-            'canPublish' => AdminAuthorization::can($request, 'publications.publish'),
+            'organizationUnits' => $organizationUnits,
+            'canPublish' => $canPublish,
             'canSyndicate' => AdminAuthorization::can($request, 'publications.syndicate'),
             'scheduleTimezone' => $this->applicationTimezone()
                 ->getName(),
@@ -318,6 +440,10 @@ final class PublicationsAdminController
             'excerpt' => trim((string) $request->post('excerpt', '')),
             'body' => trim((string) $request->post('body', '')),
             'author_name' => trim((string) $request->post('author_name', '')),
+            'owner_organization_public_id' => trim((string) $request->post(
+                'owner_organization_public_id',
+                '',
+            )),
             'slug' => trim((string) $request->post('slug', '')),
             'comments_enabled' => $request->post('comments_enabled') === '1',
             'categories' => trim((string) $request->post('categories', '')),
@@ -345,6 +471,8 @@ final class PublicationsAdminController
             'excerpt' => $publication->excerpt,
             'body' => self::editorText($publication->bodyHtml),
             'author_name' => $publication->authorName ?? '',
+            'owner_organization_public_id' =>
+                $publication->ownerOrganizationPublicId ?? '',
             'slug' => $publication->slug,
             'comments_enabled' => $publication->commentsEnabled,
             'categories' => PublicationTaxonomyService::names(
@@ -366,7 +494,9 @@ final class PublicationsAdminController
         return $form + $this->seoDefaults();
     }
 
-    private function emptyForm(): array
+    private function emptyForm(
+        string $ownerOrganizationPublicId = '',
+    ): array
     {
         return [
             'type' => PublicationType::News->value,
@@ -374,6 +504,8 @@ final class PublicationsAdminController
             'excerpt' => '',
             'body' => '',
             'author_name' => '',
+            'owner_organization_public_id' =>
+                $ownerOrganizationPublicId,
             'slug' => '',
             'comments_enabled' => false,
             'categories' => '',
@@ -479,6 +611,37 @@ final class PublicationsAdminController
             subjectId: $publicId,
             request: $request,
         );
+    }
+
+    private function requirePublicationAccess(
+        Request $request,
+        Publication $publication,
+        string $permission,
+    ): void {
+        if (
+            !PublicationOrganizationAccessService::fromDatabase()
+                ->canAccess(
+                    self::requiredUserId($request),
+                    $permission,
+                    $publication,
+                )
+        ) {
+            Response::text('403 Forbidden', 403);
+        }
+    }
+
+    private static function requiredUserId(Request $request): int
+    {
+        $user = $request->attribute('admin.user');
+        $userId = is_array($user)
+            ? (int) ($user['id'] ?? 0)
+            : 0;
+
+        if ($userId <= 0) {
+            Response::text('403 Forbidden', 403);
+        }
+
+        return $userId;
     }
 
     private static function editorText(string $html): string
