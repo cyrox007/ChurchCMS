@@ -7,9 +7,14 @@ on:
       - main
     paths:
       - 'modules/pages/**'
+      - 'core/RouteTemplate.php'
+      - 'core/Router.php'
       - 'modules/organizations/**'
       - 'tools/page-organization-owner-smoke.php'
       - 'tools/page-api-smoke.php'
+      - 'themes/default/templates/pages/show.php'
+      - 'themes/default/theme.json'
+      - 'themes/default/assets/css/site.css'
       - '.github/workflows/pages-domain-smoke.yml'
   pull_request:
     branches:
@@ -17,9 +22,14 @@ on:
       - main
     paths:
       - 'modules/pages/**'
+      - 'core/RouteTemplate.php'
+      - 'core/Router.php'
       - 'modules/organizations/**'
       - 'tools/page-organization-owner-smoke.php'
       - 'tools/page-api-smoke.php'
+      - 'themes/default/templates/pages/show.php'
+      - 'themes/default/theme.json'
+      - 'themes/default/assets/css/site.css'
       - '.github/workflows/pages-domain-smoke.yml'
 
 permissions:
@@ -59,17 +69,22 @@ jobs:
         shell: bash
         run: |
           set -euo pipefail
+          php -l core/RouteTemplate.php
+          php -l core/Router.php
           php -l modules/pages/PageStatus.php
           php -l modules/pages/Page.php
           php -l modules/pages/PageRepository.php
           php -l modules/pages/PageService.php
           php -l modules/pages/PageApiResource.php
+          php -l modules/pages/PagesController.php
           php -l modules/pages/PagesApiController.php
           php -l modules/pages/migrations/20260927_121000_add_page_organization_owner.php
           php -l modules/pages/runtime.php
           php -l tools/page-organization-owner-smoke.php
           php -l tools/page-api-smoke.php
+          php -l themes/default/templates/pages/show.php
           php bin/migrate.php validate
+          php bin/theme-check.php
 
       - name: Подготовить тестовую установку
         shell: bash

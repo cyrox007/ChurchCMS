@@ -210,11 +210,13 @@ Implemented:
 - migration backfill существующих страниц через `organization_site_roots`, сохраняя nullable для legacy-строк без корня;
 - `PageService::publish()` требует опубликованного родителя, перенос опубликованного узла под draft запрещён, а `unpublish()` атомарно скрывает всё поддерево;
 - `GET /api/v1/pages` и `GET /api/v1/pages/{public_id}` отдают только опубликованные страницы, stable parent/owner IDs и canonical path;
-- PostgreSQL smoke проверяет create/rename/move/cycle/collision/rollback, publish/unpublish, API projection и маршруты; общий MySQL runtime проверяет schema compatibility.
+- публичный контроллер разрешает вложенные страницы по `/pages/<canonical path>`, формирует canonical SEO и breadcrumbs только из опубликованных предков;
+- Router поддерживает безопасный wildcard только в последнем сегменте и кодирует каждый сегмент отдельно при генерации URL;
+- PostgreSQL smoke проверяет create/rename/move/cycle/collision/rollback, publish/unpublish, API projection, wildcard-маршрут и рендер шаблона; общий MySQL runtime проверяет schema compatibility.
 
 Next:
 
-- public/admin vertical slice;
+- Admin Shell vertical slice;
 - выбор organization owner в Admin Shell с organization-scoped RBAC;
 - publish/unpublish workflow в пользовательском интерфейсе;
 - menu integration после стабилизации публичного Pages contract.

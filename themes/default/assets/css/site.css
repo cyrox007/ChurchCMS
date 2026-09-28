@@ -728,6 +728,27 @@ svg {
     border-top: 1px solid var(--line);
 }
 
+.page-breadcrumbs {
+    margin-bottom: 1.25rem;
+    color: var(--ink-500);
+    font-size: .9rem;
+}
+
+.page-breadcrumbs ol {
+    display: flex;
+    flex-wrap: wrap;
+    gap: .35rem;
+    margin: 0;
+    padding: 0;
+    list-style: none;
+}
+
+.page-breadcrumbs li:not(:last-child)::after {
+    margin-left: .35rem;
+    content: "/";
+    color: var(--line-strong);
+}
+
 @media (max-width: 46rem) {
     .publication-list {
         grid-template-columns: 1fr;

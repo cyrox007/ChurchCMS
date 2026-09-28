@@ -91,6 +91,10 @@ component.*
 education.*
 ```
 
+Модуль Pages использует `page.show` для публичного canonical path. Шаблон
+получает `page`, `breadcrumbs`, `canonicalPath` и `seo`; `bodyHtml` уже прошёл
+общий sanitizer и выводится как доверенный контент редактора.
+
 A module should document every logical template name it expects a theme to provide.
 
 ## 4. Rendering a page

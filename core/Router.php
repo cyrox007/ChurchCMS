@@ -79,14 +79,49 @@ final class Router
             $used = [];
 
             $url = preg_replace_callback(
-                '/\{([A-Za-z_][A-Za-z0-9_]*)\}/',
+                '/\{([A-Za-z_][A-Za-z0-9_]*)(\*)?\}/',
                 static function (array $matches) use ($params, &$used): string {
                     $key = $matches[1];
                     if (!array_key_exists($key, $params)) {
-                        throw new RuntimeException("Missing route parameter: {$key}");
+                        throw new RuntimeException(
+                            "Missing route parameter: {$key}"
+                        );
                     }
+
                     $used[$key] = true;
-                    return rawurlencode((string) $params[$key]);
+                    $value = (string) $params[$key];
+
+                    if (($matches[2] ?? '') === '*') {
+                        $segments = array_values(array_filter(
+                            explode('/', trim($value, '/')),
+                            static fn(string $segment): bool =>
+                                $segment !== '',
+                        ));
+
+                        if ($segments === []) {
+                            throw new RuntimeException(
+                                "Empty wildcard route parameter: {$key}"
+                            );
+                        }
+
+                        foreach ($segments as $segment) {
+                            if (
+                                $segment === '.'
+                                || $segment === '..'
+                            ) {
+                                throw new RuntimeException(
+                                    "Unsafe wildcard route parameter: {$key}"
+                                );
+                            }
+                        }
+
+                        return implode(
+                            '/',
+                            array_map('rawurlencode', $segments),
+                        );
+                    }
+
+                    return rawurlencode($value);
                 },
                 $url,
             );

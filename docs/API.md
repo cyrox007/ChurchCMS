@@ -178,7 +178,9 @@ organization unit. Агрегаторы должны сохранять его �
 Страницы передают тот же `organization_owner_id`, canonical `path` и
 `parent_id` как stable public ID родительской страницы. В коллекцию и detail
 endpoint попадают только страницы со статусом `published` и наступившим
-`published_at`; внутренние числовые ID наружу не выдаются.
+`published_at`; внутренние числовые ID наружу не выдаются. Поле `url` указывает
+на публичный canonical URL `/pages/<вложенный path>`, когда задан базовый URL
+сайта.
 
 ## Pagination
 

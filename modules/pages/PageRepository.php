@@ -180,6 +180,33 @@ final class PageRepository
             : null;
     }
 
+    public function findPublishedByPath(
+        string $path,
+        string $siteKey = 'default',
+    ): ?Page {
+        $statement = $this->pdo->prepare(
+            'SELECT * FROM pages
+             WHERE path = :path
+               AND site_key = :site_key
+               AND status = :status
+               AND published_at IS NOT NULL
+               AND published_at <= :now
+             LIMIT 1'
+        );
+        $statement->execute([
+            'path' => $path,
+            'site_key' => $siteKey,
+            'status' => PageStatus::Published->value,
+            'now' => gmdate('Y-m-d H:i:s'),
+        ]);
+
+        $row = $statement->fetch();
+
+        return is_array($row)
+            ? $this->hydrate($row)
+            : null;
+    }
+
     public function countPublished(
         string $siteKey = 'default',
     ): int {

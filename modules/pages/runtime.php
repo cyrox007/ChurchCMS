@@ -8,6 +8,7 @@ use ChurchCMS\App\Middlewares\ApiPublicRateLimitMiddleware;
 use ChurchCMS\Core\ModuleRuntimeProvider;
 use ChurchCMS\Core\Router;
 use ChurchCMS\Modules\Pages\PagesApiController;
+use ChurchCMS\Modules\Pages\PagesController;
 
 $moduleRoot = __DIR__;
 foreach ([
@@ -16,6 +17,7 @@ foreach ([
     'PageRepository.php',
     'PageService.php',
     'PageApiResource.php',
+    'PagesController.php',
     'PagesApiController.php',
 ] as $file) {
     require_once $moduleRoot . '/' . $file;
@@ -41,6 +43,13 @@ return new class implements ModuleRuntimeProvider {
             ApiPublicRateLimitMiddleware::class,
         ];
 
+        $router->add(
+            'GET',
+            '/pages/{path*}',
+            [PagesController::class, 'show'],
+            [],
+            'page_show',
+        );
         $router->add(
             'GET',
             '/api/v1/pages',

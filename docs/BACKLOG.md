@@ -31,7 +31,8 @@ Priority is ordered within each section.
   - [x] Pages: nullable migration/backfill, default site-root owner и проверка site boundary в domain/service;
   - [ ] Pages: выбор owner в Admin Shell и public/API projection с organization-scoped RBAC;
     - [x] безопасный publish/unpublish поддерева и public API projection с `organization_owner_id`;
-    - [ ] публичный HTML и выбор owner в Admin Shell с organization-scoped RBAC;
+    - [x] публичный HTML по вложенному canonical path с SEO и breadcrumbs;
+    - [ ] выбор owner в Admin Shell с organization-scoped RBAC;
 - [ ] привязка People/назначений, Worship, Events, Media и Documents к organization unit;
 - [ ] incremental federation sync с canonical owner и tombstones;
 - [ ] агрегированные ленты вышестоящих узлов без потери источника;
