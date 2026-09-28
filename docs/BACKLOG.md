@@ -38,7 +38,8 @@ Priority is ordered within each section.
   - [ ] Worship, Events, Media и Documents: organization binding;
 - [ ] incremental federation sync с canonical owner и tombstones;
   - [x] Publications: устойчивый tombstone при снятии ранее опубликованного материала с target `diocese` и отдельный partner endpoint;
-  - [ ] remote projections, применение tombstone на принимающем узле и общий sync worker;
+  - [x] remote projections и применение tombstone на принимающем узле;
+  - [ ] общий sync worker с курсорами, повторными попытками и безопасным продвижением состояния;
 - [ ] агрегированные ленты вышестоящих узлов без потери источника;
 - [x] federation health/retry/conflict UI.
 

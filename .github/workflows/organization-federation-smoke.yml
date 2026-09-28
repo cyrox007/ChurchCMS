@@ -12,6 +12,7 @@ on:
       - 'modules/organizations/**'
       - 'themes/default/templates/admin/federation/**'
       - 'tools/organization-federation-smoke.php'
+      - 'tools/federation-remote-projection-smoke.php'
       - '.github/workflows/organization-federation-smoke.yml'
   pull_request:
     branches:
@@ -24,6 +25,7 @@ on:
       - 'modules/organizations/**'
       - 'themes/default/templates/admin/federation/**'
       - 'tools/organization-federation-smoke.php'
+      - 'tools/federation-remote-projection-smoke.php'
       - '.github/workflows/organization-federation-smoke.yml'
 
 permissions:
@@ -68,6 +70,7 @@ jobs:
           find modules/organizations -type f -name '*.php' -print0 \
             | xargs -0 -n1 php -l
           php -l tools/organization-federation-smoke.php
+          php -l tools/federation-remote-projection-smoke.php
           php -l themes/default/templates/admin/federation/index.php
           php bin/migrate.php validate
 
@@ -111,6 +114,9 @@ jobs:
 
       - name: Проверить локальное дерево и federation link
         run: php tools/organization-federation-smoke.php
+
+      - name: Проверить remote projections и tombstones
+        run: php tools/federation-remote-projection-smoke.php
 
       - name: Проверить federation discovery endpoint
         shell: bash
