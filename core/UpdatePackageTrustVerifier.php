@@ -4,6 +4,7 @@ declare(strict_types=1);
 
 namespace ChurchCMS\Core;
 
+use JsonException;
 use RuntimeException;
 
 final class UpdatePackageTrustVerifier
@@ -60,12 +61,20 @@ final class UpdatePackageTrustVerifier
             );
         }
 
-        $metadata = json_decode(
-            $signatureRaw,
-            true,
-            16,
-            JSON_THROW_ON_ERROR,
-        );
+        try {
+            $metadata = json_decode(
+                $signatureRaw,
+                true,
+                16,
+                JSON_THROW_ON_ERROR,
+            );
+        } catch (JsonException $error) {
+            throw new RuntimeException(
+                'Файл подписи пакета обновления повреждён.',
+                0,
+                $error,
+            );
+        }
 
         if (
             !is_array($metadata)
