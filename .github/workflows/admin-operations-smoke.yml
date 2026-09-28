@@ -12,6 +12,8 @@ on:
       - 'core/FileRestoreManager.php'
       - 'core/InstallationHealthCheck.php'
       - 'core/UpdatePackageStager.php'
+      - 'core/UpdatePackageSignatureVerifier.php'
+      - 'tools/update-sign.php'
       - 'core/UpdatePackageApplier.php'
       - 'modules/operations/**'
       - 'themes/default/templates/admin/operations.php'
@@ -29,6 +31,8 @@ on:
       - 'core/FileRestoreManager.php'
       - 'core/InstallationHealthCheck.php'
       - 'core/UpdatePackageStager.php'
+      - 'core/UpdatePackageSignatureVerifier.php'
+      - 'tools/update-sign.php'
       - 'core/UpdatePackageApplier.php'
       - 'modules/operations/**'
       - 'themes/default/templates/admin/operations.php'
@@ -66,7 +70,7 @@ jobs:
         uses: shivammathur/setup-php@v2
         with:
           php-version: '8.3'
-          extensions: pdo, pdo_pgsql
+          extensions: pdo, pdo_pgsql, openssl
           coverage: none
 
       - name: Проверить PHP и тему
@@ -78,6 +82,8 @@ jobs:
           php -l core/DatabaseRestoreManager.php
           php -l core/FileRestoreManager.php
           php -l core/UpdatePackageStager.php
+          php -l core/UpdatePackageSignatureVerifier.php
+          php -l tools/update-sign.php
           php -l modules/operations/OperationsService.php
           php -l modules/operations/OperationsAdminController.php
           php -l modules/operations/runtime.php
@@ -90,6 +96,16 @@ jobs:
           set -euo pipefail
           mkdir -p storage/cache storage/logs storage/sessions storage/rate-limits storage/uploads
           printf 'operations-smoke\n' > storage/uploads/operations-smoke.txt
+
+          openssl genpkey \
+            -algorithm RSA \
+            -pkeyopt rsa_keygen_bits:2048 \
+            -out "$RUNNER_TEMP/update-private.pem"
+          openssl pkey \
+            -in "$RUNNER_TEMP/update-private.pem" \
+            -pubout \
+            -out "$RUNNER_TEMP/update-public.pem"
+
           cat > config/local.php <<'PHP'
           <?php
 
@@ -105,6 +121,11 @@ jobs:
               'operations' => [
                   'backup_path' => getenv('RUNNER_TEMP') . '/operations-backups',
                   'update_staging_path' => getenv('RUNNER_TEMP') . '/operations-staging',
+                  'update_trusted_public_keys' => [
+                      'ci-release' => file_get_contents(
+                          getenv('RUNNER_TEMP') . '/update-public.pem'
+                      ),
+                  ],
               ],
               'database' => [
                   'driver' => 'pgsql',
@@ -255,6 +276,11 @@ jobs:
           );
           ' "$package"
 
+          php tools/update-sign.php \
+            "$package/manifest.json" \
+            "$RUNNER_TEMP/update-private.pem" \
+            ci-release
+
           php -r '
           require "core.php";
           $stager = new \ChurchCMS\Core\UpdatePackageStager(
@@ -270,6 +296,8 @@ jobs:
               || ($package["version"] ?? null) !== "999.2.0-ci"
               || ($package["ready"] ?? false) !== true
               || ($package["code_only"] ?? false) !== true
+              || ($package["signature_key_id"] ?? null)
+                  !== "ci-release"
           ) {
               fwrite(
                   STDERR,
@@ -321,6 +349,8 @@ jobs:
           foreach ([
               "Резервные копии",
               "Подготовленные пакеты",
+              "Подпись подтверждена ключом",
+              "ci-release",
               "Создать копию",
               "confirm_restore",
               "Восстановить",

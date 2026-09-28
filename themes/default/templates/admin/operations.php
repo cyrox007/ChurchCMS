@@ -167,6 +167,9 @@ $checkLabels = [
                     $stageId = (string) ($package['id'] ?? '');
                     $ready = !empty($package['ready']);
                     $codeOnly = !empty($package['code_only']);
+                    $signatureKeyId = (string) (
+                        $package['signature_key_id'] ?? ''
+                    );
                     ?>
                     <article class="admin-operations-row admin-operations-row--update" role="listitem">
                         <div class="admin-operations-row__body">
@@ -182,8 +185,14 @@ $checkLabels = [
                                     файлов <?= $theme->e((int) ($package['files'] ?? 0)) ?>
                                     · удалений <?= $theme->e((int) ($package['deleted_files'] ?? 0)) ?>
                                 </span>
+                                <?php if ($signatureKeyId !== ''): ?>
+                                    <small>
+                                        Подпись подтверждена ключом
+                                        <code><?= $theme->e($signatureKeyId) ?></code>
+                                    </small>
+                                <?php endif; ?>
                             <?php else: ?>
-                                <span>Пакет повреждён, устарел или не предназначен для текущей версии.</span>
+                                <span>Пакет повреждён, не подписан доверенным ключом, устарел или не предназначен для текущей версии.</span>
                             <?php endif; ?>
 
                             <?php if ($ready && !$codeOnly): ?>

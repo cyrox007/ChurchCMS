@@ -50,11 +50,12 @@ try {
         $result = (new UpdatePackageStager($root, $stagingPath))->stage($source);
 
         echo sprintf(
-            "Пакет проверен и помещён в staging: %s; версия: %s; файлов: %d; удалений: %d\n",
+            "Пакет проверен и помещён в staging: %s; версия: %s; файлов: %d; удалений: %d; подпись: %s\n",
             $result['id'],
             $result['version'],
             $result['files'],
             $result['deleted_files'],
+            $result['signature_key_id'],
         );
         exit(0);
     }
@@ -84,12 +85,13 @@ try {
         ))->apply($stageId);
 
         echo sprintf(
-            "Обновление применено: %s; версия: %s; backup: %s; файлов: %d; удалений: %d\n",
+            "Обновление применено: %s; версия: %s; backup: %s; файлов: %d; удалений: %d; подпись: %s\n",
             $result['id'],
             $result['version'],
             $result['backup_id'],
             $result['files'],
             $result['deleted_files'],
+            $result['signature_key_id'],
         );
         exit(0);
     }

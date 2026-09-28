@@ -39,6 +39,9 @@ return [
         // По умолчанию служебные данные лежат рядом с каталогом сайта, а не внутри публичного корня.
         'backup_path' => dirname(__DIR__, 2) . '/' . basename(dirname(__DIR__)) . '-backups',
         'update_staging_path' => dirname(__DIR__, 2) . '/' . basename(dirname(__DIR__)) . '-updates',
+        // Публичные ключи релизов задаются в config/local.php.
+        // При пустом списке ни один пакет обновления не считается доверенным.
+        'update_trusted_public_keys' => [],
     ],
     'database' => [
         'driver' => 'pgsql',

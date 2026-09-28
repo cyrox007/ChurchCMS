@@ -190,6 +190,8 @@ final class OperationsAdminController
                     'backup_id' => $result['backup_id'],
                     'files' => $result['files'],
                     'deleted_files' => $result['deleted_files'],
+                    'signature_key_id' =>
+                        $result['signature_key_id'],
                 ],
                 request: $request,
             );

@@ -42,9 +42,6 @@ Priority is ordered within each section.
   - [x] Publications: фоновый обработчик синхронизации с раздельными составными курсорами для публикаций/tombstones, безопасным повторным запуском, CLI для cron и отдельным состоянием ошибки sync;
   - [ ] обобщить обработчик синхронизации на остальные типы remote projections и единый планировщик;
 - [ ] агрегированные ленты вышестоящих узлов без потери источника;
-  - [x] Publications: публичный API `/api/v1/publications/aggregated` объединяет локальные материалы и active remote projections только от `child`-связей с разрешённым входящим scope;
-  - [x] агрегированный элемент сохраняет source `instance_id`, organization owner, имя и canonical URL и не выдаёт сырой remote `body_html`;
-  - [ ] подключить агрегированную ленту к публичным блокам темы/RSS и расширить тот же контракт на Events/Worship/Media/Documents;
 - [x] federation health/retry/conflict UI.
 
 ## P0 — Installation and operator UX
@@ -69,6 +66,9 @@ Priority is ordered within each section.
     - [x] безопасное восстановление config/local.php и storage/uploads с откатом файловой части;
   - [x] staging/проверка пакета обновления;
   - [ ] доверенный источник/аутентичность релизного пакета до автоматической сетевой загрузки;
+    - [x] цифровая подпись манифеста OpenSSL + SHA-256 и обязательная проверка перед staging/inspect/apply;
+    - [x] набор закреплённых публичных ключей по `key_id`, отказ unsigned/unknown-key пакетов и release-инструмент подписи с приватным ключом вне репозитория;
+    - [ ] доверенная автоматическая сетевая доставка пакета в staging без ручного копирования;
   - [ ] обязательная резервная копия перед миграциями/заменой файлов и сценарий отката;
     - [x] code-only apply: повторная проверка staging → обязательный backup → откатываемая замена/добавление/удаление файлов → PHP syntax/version/healthcheck;
     - [x] автоматический файловый rollback при ошибке code-only обновления;
