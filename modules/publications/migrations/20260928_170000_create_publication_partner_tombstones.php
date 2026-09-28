@@ -31,7 +31,7 @@ CREATE TABLE publication_partner_tombstones (
 )
 SQL,
                 'CREATE INDEX publication_partner_tombstones_sync_idx
-                    ON publication_partner_tombstones (site_key, updated_at ASC, id ASC)',
+                    ON publication_partner_tombstones (site_key, updated_at ASC, publication_public_id ASC)',
             ],
             'mysql' => [
                 <<<'SQL'
@@ -51,7 +51,7 @@ CREATE TABLE publication_partner_tombstones (
     KEY publication_partner_tombstones_sync_idx (
         site_key,
         updated_at,
-        id
+        publication_public_id
     )
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci
 SQL,
