@@ -29,9 +29,10 @@ Priority is ordered within each section.
   - [x] Publications: nullable migration/backfill, default site-root owner, проверка site boundary и stable public ID в API;
   - [ ] Publications: выбор owner в Admin Shell с organization-scoped RBAC;
   - [x] Pages: nullable migration/backfill, default site-root owner и проверка site boundary в domain/service;
-  - [ ] Pages: выбор owner в Admin Shell и public/API projection с organization-scoped RBAC;
+  - [ ] Pages: Admin/public/API vertical slice с organization-scoped RBAC;
     - [x] безопасный publish/unpublish поддерева и public API projection с `organization_owner_id`;
-    - [ ] публичный HTML и выбор owner в Admin Shell с organization-scoped RBAC;
+    - [x] выбор owner, дерево и publish/unpublish в Admin Shell с organization-scoped RBAC;
+    - [ ] публичный HTML по canonical path;
 - [ ] привязка People/назначений, Worship, Events, Media и Documents к organization unit;
 - [ ] incremental federation sync с canonical owner и tombstones;
 - [ ] агрегированные ленты вышестоящих узлов без потери источника;
@@ -100,7 +101,7 @@ Priority is ordered within each section.
 - [ ] content tree/pages;
   - [x] PostgreSQL/MySQL schema foundation with stable public IDs, site-scoped canonical paths, parent links and ordered-tree indexes;
   - [x] domain repository/service and safe subtree moves;
-  - [ ] public/admin/API vertical slice;
+  - [ ] public/admin/API vertical slice (Admin Shell и API реализованы; публичный HTML остаётся);
 - [x] publication categories/tags with site-scoped normalized storage, editor fields, public/API/syndication projections and PostgreSQL/MySQL smoke coverage;
 - menus;
 - content revisions;

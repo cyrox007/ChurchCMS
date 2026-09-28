@@ -29,6 +29,8 @@
     "admin.comments": "admin/comments",
     "admin.publications.index": "admin/publications/index",
     "admin.publications.editor": "admin/publications/editor",
+    "admin.pages.index": "admin/pages/index",
+    "admin.pages.editor": "admin/pages/editor",
     "layout.admin": "layouts/admin",
     "admin.state": "admin/state",
     "admin.search": "admin/search",

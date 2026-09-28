@@ -242,6 +242,123 @@ final class PageService
         PageCache::bumpVersion();
     }
 
+    /**
+     * Атомарно сохраняет поля редактора, положение в дереве и владельца.
+     */
+    public function update(
+        string $publicId,
+        string $title,
+        string $slug,
+        string $bodyInput,
+        ?string $navigationTitle = null,
+        ?string $parentPublicId = null,
+        int $sortOrder = 0,
+        string $siteKey = 'default',
+        ?string $ownerOrganizationPublicId = null,
+    ): void {
+        self::assertUuid($publicId);
+        $title = self::title($title);
+        $slug = self::slug($slug, $title);
+        $navigationTitle = self::navigationTitle(
+            $navigationTitle,
+        );
+        $sortOrder = self::sortOrder($sortOrder);
+        $siteKey = self::siteKey($siteKey);
+        $ownerOrganizationPublicId = $this->organizationOwner(
+            $ownerOrganizationPublicId,
+            $siteKey,
+        );
+
+        if ($ownerOrganizationPublicId === null) {
+            throw new InvalidArgumentException(
+                'Организация-владелец не найдена.'
+            );
+        }
+
+        $ownsTransaction = !$this->pdo->inTransaction();
+        if ($ownsTransaction) {
+            $this->pdo->beginTransaction();
+        }
+
+        try {
+            $page = $this->requiredPage($publicId, $siteKey);
+            $parent = $this->parent($parentPublicId, $siteKey);
+
+            if ($parent !== null) {
+                if ($parent->id === $page->id) {
+                    throw new InvalidArgumentException(
+                        'Страница не может быть родителем самой себя.'
+                    );
+                }
+
+                if (
+                    $parent->path === $page->path
+                    || str_starts_with(
+                        $parent->path,
+                        $page->path . '/',
+                    )
+                ) {
+                    throw new InvalidArgumentException(
+                        'Нельзя переместить страницу внутрь её собственного подраздела.'
+                    );
+                }
+
+                if (
+                    $page->status === PageStatus::Published
+                    && (
+                        $parent->status !== PageStatus::Published
+                        || $parent->publishedAt === null
+                    )
+                ) {
+                    throw new InvalidArgumentException(
+                        'Нельзя переместить опубликованную страницу под черновик.'
+                    );
+                }
+            }
+
+            $this->relocateSubtree(
+                $page,
+                $parent,
+                $slug,
+                $sortOrder,
+            );
+
+            $statement = $this->pdo->prepare(
+                'UPDATE pages
+                 SET title = :title,
+                     navigation_title = :navigation_title,
+                     body_html = :body_html,
+                     owner_organization_public_id = :owner,
+                     updated_at = :updated_at
+                 WHERE id = :id'
+            );
+            $statement->execute([
+                'title' => $title,
+                'navigation_title' => $navigationTitle,
+                'body_html' => HtmlSanitizer::fromEditorInput(
+                    $bodyInput,
+                ),
+                'owner' => $ownerOrganizationPublicId,
+                'updated_at' => gmdate('Y-m-d H:i:s'),
+                'id' => $page->id,
+            ]);
+
+            if ($ownsTransaction) {
+                $this->pdo->commit();
+            }
+
+            PageCache::bumpVersion();
+        } catch (Throwable $error) {
+            self::rollback($this->pdo, $ownsTransaction);
+
+            if ($error instanceof PDOException) {
+                self::throwFriendlyUnique($error);
+            }
+
+            throw $error;
+        }
+    }
+
     public function updateContent(
         string $publicId,
         string $title,
