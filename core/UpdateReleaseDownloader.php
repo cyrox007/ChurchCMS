@@ -305,13 +305,18 @@ final class UpdateReleaseDownloader
             return false;
         }
 
-        foreach (explode('/', $path) as $segment) {
+        $segments = explode('/', $path);
+        foreach ($segments as $segment) {
             if ($segment === '' || $segment === '.' || $segment === '..') {
                 return false;
             }
         }
 
-        return true;
+        if ($segments[0] === '.git' || $segments[0] === 'storage') {
+            return false;
+        }
+
+        return $path !== 'config/local.php';
     }
 
     private function payloadUrl(
@@ -508,10 +513,15 @@ final class UpdateReleaseDownloader
                 );
             }
 
+            if ($received > 0) {
+                throw new RuntimeException(
+                    'Соединение с источником обновления прервалось во время передачи файла.'
+                );
+            }
+
             $lastError = $status > 0
                 ? 'HTTP ' . $status
                 : ($error !== '' ? $error : 'неизвестная ошибка');
-            $received = 0;
         }
 
         throw new RuntimeException(
