@@ -112,6 +112,141 @@ final class FederationRepository
         return SecretVault::decrypt($encrypted);
     }
 
+    public function saveSyncCursor(
+        int $linkId,
+        ?string $expectedCursor,
+        string $cursor,
+    ): void {
+        $this->writeSyncCursor(
+            $linkId,
+            $expectedCursor,
+            $cursor,
+            false,
+        );
+    }
+
+    public function recordSyncSuccess(
+        int $linkId,
+        ?string $expectedCursor,
+        string $cursor,
+    ): void {
+        $this->writeSyncCursor(
+            $linkId,
+            $expectedCursor,
+            $cursor,
+            true,
+        );
+    }
+
+    public function recordSyncFailure(
+        int $linkId,
+        string $message,
+        ?string $expectedCursor = null,
+    ): void {
+        if ($linkId <= 0) {
+            return;
+        }
+
+        $message = trim($message);
+        if ($message === '' || strlen($message) > 500) {
+            $message = 'Синхронизация с удалённым узлом не выполнена.';
+        }
+
+        $statement = $this->pdo->prepare(
+            'UPDATE organization_federation_links
+             SET last_sync_error = :last_sync_error,
+                 updated_at = :updated_at
+             WHERE id = :id
+               AND COALESCE(sync_cursor, \'\') = :expected_cursor'
+        );
+        $statement->execute([
+            'last_sync_error' => $message,
+            'updated_at' => gmdate('Y-m-d H:i:s'),
+            'id' => $linkId,
+            'expected_cursor' => trim(
+                (string) ($expectedCursor ?? '')
+            ),
+        ]);
+    }
+
+    private function writeSyncCursor(
+        int $linkId,
+        ?string $expectedCursor,
+        string $cursor,
+        bool $completed,
+    ): void {
+        $cursor = trim($cursor);
+        if ($linkId <= 0 || $cursor === '') {
+            throw new RuntimeException(
+                'Некорректное состояние курсора federation sync.'
+            );
+        }
+
+        $expectedCursor = trim((string) ($expectedCursor ?? ''));
+        $now = gmdate('Y-m-d H:i:s');
+        $syncFields = $completed
+            ? ',
+                 last_sync_at = :last_sync_at,
+                 last_sync_error = NULL'
+            : '';
+
+        $statement = $this->pdo->prepare(
+            'UPDATE organization_federation_links
+             SET sync_cursor = :sync_cursor'
+             . $syncFields
+             . ',
+                 updated_at = :updated_at
+             WHERE id = :id
+               AND COALESCE(sync_cursor, \'\') = :expected_cursor'
+        );
+        $parameters = [
+            'sync_cursor' => $cursor,
+            'updated_at' => $now,
+            'id' => $linkId,
+            'expected_cursor' => $expectedCursor,
+        ];
+        if ($completed) {
+            $parameters['last_sync_at'] = $now;
+        }
+        $statement->execute($parameters);
+
+        if ($statement->rowCount() === 1) {
+            return;
+        }
+
+        $current = $this->currentSyncCursor($linkId);
+        if (
+            $cursor === $expectedCursor
+            && $current === $expectedCursor
+        ) {
+            return;
+        }
+
+        throw new RuntimeException(
+            'Курсор federation sync уже изменён другим процессом.'
+        );
+    }
+
+    private function currentSyncCursor(int $linkId): string
+    {
+        $statement = $this->pdo->prepare(
+            'SELECT COALESCE(sync_cursor, \'\')
+             FROM organization_federation_links
+             WHERE id = :id
+             LIMIT 1'
+        );
+        $statement->execute(['id' => $linkId]);
+        $cursor = $statement->fetchColumn();
+
+        if (!is_string($cursor)) {
+            throw new RuntimeException(
+                'Federation link для сохранения курсора не найден.'
+            );
+        }
+
+        return $cursor;
+    }
+
     private function hydrate(array $row): FederationLink
     {
         return new FederationLink(
@@ -141,6 +276,14 @@ final class FederationRepository
             syncCursor: isset($row['sync_cursor'])
                 && $row['sync_cursor'] !== ''
                 ? (string) $row['sync_cursor']
+                : null,
+            lastSyncAt: isset($row['last_sync_at'])
+                && $row['last_sync_at'] !== ''
+                ? (string) $row['last_sync_at']
+                : null,
+            lastSyncError: isset($row['last_sync_error'])
+                && $row['last_sync_error'] !== ''
+                ? (string) $row['last_sync_error']
                 : null,
             lastSeenAt: isset($row['last_seen_at'])
                 && $row['last_seen_at'] !== ''

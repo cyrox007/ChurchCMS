@@ -208,8 +208,32 @@ final class PublicationRepository
         DateTimeImmutable $updatedSince,
         string $siteKey = 'default',
         int $limit = 100,
+        ?string $afterPublicId = null,
     ): array {
         $limit = max(1, min(100, $limit));
+        $timestamp = $updatedSince
+            ->setTimezone(new \DateTimeZone('UTC'))
+            ->format('Y-m-d H:i:s');
+
+        if (
+            $afterPublicId !== null
+            && preg_match(
+                '/^[a-f0-9]{8}-[a-f0-9]{4}-4[a-f0-9]{3}-[89ab][a-f0-9]{3}-[a-f0-9]{12}$/Di',
+                $afterPublicId,
+            ) !== 1
+        ) {
+            throw new \InvalidArgumentException(
+                'Некорректный public ID курсора публикаций.'
+            );
+        }
+
+        $cursorSql = $afterPublicId === null
+            ? 'updated_at > :updated_since'
+            : '(updated_at > :updated_since
+                OR (
+                    updated_at = :same_updated_at
+                    AND public_id > :after_public_id
+                ))';
 
         $statement = $this->pdo->prepare(
             'SELECT * FROM publications
@@ -217,14 +241,27 @@ final class PublicationRepository
                AND status = :status
                AND published_at IS NOT NULL
                AND published_at <= :now
-               AND updated_at > :updated_since
-             ORDER BY updated_at ASC, id ASC
+               AND ' . $cursorSql . '
+             ORDER BY updated_at ASC, public_id ASC
              LIMIT :limit'
         );
         $statement->bindValue(':site_key', $siteKey);
-        $statement->bindValue(':status', PublicationStatus::Published->value);
+        $statement->bindValue(
+            ':status',
+            PublicationStatus::Published->value,
+        );
         $statement->bindValue(':now', gmdate('Y-m-d H:i:s'));
-        $statement->bindValue(':updated_since', $updatedSince->setTimezone(new \DateTimeZone('UTC'))->format('Y-m-d H:i:s'));
+        $statement->bindValue(':updated_since', $timestamp);
+        if ($afterPublicId !== null) {
+            $statement->bindValue(
+                ':same_updated_at',
+                $timestamp,
+            );
+            $statement->bindValue(
+                ':after_public_id',
+                $afterPublicId,
+            );
+        }
         $statement->bindValue(':limit', $limit, PDO::PARAM_INT);
         $statement->execute();
 

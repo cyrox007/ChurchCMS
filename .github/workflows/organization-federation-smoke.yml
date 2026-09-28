@@ -10,9 +10,13 @@ on:
       - 'config/app.php'
       - 'install.php'
       - 'modules/organizations/**'
+      - 'modules/publications/PublicationRepository.php'
+      - 'modules/publications/PublicationsApiController.php'
+      - 'bin/federation-sync.php'
       - 'themes/default/templates/admin/federation/**'
       - 'tools/organization-federation-smoke.php'
       - 'tools/federation-remote-projection-smoke.php'
+      - 'tools/federation-publication-sync-smoke.php'
       - '.github/workflows/organization-federation-smoke.yml'
   pull_request:
     branches:
@@ -23,9 +27,13 @@ on:
       - 'config/app.php'
       - 'install.php'
       - 'modules/organizations/**'
+      - 'modules/publications/PublicationRepository.php'
+      - 'modules/publications/PublicationsApiController.php'
+      - 'bin/federation-sync.php'
       - 'themes/default/templates/admin/federation/**'
       - 'tools/organization-federation-smoke.php'
       - 'tools/federation-remote-projection-smoke.php'
+      - 'tools/federation-publication-sync-smoke.php'
       - '.github/workflows/organization-federation-smoke.yml'
 
 permissions:
@@ -71,6 +79,10 @@ jobs:
             | xargs -0 -n1 php -l
           php -l tools/organization-federation-smoke.php
           php -l tools/federation-remote-projection-smoke.php
+          php -l tools/federation-publication-sync-smoke.php
+          php -l modules/publications/PublicationRepository.php
+          php -l modules/publications/PublicationsApiController.php
+          php -l bin/federation-sync.php
           php -l themes/default/templates/admin/federation/index.php
           php bin/migrate.php validate
 
@@ -117,6 +129,9 @@ jobs:
 
       - name: Проверить remote projections и tombstones
         run: php tools/federation-remote-projection-smoke.php
+
+      - name: Проверить federation sync публикаций и курсоры
+        run: php tools/federation-publication-sync-smoke.php
 
       - name: Проверить federation discovery endpoint
         shell: bash
@@ -246,6 +261,7 @@ jobs:
               "Создать связь",
               "Проверить состояние",
               "Последний ответ discovery:",
+              "Последняя синхронизация:",
               "Отозвать доверие",
           ] as $expected) {
               if (!str_contains($html, $expected)) {

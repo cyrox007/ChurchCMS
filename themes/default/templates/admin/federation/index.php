@@ -371,7 +371,20 @@ $statusLabels = [
                                 </p>
                             <?php endif; ?>
 
-                            <?php if ($link->syncCursor !== null): ?>
+                            <p>
+                                Последняя синхронизация:
+                                <?= $theme->e(
+                                    $link->lastSyncAt
+                                    ?? 'ещё не выполнялась'
+                                ) ?>
+                            </p>
+
+                            <?php if ($link->lastSyncError !== null): ?>
+                                <p>
+                                    <strong>Ошибка синхронизации:</strong>
+                                    <?= $theme->e($link->lastSyncError) ?>
+                                </p>
+                            <?php elseif ($link->syncCursor !== null): ?>
                                 <small>
                                     Курсор синхронизации сохранён.
                                 </small>

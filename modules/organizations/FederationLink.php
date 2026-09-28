@@ -25,6 +25,8 @@ final readonly class FederationLink
         public array $inboundScopes,
         public array $outboundScopes,
         public ?string $syncCursor,
+        public ?string $lastSyncAt,
+        public ?string $lastSyncError,
         public ?string $lastSeenAt,
         public ?string $lastError,
     ) {

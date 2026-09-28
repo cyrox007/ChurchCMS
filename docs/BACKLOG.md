@@ -39,7 +39,8 @@ Priority is ordered within each section.
 - [ ] incremental federation sync с canonical owner и tombstones;
   - [x] Publications: устойчивый tombstone при снятии ранее опубликованного материала с target `diocese` и отдельный partner endpoint;
   - [x] remote projections и применение tombstone на принимающем узле;
-  - [ ] общий sync worker с курсорами, повторными попытками и безопасным продвижением состояния;
+  - [x] Publications: фоновый обработчик синхронизации с раздельными составными курсорами для публикаций/tombstones, безопасным повторным запуском, CLI для cron и отдельным состоянием ошибки sync;
+  - [ ] обобщить обработчик синхронизации на остальные типы remote projections и единый планировщик;
 - [ ] агрегированные ленты вышестоящих узлов без потери источника;
 - [x] federation health/retry/conflict UI.
 

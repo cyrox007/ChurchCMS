@@ -66,45 +66,87 @@ final class PublicationsApiController
         ApiAccess::requireScope($request, 'content.read');
 
         $repository = PublicationRepository::fromDatabase();
-        $limit = max(1, min(100, (int) $request->get('limit', 100)));
-        $updatedSinceRaw = trim((string) $request->get('updated_since', ''));
+        $limit = max(
+            1,
+            min(100, (int) $request->get('limit', 100)),
+        );
+        $updatedSinceRaw = trim(
+            (string) $request->get('updated_since', '')
+        );
+        $afterPublicId = trim(
+            (string) $request->get('after', '')
+        );
+        $afterPublicId = $afterPublicId !== ''
+            ? $afterPublicId
+            : null;
+
+        if (
+            $afterPublicId !== null
+            && preg_match(
+                '/^[a-f0-9]{8}-[a-f0-9]{4}-4[a-f0-9]{3}-[89ab][a-f0-9]{3}-[a-f0-9]{12}$/Di',
+                $afterPublicId,
+            ) !== 1
+        ) {
+            ApiResponse::error(
+                'invalid_publication_cursor',
+                'after должен содержать корректный public ID публикации.',
+                400,
+            );
+        }
 
         if ($updatedSinceRaw === '') {
-            $scan = $repository->published('default', $limit, 0);
+            $updatedSince = new DateTimeImmutable(
+                '1970-01-01T00:00:00Z',
+            );
         } else {
             try {
-                $updatedSince = new DateTimeImmutable($updatedSinceRaw);
+                $updatedSince = new DateTimeImmutable(
+                    $updatedSinceRaw,
+                );
             } catch (Exception) {
                 ApiResponse::error(
                     'invalid_updated_since',
-                    'updated_since must be a valid ISO-8601 timestamp.',
+                    'updated_since должен содержать корректное время ISO-8601.',
                     400,
                 );
             }
-
-            $scan = $repository->publishedUpdatedSince($updatedSince, 'default', $limit);
         }
 
+        $scan = $repository->publishedUpdatedSince(
+            $updatedSince,
+            'default',
+            $limit,
+            $afterPublicId,
+        );
         $publications = array_values(array_filter(
             $scan,
             static fn(Publication $publication): bool =>
-                in_array('diocese', $publication->syndicationTargets, true),
+                in_array(
+                    'diocese',
+                    $publication->syndicationTargets,
+                    true,
+                ),
         ));
-
         $items = $this->resources($publications);
 
-        $lastUpdatedAt = null;
+        $nextUpdatedSince = null;
+        $nextAfter = null;
         if ($scan !== []) {
             $last = $scan[array_key_last($scan)];
-            $lastUpdatedAt = $last->updatedAt
+            $nextUpdatedSince = $last->updatedAt
                 ->setTimezone(new \DateTimeZone('UTC'))
                 ->format(DATE_ATOM);
+            $nextAfter = $last->publicId;
         }
 
         ApiResponse::success($items, [
             'sync' => [
-                'updated_since' => $updatedSinceRaw !== '' ? $updatedSinceRaw : null,
-                'next_updated_since' => $lastUpdatedAt,
+                'updated_since' => $updatedSinceRaw !== ''
+                    ? $updatedSinceRaw
+                    : null,
+                'after' => $afterPublicId,
+                'next_updated_since' => $nextUpdatedSince,
+                'next_after' => $nextAfter,
                 'limit' => $limit,
                 'has_more' => count($scan) === $limit,
             ],
