@@ -2,6 +2,7 @@
 
 declare(strict_types=1);
 
+use ChurchCMS\Core\DatabaseManager;
 use ChurchCMS\Modules\Organizations\OrganizationService;
 use ChurchCMS\Modules\Publications\PublicationPartnerTombstoneRepository;
 use ChurchCMS\Modules\Publications\PublicationService;
@@ -70,6 +71,20 @@ if (
     exit(1);
 }
 
+$secondPartnerId = $service->createDraft(
+    title: 'Второй материал для проверки курсора',
+    syndicationTargets: ['diocese'],
+    siteKey: $siteKey,
+);
+$service->publish(
+    $secondPartnerId,
+    new DateTimeImmutable(
+        '-1 minute',
+        new DateTimeZone('UTC'),
+    ),
+);
+$service->withdraw($secondPartnerId);
+
 $localOnlyId = $service->createDraft(
     title: 'Локальный RSS-материал',
     syndicationTargets: ['rss'],
@@ -89,10 +104,52 @@ $afterLocalWithdraw = $repository->updatedSince(
     $siteKey,
 );
 
-if (count($afterLocalWithdraw) !== 1) {
+if (count($afterLocalWithdraw) !== 2) {
     fwrite(
         STDERR,
         "Локальный материал ошибочно попал в partner tombstones.\n",
+    );
+    exit(1);
+}
+
+$pdo = DatabaseManager::getInstance()->connection();
+$fixedTimestamp = '2040-01-01 00:00:00';
+$normalize = $pdo->prepare(
+    'UPDATE publication_partner_tombstones
+     SET withdrawn_at = :withdrawn_at,
+         updated_at = :updated_at
+     WHERE site_key = :site_key
+       AND publication_public_id IN (:first_id, :second_id)'
+);
+$normalize->execute([
+    'withdrawn_at' => $fixedTimestamp,
+    'updated_at' => $fixedTimestamp,
+    'site_key' => $siteKey,
+    'first_id' => $publicationId,
+    'second_id' => $secondPartnerId,
+]);
+
+$pageOne = $repository->updatedSince(
+    new DateTimeImmutable('2000-01-01T00:00:00Z'),
+    $siteKey,
+    1,
+);
+$pageTwo = $repository->updatedSince(
+    $pageOne[0]['updated_at'],
+    $siteKey,
+    1,
+    $pageOne[0]['publication_public_id'],
+);
+
+if (
+    count($pageOne) !== 1
+    || count($pageTwo) !== 1
+    || $pageOne[0]['publication_public_id']
+        === $pageTwo[0]['publication_public_id']
+) {
+    fwrite(
+        STDERR,
+        "Tie-breaker tombstone-потока пропустил запись с тем же временем.\n",
     );
     exit(1);
 }
