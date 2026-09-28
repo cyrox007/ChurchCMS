@@ -183,6 +183,8 @@ final class FederationService
                      outbound_scopes_json = :outbound_scopes_json,
                      outbound_token_encrypted = :outbound_token_encrypted,
                      sync_cursor = NULL,
+                     last_sync_at = NULL,
+                     last_sync_error = NULL,
                      last_seen_at = NULL,
                      last_error = NULL,
                      updated_at = :updated_at
@@ -277,6 +279,7 @@ final class FederationService
              SET status = :status,
                  outbound_token_encrypted = NULL,
                  sync_cursor = NULL,
+                 last_sync_error = NULL,
                  last_error = NULL,
                  updated_at = :updated_at
              WHERE id = :id'
