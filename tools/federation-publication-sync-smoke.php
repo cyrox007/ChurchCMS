@@ -250,6 +250,45 @@ if (
     exit(1);
 }
 
+$cursorAfterRetry = $linkAfterRetry->syncCursor;
+if ($cursorAfterRetry === null) {
+    fwrite(
+        STDERR,
+        "После успешной синхронизации отсутствует курсор.\n",
+    );
+    exit(1);
+}
+
+try {
+    $linkRepository->saveSyncCursor(
+        $linkAfterRetry->id,
+        '{"version":1,"stale":true}',
+        $cursorAfterRetry,
+    );
+    fwrite(
+        STDERR,
+        "Устаревший параллельный процесс смог перезаписать sync-курсор.\n",
+    );
+    exit(1);
+} catch (RuntimeException) {
+}
+
+$linkAfterConflict = $linkRepository->findByPublicId(
+    $linkPublicId,
+    $siteKey,
+);
+if (
+    $linkAfterConflict === null
+    || $linkAfterConflict->syncCursor !== $cursorAfterRetry
+    || $linkAfterConflict->lastSyncError !== null
+) {
+    fwrite(
+        STDERR,
+        "Конкурентная защита повредила актуальное sync-состояние.\n",
+    );
+    exit(1);
+}
+
 if (
     count($transport->calls) !== 4
     || ($transport->calls[0]['query']['updated_since'] ?? null)
