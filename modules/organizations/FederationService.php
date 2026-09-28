@@ -4,6 +4,7 @@ declare(strict_types=1);
 
 namespace ChurchCMS\Modules\Organizations;
 
+use ChurchCMS\Core\Config;
 use ChurchCMS\Core\DatabaseManager;
 use ChurchCMS\Core\SecretVault;
 use ChurchCMS\Core\Uuid;
@@ -13,10 +14,14 @@ use PDO;
 final class FederationService
 {
     private OrganizationRepository $organizations;
+    private FederationRepository $links;
 
     public function __construct(private readonly PDO $pdo)
     {
         $this->organizations = new OrganizationRepository(
+            $pdo,
+        );
+        $this->links = new FederationRepository(
             $pdo,
         );
     }
@@ -71,19 +76,36 @@ final class FederationService
             'remote organization ID',
         );
 
+        $localInstanceId = trim(
+            (string) Config::get(
+                'federation.instance_id',
+                '',
+            )
+        );
+        if (
+            $localInstanceId !== ''
+            && hash_equals(
+                strtolower($localInstanceId),
+                strtolower($remoteInstanceId),
+            )
+        ) {
+            throw new InvalidArgumentException(
+                'Нельзя создать federation link с этой же установкой.'
+            );
+        }
+
         $local = $this->organizations->findByPublicId(
             $localOrganizationPublicId,
             $siteKey,
         );
-        if ($local === null) {
+        if ($local === null || $local->status !== 'active') {
             throw new InvalidArgumentException(
-                'Локальная организация для связи не найдена.'
+                'Активная локальная организация для связи не найдена.'
             );
         }
 
         $remoteBaseUrl = self::baseUrl(
             $remoteBaseUrl,
-            $outboundToken,
         );
         $inboundScopes = self::scopes($inboundScopes);
         $outboundScopes = self::scopes($outboundScopes);
@@ -93,13 +115,93 @@ final class FederationService
             $outboundToken !== null
             && trim($outboundToken) !== ''
         ) {
+            $outboundToken = trim($outboundToken);
+            if (strlen($outboundToken) > 4096) {
+                throw new InvalidArgumentException(
+                    'Credential federation-связи слишком длинный.'
+                );
+            }
+
             $encryptedToken = SecretVault::encrypt(
-                trim($outboundToken),
+                $outboundToken,
             );
         }
 
-        $publicId = Uuid::v4();
+        $existing = $this->links
+            ->findByRemoteInstanceId(
+                $remoteInstanceId,
+                $siteKey,
+            );
         $now = gmdate('Y-m-d H:i:s');
+
+        $values = [
+            'site_key' => $siteKey,
+            'local_organization_id' => $local->id,
+            'relation' => $relation,
+            'status' => 'pending',
+            'remote_instance_id' => $remoteInstanceId,
+            'remote_organization_public_id' =>
+                $remoteOrganizationPublicId,
+            'remote_base_url' => $remoteBaseUrl,
+            'remote_profile' => self::optional(
+                $remoteProfile,
+                64,
+            ),
+            'remote_name' => self::optional(
+                $remoteName,
+                255,
+            ),
+            'inbound_scopes_json' => json_encode(
+                $inboundScopes,
+                JSON_THROW_ON_ERROR,
+            ),
+            'outbound_scopes_json' => json_encode(
+                $outboundScopes,
+                JSON_THROW_ON_ERROR,
+            ),
+            'outbound_token_encrypted' => $encryptedToken,
+            'updated_at' => $now,
+        ];
+
+        if ($existing !== null) {
+            if ($existing->status !== 'revoked') {
+                throw new InvalidArgumentException(
+                    'Связь с этим ChurchCMS-узлом уже существует.'
+                );
+            }
+
+            $statement = $this->pdo->prepare(
+                'UPDATE organization_federation_links
+                 SET local_organization_id = :local_organization_id,
+                     relation = :relation,
+                     status = :status,
+                     remote_organization_public_id = :remote_organization_public_id,
+                     remote_base_url = :remote_base_url,
+                     remote_profile = :remote_profile,
+                     remote_name = :remote_name,
+                     inbound_scopes_json = :inbound_scopes_json,
+                     outbound_scopes_json = :outbound_scopes_json,
+                     outbound_token_encrypted = :outbound_token_encrypted,
+                     sync_cursor = NULL,
+                     last_seen_at = NULL,
+                     last_error = NULL,
+                     updated_at = :updated_at
+                 WHERE id = :id'
+            );
+            $updateValues = $values;
+            unset(
+                $updateValues['site_key'],
+                $updateValues['remote_instance_id'],
+            );
+
+            $statement->execute($updateValues + [
+                'id' => $existing->id,
+            ]);
+
+            return $existing->publicId;
+        }
+
+        $publicId = Uuid::v4();
 
         $statement = $this->pdo->prepare(
             'INSERT INTO organization_federation_links (
@@ -142,38 +244,48 @@ final class FederationService
                 :updated_at
              )'
         );
-        $statement->execute([
+        $statement->execute($values + [
             'public_id' => $publicId,
-            'site_key' => $siteKey,
-            'local_organization_id' => $local->id,
-            'relation' => $relation,
-            'status' => 'pending',
-            'remote_instance_id' => $remoteInstanceId,
-            'remote_organization_public_id' =>
-                $remoteOrganizationPublicId,
-            'remote_base_url' => $remoteBaseUrl,
-            'remote_profile' => self::optional(
-                $remoteProfile,
-                64,
-            ),
-            'remote_name' => self::optional(
-                $remoteName,
-                255,
-            ),
-            'inbound_scopes_json' => json_encode(
-                $inboundScopes,
-                JSON_THROW_ON_ERROR,
-            ),
-            'outbound_scopes_json' => json_encode(
-                $outboundScopes,
-                JSON_THROW_ON_ERROR,
-            ),
-            'outbound_token_encrypted' => $encryptedToken,
             'created_at' => $now,
-            'updated_at' => $now,
         ]);
 
         return $publicId;
+    }
+
+    public function revoke(
+        string $publicId,
+        string $siteKey = 'default',
+    ): void {
+        $publicId = trim($publicId);
+        $link = $this->links->findByPublicId(
+            $publicId,
+            $siteKey,
+        );
+
+        if ($link === null) {
+            throw new InvalidArgumentException(
+                'Federation link не найден.'
+            );
+        }
+
+        if ($link->status === 'revoked') {
+            return;
+        }
+
+        $statement = $this->pdo->prepare(
+            'UPDATE organization_federation_links
+             SET status = :status,
+                 outbound_token_encrypted = NULL,
+                 sync_cursor = NULL,
+                 last_error = NULL,
+                 updated_at = :updated_at
+             WHERE id = :id'
+        );
+        $statement->execute([
+            'status' => 'revoked',
+            'updated_at' => gmdate('Y-m-d H:i:s'),
+            'id' => $link->id,
+        ]);
     }
 
     /**
@@ -205,7 +317,6 @@ final class FederationService
 
     private static function baseUrl(
         string $value,
-        ?string $outboundToken,
     ): string {
         $value = rtrim(trim($value), '/');
         $parts = parse_url($value);
@@ -218,12 +329,10 @@ final class FederationService
                 true,
             )
             || empty($parts['host'])
-            || isset(
-                $parts['user'],
-                $parts['pass'],
-                $parts['query'],
-                $parts['fragment'],
-            )
+            || isset($parts['user'])
+            || isset($parts['pass'])
+            || isset($parts['query'])
+            || isset($parts['fragment'])
         ) {
             throw new InvalidArgumentException(
                 'Некорректный адрес удалённого ChurchCMS-узла.'
@@ -232,14 +341,18 @@ final class FederationService
 
         if (
             ($parts['scheme'] ?? '') !== 'https'
-            && $outboundToken !== null
-            && trim($outboundToken) !== ''
             && !self::isLocalOrPrivateHost(
                 (string) $parts['host'],
             )
         ) {
             throw new InvalidArgumentException(
-                'Credential федеративной связи нельзя отправлять по открытому HTTP.'
+                'Публичная federation-связь разрешена только по HTTPS.'
+            );
+        }
+
+        if (strlen($value) > 500) {
+            throw new InvalidArgumentException(
+                'Адрес удалённого ChurchCMS-узла слишком длинный.'
             );
         }
 
