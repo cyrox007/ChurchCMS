@@ -66,6 +66,14 @@ return new class implements ModuleRuntimeProvider {
 
         $router->add(
             'POST',
+            '/admin/system/backups/{backupId}/restore',
+            [OperationsAdminController::class, 'restoreBackup'],
+            [RequireAdminMiddleware::class, CsrfMiddleware::class],
+            'admin_operations_backup_restore',
+        );
+
+        $router->add(
+            'POST',
             '/admin/system/updates/{stageId}/apply',
             [OperationsAdminController::class, 'applyUpdate'],
             [RequireAdminMiddleware::class, CsrfMiddleware::class],

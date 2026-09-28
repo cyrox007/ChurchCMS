@@ -103,16 +103,42 @@ $checkLabels = [
                             <?php endif; ?>
                         </div>
 
-                        <form
-                            method="post"
-                            action="<?= $theme->e($theme->route(
-                                'admin_operations_backup_verify',
-                                ['backupId' => $backupId],
-                            )) ?>"
-                        >
-                            <?= $theme->csrfInput() ?>
-                            <button class="button button--quiet" type="submit">Проверить</button>
-                        </form>
+                        <div>
+                            <form
+                                method="post"
+                                action="<?= $theme->e($theme->route(
+                                    'admin_operations_backup_verify',
+                                    ['backupId' => $backupId],
+                                )) ?>"
+                            >
+                                <?= $theme->csrfInput() ?>
+                                <button class="button button--quiet" type="submit">Проверить</button>
+                            </form>
+
+                            <form
+                                class="admin-update-apply"
+                                method="post"
+                                action="<?= $theme->e($theme->route(
+                                    'admin_operations_backup_restore',
+                                    ['backupId' => $backupId],
+                                )) ?>"
+                            >
+                                <?= $theme->csrfInput() ?>
+                                <label>
+                                    <input
+                                        type="checkbox"
+                                        name="confirm_restore"
+                                        value="<?= $theme->e($backupId) ?>"
+                                        required
+                                    >
+                                    <span>
+                                        Заменить БД, config и uploads этой копией.
+                                        Перед восстановлением будет создан аварийный снимок текущего состояния.
+                                    </span>
+                                </label>
+                                <button class="button button--quiet" type="submit">Восстановить</button>
+                            </form>
+                        </div>
                     </article>
                 <?php endforeach; ?>
             </div>
@@ -196,9 +222,11 @@ $checkLabels = [
     </section>
 
     <aside class="admin-operations-note">
-        <strong>Восстановление не запускается из браузера автоматически.</strong>
+        <strong>Восстановление выполняется с аварийной копией.</strong>
         <p>
-            Фундамент restore уже существует, но объединённый безопасный сценарий БД + файлов ещё требует отдельной оркестрации. До этого момента аварийное восстановление остаётся операторской процедурой.
+            Перед заменой БД, локальной конфигурации и uploads ChurchCMS создаёт проверенный снимок текущего состояния.
+            При ошибке система пытается автоматически вернуть этот снимок. Из браузера разрешено восстанавливать только копию
+            с тем же подключением к БД и тем же каталогом резервных копий; перенос между окружениями остаётся операторской процедурой.
         </p>
     </aside>
 </section>

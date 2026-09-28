@@ -107,6 +107,57 @@ final class OperationsAdminController
         }
     }
 
+    public function restoreBackup(
+        Request $request,
+        string $backupId,
+    ): never {
+        AdminAuthorization::requirePermission(
+            $request,
+            'settings.manage',
+        );
+
+        if (
+            (string) $request->post('confirm_restore', '')
+            !== $backupId
+        ) {
+            Response::redirectLocal(
+                '/admin/system?status=restore-confirm-required',
+            );
+        }
+
+        try {
+            $result = (new OperationsService())
+                ->restoreBackup($backupId);
+
+            AuditLog::emit(
+                eventType: 'operations.backup.restored',
+                actorUserId: self::actorId($request),
+                subjectType: 'backup',
+                subjectId: $backupId,
+                metadata: [
+                    'safety_backup_id' => $result['safety_backup_id'],
+                    'tables' => $result['tables'],
+                    'rows' => $result['rows'],
+                    'files' => $result['files'],
+                ],
+                request: $request,
+            );
+
+            Response::redirectLocal(
+                '/admin/system?status=backup-restored',
+            );
+        } catch (Throwable $e) {
+            self::failed(
+                $request,
+                'operations.backup.restore_failed',
+                'backup-restore-failed',
+                $e,
+                'backup',
+                $backupId,
+            );
+        }
+    }
+
     public function applyUpdate(
         Request $request,
         string $stageId,
@@ -214,6 +265,16 @@ final class OperationsAdminController
                 'title' => 'Резервная копия проверена',
                 'message' => 'Манифест и контрольные суммы совпадают.',
             ],
+            'backup-restored' => [
+                'kind' => 'success',
+                'title' => 'Резервная копия восстановлена',
+                'message' => 'База данных, локальная конфигурация и uploads восстановлены. Перед операцией создан аварийный снимок.',
+            ],
+            'restore-confirm-required' => [
+                'kind' => 'error',
+                'title' => 'Нужно подтверждение восстановления',
+                'message' => 'Подтвердите замену БД, локальной конфигурации и uploads выбранной резервной копией.',
+            ],
             'update-applied' => [
                 'kind' => 'success',
                 'title' => 'Обновление применено',
@@ -233,6 +294,11 @@ final class OperationsAdminController
                 'kind' => 'error',
                 'title' => 'Проверка копии не пройдена',
                 'message' => 'Эту резервную копию нельзя считать готовой к восстановлению.',
+            ],
+            'backup-restore-failed' => [
+                'kind' => 'error',
+                'title' => 'Восстановление не завершено',
+                'message' => 'ChurchCMS остановила операцию и попыталась вернуть аварийную копию. Подробность записана в журнал сервера.',
             ],
             'update-apply-failed' => [
                 'kind' => 'error',

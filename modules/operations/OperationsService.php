@@ -5,6 +5,7 @@ declare(strict_types=1);
 namespace ChurchCMS\Modules\Operations;
 
 use ChurchCMS\Core\BackupManager;
+use ChurchCMS\Core\BackupRestoreOrchestrator;
 use ChurchCMS\Core\Config;
 use ChurchCMS\Core\DatabaseManager;
 use ChurchCMS\Core\InstallationHealthCheck;
@@ -85,6 +86,24 @@ final class OperationsService
     public function verifyBackup(string $backupId): void
     {
         $this->backupManager()->verify($backupId);
+    }
+
+    /**
+     * @return array{
+     *     id:string,
+     *     safety_backup_id:string,
+     *     tables:int,
+     *     rows:int,
+     *     files:int
+     * }
+     */
+    public function restoreBackup(string $backupId): array
+    {
+        return (new BackupRestoreOrchestrator(
+            $this->database,
+            $this->root,
+            $this->backupRoot,
+        ))->restore($backupId);
     }
 
     /**
