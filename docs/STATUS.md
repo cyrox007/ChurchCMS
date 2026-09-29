@@ -59,7 +59,7 @@ Implemented:
 - `php bin/federation-sync.php` выполняет ограниченный проход по активным связям и подходит для cron; один сбой не останавливает обработку остальных связей;
 - Admin Shell показывает отдельное состояние каждого применимого sync worker, время последнего успеха и безопасную ошибку;
 - `FederationSyncDashboardService` считает активные связи и worker в состояниях successful/failed/partial/not-started, учитывает scopes и не передаёт содержимое sync cursor в шаблон;
-- экран «Связи» показывает сводные метрики и подробный прогресс Publications/Events/Worship; PostgreSQL/MySQL smoke проверяет расчёт, scope-фильтрацию и отсутствие cursor в read-model;
+- экран «Связи» показывает сводные метрики и подробный прогресс Publications/Events/Worship/Documents; PostgreSQL/MySQL smoke проверяет расчёт, scope-фильтрацию и отсутствие cursor в read-model;
 - PostgreSQL/MySQL smoke проверяет частичный сетевой сбой, сохранение безопасного курсора, повторный запуск и tie-breaker публикаций с одинаковым `updated_at`;
 - `FederatedPublicationFeedService` объединяет локальные опубликованные материалы с active remote projections только от доверенных `child`-связей, у которых разрешён входящий `content.read` или `publications.read`;
 - публичный `GET /api/v1/publications/aggregated` отдаёт ограниченную общую ленту, где каждый элемент содержит явный блок `source` с видом источника, исходным `instance_id`, organization owner, названием и canonical URL;
@@ -214,7 +214,10 @@ Pending:
 - Documents source-side federation отдаёт только `published/federated` карточки через `/api/v1/partner/documents`, без filesystem path/blob; отдельный endpoint tombstones использует тот же составной курсор `updated_at + public_id`;
 - уход опубликованного документа из `federated` при смене visibility, withdraw или archive атомарно записывает tombstone; возврат в federation очищает устаревшее удаление;
 - PostgreSQL/MySQL smoke проверяет фильтрацию private-документов, безопасную projection, lifecycle tombstone и отказ некорректного public-ID cursor;
-- принимающий Documents worker, remote projection и aggregation остаются следующим federation-инкрементом.
+- `FederationDocumentSyncWorker` принимает активный поток и tombstone в независимое состояние `documents`, сохраняет удалённые карточки только как remote projection типа `document` и не создаёт из них локальные канонические Documents;
+- подтверждённый курсор активного потока сохраняется до запроса tombstone: частичный сетевой сбой не заставляет повторно читать уже применённую страницу;
+- PostgreSQL/MySQL smoke проверяет частичный сбой, повторный запуск, tombstone и независимость состояния от Publications;
+- для Documents остаётся агрегированное представление с сохранением исходного узла.
 
 ## Source-side federation Media
 
