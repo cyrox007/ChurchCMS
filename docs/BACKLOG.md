@@ -39,7 +39,7 @@ Priority is ordered within each section.
   - [x] Events: схема и доменный слой с обязательным organization owner, site-root по умолчанию и cross-site защитой;
   - [x] Media: foundation метаданных с обязательным organization owner, site-root по умолчанию и cross-site защитой;
   - [x] Documents: foundation карточки с обязательным organization owner, site-root по умолчанию и cross-site защитой;
-- [ ] incremental federation sync с canonical owner и tombstones;
+- [x] incremental federation sync с canonical owner и tombstones;
   - [x] Publications: устойчивый tombstone при снятии ранее опубликованного материала с target `diocese` и отдельный partner endpoint;
   - [x] remote projections и применение tombstone на принимающем узле;
   - [x] Publications: фоновый обработчик синхронизации с раздельными составными курсорами для публикаций/tombstones, безопасным повторным запуском, CLI для cron и отдельным состоянием ошибки sync;
@@ -55,7 +55,7 @@ Priority is ordered within each section.
     - [x] Documents: принимающий worker с отдельным состоянием, remote projection и tombstones;
     - [x] Media source-side: только явно разрешённые `federated` неархивные метаданные, безопасная projection без исходного имени/пути/blob и tombstones при смене видимости или архивировании;
     - [x] Media: принимающий worker с отдельным состоянием, remote projection и tombstones;
-- [ ] агрегированные ленты вышестоящих узлов без потери источника;
+- [x] агрегированные ленты вышестоящих узлов без потери источника;
   - [x] Publications: публичный API `/api/v1/publications/aggregated` объединяет локальные материалы и active remote projections только от `child`-связей с разрешённым входящим scope;
   - [x] агрегированный элемент сохраняет source `instance_id`, organization owner, имя и canonical URL и не выдаёт сырой remote `body_html`;
   - [x] подключить remote Publications к общему RSS с сохранением исходного узла через стандартный RSS `source`;
@@ -64,9 +64,9 @@ Priority is ordered within each section.
   - [x] Events: публичный `GET /api/v1/events/aggregated` не отдаёт сырой `description_html`, исключает tombstone/peer/parent/no-scope и сортирует по времени начала;
   - [x] Worship: объединять ближайшие локальные `scheduled/cancelled` записи и active remote projections только от `child`-связей с `content.read`, сохраняя источник и не отдавая `description_html`;
   - [x] Worship: публичный `GET /api/v1/worship/aggregated` исключает tombstone/peer/parent/no-scope и сохраняет `cancelled` как видимое состояние;
-  - [ ] расширить тот же контракт агрегации на Media/Documents после определения их публичной видимости;
+  - [x] расширить тот же контракт агрегации на Media/Documents после определения их публичной видимости;
     - [x] Documents: `GET /api/v1/documents/aggregated` объединяет локальные `published/public` карточки и active remote projections только от `child`-связей с `content.read`, сохраняя источник и исключая tombstone/peer/parent/no-scope;
-    - [ ] Media: добавить безопасную агрегацию после принимающего worker/projection и определения допустимого metadata-only публичного контракта;
+    - [x] Media: `GET /api/v1/media/aggregated` объединяет локальные `public` metadata-карточки и active remote projections только от `child`-связей с `content.read`, сохраняет источник и никогда не объявляет blob доступным;
 - [x] federation health/retry/conflict UI;
   - [x] сводные метрики активных связей и worker, отдельные success/error/partial/not-started состояния без раскрытия содержимого sync cursor.
 
