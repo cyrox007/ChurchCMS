@@ -95,12 +95,15 @@ Implemented:
 - модуль `documents` хранит карточку документа с обязательным `owner_organization_public_id`, типом, номером, датой и кратким описанием;
 - `DocumentService` назначает site root владельцем по умолчанию, валидирует дату и запрещает cross-site/архивного владельца; PostgreSQL/MySQL smoke проверяет owner FK, смену владельца и архивирование;
 - Documents foundation намеренно не хранит filesystem path и не считает файл прикреплённым до отдельной связи с проверенным Media asset;
+- federation sync вынесен в общий `FederationSyncWorker` contract и `FederationSyncCoordinator`;
+- существующий Publications worker реализует общий contract, а `bin/federation-sync.php` запускает coordinator вместо жёсткого вызова одного типа данных;
+- coordinator суммирует результаты worker'ов и не останавливает остальные типы, если один worker завершился исключением; отдельный smoke проверяет несколько worker, агрегацию статистики, изоляцию ошибки и запрет повторяющихся worker ID;
 - `docs/ORGANIZATIONS_AND_FEDERATION.md` фиксирует результаты анализа епархиальных/митрополичьих сайтов и общий domain contract.
 
 Дальше:
 
 - Admin/public/API слой People и расширенные сведения о духовенстве;
-- обобщить синхронизацию на остальные типы remote projections и общий планировщик;
+- добавить federation sync worker для Events/Worship/Media/Documents поверх готового общего coordinator;
 - Admin/public/API и повторяющиеся правила Worship;
 - Admin/public/API, публикация и календарные представления Events;
 - безопасный upload/storage pipeline Media, MIME sniffing, derivatives и usage references;
