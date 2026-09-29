@@ -114,17 +114,20 @@ Implemented:
 - partner endpoints Worship используют bounded page size и составной курсор `updated_at + public_id`; PostgreSQL/MySQL smoke проверяет lifecycle и отсутствие HTML в projection;
 - `FederationWorshipSyncWorker` принимает активный Worship-поток и tombstones как отдельные bounded-потоки, применяет их через remote projections типа `worship` и подключён к общему coordinator;
 - состояние Worship хранится под worker ID `worship` отдельно от Publications/Events; smoke проверяет частичный сбой tombstone-потока, безопасное продолжение и сохранность состояния другого worker;
+- `FederatedWorshipFeedService` объединяет ближайшие локальные `scheduled/cancelled` записи и active `worship` projections только от доверенных дочерних связей с входящим `content.read`;
+- публичный `GET /api/v1/worship/aggregated` сохраняет `cancelled` как видимое состояние, явно передаёт `source`, не копирует сырой `description_html` и исключает tombstone/peer/parent/no-scope источники;
+- PostgreSQL/MySQL smoke проверяет локальную + дочернюю Worship-ленту, сохранность источника, отменённое состояние и исключение запрещённых источников;
 - `docs/ORGANIZATIONS_AND_FEDERATION.md` фиксирует результаты анализа епархиальных/митрополичьих сайтов и общий domain contract.
 
 Дальше:
 
 - Admin/public/API слой People и расширенные сведения о духовенстве;
-- добавить source/worker federation sync для Worship/Media/Documents;
+- определить явную public/federation visibility Media/Documents и затем добавить для них source/worker federation sync;
 - Admin/public/API и повторяющиеся правила Worship;
 - Admin/public/API, публикация и календарные представления Events;
 - безопасный upload/storage pipeline Media, MIME sniffing, derivatives и usage references;
 - связь Documents → проверенный Media asset, Admin/public/API и версии файла;
-- расширить source-preserving federation-контракт с Publications/Events на Worship/Media/Documents.
+- расширить source-preserving federation-контракт с Publications/Events/Worship на Media/Documents после определения их публичной видимости.
 
 ## Installation
 
