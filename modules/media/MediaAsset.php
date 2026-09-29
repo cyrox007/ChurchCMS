@@ -12,6 +12,7 @@ final readonly class MediaAsset
         public string $siteKey,
         public string $ownerOrganizationPublicId,
         public string $status,
+        public string $visibility,
         public string $mediaType,
         public string $originalName,
         public string $mimeType,
