@@ -6,6 +6,7 @@ $connections = is_array($connections ?? null) ? $connections : [];
 $adapters = is_array($adapters ?? null) ? $adapters : [];
 $inboxItems = is_array($inboxItems ?? null) ? $inboxItems : [];
 $importOwners = is_array($importOwners ?? null) ? $importOwners : [];
+$canLinkExternal = ($canLinkExternal ?? false) === true;
 $canImportExternal = ($canImportExternal ?? false) === true;
 $status = is_array($channelStatus ?? null) ? $channelStatus : null;
 ?>
@@ -148,28 +149,30 @@ $status = is_array($channelStatus ?? null) ? $channelStatus : null;
                                 </form>
                             <?php endif; ?>
 
-                            <form
-                                class="admin-update-apply"
-                                method="post"
-                                action="<?= $theme->e($theme->route(
-                                    'admin_external_channels_inbox_link',
-                                    ['publicId' => $item->publicId],
-                                )) ?>"
-                            >
-                                <?= $theme->csrfInput() ?>
-                                <label>
-                                    <span>Публичный ID публикации</span>
-                                    <input
-                                        type="text"
-                                        name="publication_public_id"
-                                        required
-                                        autocomplete="off"
-                                    >
-                                </label>
-                                <button class="button button--quiet" type="submit">
-                                    Связать с публикацией
-                                </button>
-                            </form>
+                            <?php if ($canLinkExternal): ?>
+                                <form
+                                    class="admin-update-apply"
+                                    method="post"
+                                    action="<?= $theme->e($theme->route(
+                                        'admin_external_channels_inbox_link',
+                                        ['publicId' => $item->publicId],
+                                    )) ?>"
+                                >
+                                    <?= $theme->csrfInput() ?>
+                                    <label>
+                                        <span>Публичный ID публикации</span>
+                                        <input
+                                            type="text"
+                                            name="publication_public_id"
+                                            required
+                                            autocomplete="off"
+                                        >
+                                    </label>
+                                    <button class="button button--quiet" type="submit">
+                                        Связать с публикацией
+                                    </button>
+                                </form>
+                            <?php endif; ?>
                         </div>
                     </article>
                 <?php endforeach; ?>
