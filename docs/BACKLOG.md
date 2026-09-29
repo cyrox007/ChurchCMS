@@ -44,6 +44,7 @@ Priority is ordered within each section.
   - [x] remote projections и применение tombstone на принимающем узле;
   - [x] Publications: фоновый обработчик синхронизации с раздельными составными курсорами для публикаций/tombstones, безопасным повторным запуском, CLI для cron и отдельным состоянием ошибки sync;
   - [x] единый coordinator/CLI вызывает зарегистрированные sync worker и изолирует сбой одного типа данных;
+  - [x] sync state разделён по federation link + worker ID; Publications мигрирован с legacy cursor, revoke/reconnect очищают все worker-состояния;
   - [x] Events source-side: publish/withdraw/cancel lifecycle, безопасная partner projection, incremental endpoint и tombstones;
   - [ ] добавить принимающий sync worker Events;
   - [ ] добавить source/worker для Worship/Media/Documents и их tombstones;
