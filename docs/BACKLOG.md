@@ -44,7 +44,8 @@ Priority is ordered within each section.
 - [ ] агрегированные ленты вышестоящих узлов без потери источника;
   - [x] Publications: публичный API `/api/v1/publications/aggregated` объединяет локальные материалы и active remote projections только от `child`-связей с разрешённым входящим scope;
   - [x] агрегированный элемент сохраняет source `instance_id`, organization owner, имя и canonical URL и не выдаёт сырой remote `body_html`;
-  - [ ] подключить агрегированную ленту к публичным блокам темы/RSS и расширить тот же контракт на Events/Worship/Media/Documents;
+  - [x] подключить remote Publications к общему RSS с сохранением исходного узла через стандартный RSS `source`;
+  - [ ] подключить агрегированную ленту к публичным блокам темы и расширить тот же контракт на Events/Worship/Media/Documents;
 - [x] federation health/retry/conflict UI.
 
 ## P0 — Installation and operator UX

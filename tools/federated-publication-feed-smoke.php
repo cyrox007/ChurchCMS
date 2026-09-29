@@ -5,7 +5,10 @@ declare(strict_types=1);
 use ChurchCMS\Modules\Organizations\FederationProjectionService;
 use ChurchCMS\Modules\Organizations\FederationService;
 use ChurchCMS\Modules\Organizations\OrganizationService;
+use ChurchCMS\Core\Rss2SyndicationRenderer;
+use ChurchCMS\Core\SyndicationFeed;
 use ChurchCMS\Modules\Publications\FederatedPublicationFeedService;
+use ChurchCMS\Modules\Publications\FederatedPublicationSyndicationProvider;
 use ChurchCMS\Modules\Publications\PublicationService;
 
 require dirname(__DIR__) . '/core.php';
@@ -295,4 +298,60 @@ if (($feed[0]['id'] ?? null) !== $childPublication) {
     exit(1);
 }
 
-echo "Агрегированная лента публикаций проверена\n";
+$remoteEntries = iterator_to_array(
+    (new FederatedPublicationSyndicationProvider($siteKey))
+        ->entries(),
+    false,
+);
+
+if (count($remoteEntries) !== 1) {
+    fwrite(
+        STDERR,
+        "RSS provider federation-публикаций вернул неверное число элементов.\n",
+    );
+    exit(1);
+}
+
+$entry = $remoteEntries[0];
+$expectedGuid = 'urn:churchcms:federation:'
+    . $childInstance
+    . ':publication:'
+    . $childPublication;
+
+if (
+    $entry->id !== $expectedGuid
+    || $entry->url !== 'https://child.example/publications/news'
+    || $entry->sourceName !== 'Дочерний приход'
+    || $entry->sourceUrl !== 'https://child.example/publications/news'
+    || $entry->targets !== ['rss']
+    || $entry->contentHtml !== ''
+) {
+    fwrite(
+        STDERR,
+        "RSS federation-публикации потерял source или раскрыл лишний payload.\n",
+    );
+    exit(1);
+}
+
+$xml = (new Rss2SyndicationRenderer())->render(
+    new SyndicationFeed(
+        title: 'Тестовая агрегированная лента',
+        siteUrl: 'https://diocese.example/',
+        description: 'Smoke',
+        entries: $remoteEntries,
+    ),
+);
+
+if (
+    !str_contains($xml, '<source url="https://child.example/publications/news">Дочерний приход</source>')
+    || !str_contains($xml, $expectedGuid)
+    || str_contains($xml, '<script>')
+) {
+    fwrite(
+        STDERR,
+        "RSS XML не сохранил безопасный источник federation-публикации.\n",
+    );
+    exit(1);
+}
+
+echo "Агрегированная лента публикаций и RSS source проверены\n";

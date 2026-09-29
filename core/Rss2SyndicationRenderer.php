@@ -36,6 +36,19 @@ class Rss2SyndicationRenderer implements SyndicationRenderer
                 $xml[] = '<author>' . self::xml($entry->author) . '</author>';
             }
 
+            if (
+                $entry->sourceName !== null
+                && $entry->sourceName !== ''
+                && $entry->sourceUrl !== null
+                && $entry->sourceUrl !== ''
+            ) {
+                $xml[] = '<source url="'
+                    . self::xmlAttr($entry->sourceUrl)
+                    . '">'
+                    . self::xml($entry->sourceName)
+                    . '</source>';
+            }
+
             foreach ($entry->categories as $category) {
                 if (is_string($category) && $category !== '') {
                     $xml[] = '<category>' . self::xml($category) . '</category>';

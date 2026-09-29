@@ -16,6 +16,7 @@ use ChurchCMS\Core\ModuleRuntimeProvider;
 use ChurchCMS\Core\Router;
 use ChurchCMS\Core\SyndicationRegistry;
 use ChurchCMS\Modules\Publications\PublicationSyndicationProvider;
+use ChurchCMS\Modules\Publications\FederatedPublicationSyndicationProvider;
 use ChurchCMS\Modules\Publications\PublicationAdminSearchProvider;
 use ChurchCMS\Modules\Publications\PublicationAdminTaskProvider;
 use ChurchCMS\Modules\Publications\PublicationsApiController;
@@ -38,6 +39,7 @@ foreach ([
     'PublicationScheduleWorker.php',
     'PublicationApiResource.php',
     'FederatedPublicationFeedService.php',
+    'FederatedPublicationSyndicationProvider.php',
     'PublicationSyndicationProvider.php',
     'PublicationAdminSearchProvider.php',
     'PublicationAdminTaskProvider.php',
@@ -75,6 +77,10 @@ return new class implements ModuleRuntimeProvider {
         SyndicationRegistry::register(
             'publications',
             new PublicationSyndicationProvider(),
+        );
+        SyndicationRegistry::register(
+            'federated-publications',
+            new FederatedPublicationSyndicationProvider(),
         );
 
         AdminNavigationRegistry::register(

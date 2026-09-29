@@ -13,6 +13,9 @@ on:
       - 'modules/publications/PublicationRepository.php'
       - 'modules/publications/PublicationApiResource.php'
       - 'modules/publications/FederatedPublicationFeedService.php'
+      - 'modules/publications/FederatedPublicationSyndicationProvider.php'
+      - 'core/SyndicationEntry.php'
+      - 'core/Rss2SyndicationRenderer.php'
       - 'modules/publications/PublicationsApiController.php'
       - 'modules/publications/runtime.php'
       - 'bin/federation-sync.php'
@@ -34,6 +37,9 @@ on:
       - 'modules/publications/PublicationRepository.php'
       - 'modules/publications/PublicationApiResource.php'
       - 'modules/publications/FederatedPublicationFeedService.php'
+      - 'modules/publications/FederatedPublicationSyndicationProvider.php'
+      - 'core/SyndicationEntry.php'
+      - 'core/Rss2SyndicationRenderer.php'
       - 'modules/publications/PublicationsApiController.php'
       - 'modules/publications/runtime.php'
       - 'bin/federation-sync.php'
@@ -91,6 +97,9 @@ jobs:
           php -l tools/federated-publication-feed-smoke.php
           php -l modules/publications/PublicationRepository.php
           php -l modules/publications/FederatedPublicationFeedService.php
+          php -l modules/publications/FederatedPublicationSyndicationProvider.php
+          php -l core/SyndicationEntry.php
+          php -l core/Rss2SyndicationRenderer.php
           php -l modules/publications/PublicationsApiController.php
           php -l bin/federation-sync.php
           php -l themes/default/templates/admin/federation/index.php
