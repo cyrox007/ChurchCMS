@@ -98,6 +98,9 @@ Implemented:
 - federation sync вынесен в общий `FederationSyncWorker` contract и `FederationSyncCoordinator`;
 - существующий Publications worker реализует общий contract, а `bin/federation-sync.php` запускает coordinator вместо жёсткого вызова одного типа данных;
 - coordinator суммирует результаты worker'ов и не останавливает остальные типы, если один worker завершился исключением; отдельный smoke проверяет несколько worker, агрегацию статистики, изоляцию ошибки и запрет повторяющихся worker ID;
+- курсор, время последнего успеха и ошибка federation sync теперь хранятся отдельно для каждого `(federation_link_id, worker_id)`, поэтому второй worker не может перетереть состояние Publications;
+- migration переносит существующий legacy Publications cursor в worker `publications`; этот worker временно зеркалит состояние обратно в поля link для совместимости текущего Admin Shell;
+- optimistic locking выполняется внутри конкретного worker state, а revoke/reconnect удаляют все состояния worker этой связи; PostgreSQL/MySQL smoke проверяет независимость курсоров/ошибок Publications и Events;
 - Events получил source-side federation contract: publish/withdraw/cancel lifecycle, incremental partner feed по `updated_at + public_id` и отдельный tombstone поток;
 - partner projection Events реализует `ApiResource` и не отдаёт сырой `description_html`; наружу идут только безопасные поля списка и stable organization owner;
 - снятие/отмена только ранее опубликованного события создаёт tombstone, а повторная публикация очищает устаревший tombstone; PostgreSQL/MySQL smoke проверяет весь этот lifecycle;
