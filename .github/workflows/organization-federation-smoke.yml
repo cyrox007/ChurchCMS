@@ -33,6 +33,7 @@ on:
       - 'tools/federation-event-sync-smoke.php'
       - 'tools/federated-event-feed-smoke.php'
       - 'tools/federation-worship-sync-smoke.php'
+      - 'tools/federated-worship-feed-smoke.php'
       - 'tools/federation-sync-coordinator-smoke.php'
       - 'tools/federation-worker-sync-state-smoke.php'
       - 'tools/federation-sync-dashboard-smoke.php'
@@ -70,6 +71,7 @@ on:
       - 'tools/federation-event-sync-smoke.php'
       - 'tools/federated-event-feed-smoke.php'
       - 'tools/federation-worship-sync-smoke.php'
+      - 'tools/federated-worship-feed-smoke.php'
       - 'tools/federation-sync-coordinator-smoke.php'
       - 'tools/federation-worker-sync-state-smoke.php'
       - 'tools/federation-sync-dashboard-smoke.php'
@@ -124,6 +126,7 @@ jobs:
           php -l tools/federated-event-feed-smoke.php
           php -l modules/organizations/FederationEventSyncWorker.php
           php -l tools/federation-worship-sync-smoke.php
+          php -l tools/federated-worship-feed-smoke.php
           php -l modules/organizations/FederationWorshipSyncWorker.php
           php -l tools/federation-sync-coordinator-smoke.php
           php -l tools/federation-worker-sync-state-smoke.php
@@ -212,6 +215,9 @@ jobs:
 
       - name: Проверить агрегированную ленту событий
         run: php tools/federated-event-feed-smoke.php
+
+      - name: Проверить агрегированную ленту богослужений
+        run: php tools/federated-worship-feed-smoke.php
 
       - name: Проверить публичный блок агрегированных публикаций
         run: php tools/federated-publication-theme-smoke.php
