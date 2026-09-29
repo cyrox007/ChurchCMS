@@ -36,7 +36,7 @@ Status: in progress.
 - [ ] Worship schedule (schema/domain foundation с обязательным organization owner реализован; Admin Shell, public/API, повторяющиеся правила и праздничные шаблоны остаются).
 - [ ] Events (schema/domain foundation с обязательным organization owner реализован; Admin Shell, публикация, public/API, календарные представления и повторяющиеся правила остаются).
 - [ ] Galleries.
-- [ ] Documents (foundation карточки и organization owner, явная visibility, source-side federation/tombstones и принимающий worker с remote projection реализованы; связь с Media, Admin Shell, public/API, версии файла и агрегация остаются).
+- [ ] Documents (foundation карточки и organization owner, явная visibility и полный federation-путь source → worker → remote projection/tombstone → агрегированная API-лента реализованы; связь с Media, Admin Shell, обычный public/API и версии файла остаются).
 - [ ] Search.
 - [x] SEO foundation: metadata, canonical, OG/social cards, robots, sitemap, sharing.
 - [ ] Redirect manager.
@@ -95,7 +95,7 @@ Status: in progress.
 - [x] Federation pairing wizard и отзыв доверия.
 - [x] Organization-scoped RBAC enforcement.
 - [x] Organization ownership/references для Publications/Pages/People/Worship/Events/Media/Documents (organization owner/reference foundation реализован для всех перечисленных типов).
-- [ ] Parent/child aggregation и remote projections/tombstones (Publications полностью проходит source → worker → projection → aggregation; Events и Worship проходят source → worker → remote projection/tombstone → безопасную агрегированную API-ленту; Documents проходит source → worker → remote projection/tombstone и ждёт агрегацию; Media имеет source-side поток/tombstones и ждёт worker/projection/aggregation).
+- [ ] Parent/child aggregation и remote projections/tombstones (Publications, Events, Worship и Documents проходят source → worker → remote projection/tombstone → безопасное агрегированное представление; Media имеет source-side поток/tombstones и ждёт worker/projection/aggregation).
 - [x] Federation health/sync dashboard (health/retry/conflict UI, отдельные состояния Publications/Events/Worship, безопасный прогресс и сводные метрики реализованы).
 
 ## Cross-cutting — External channels
