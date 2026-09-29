@@ -33,6 +33,90 @@
     </aside>
 </section>
 
+
+<?php
+$latestPublications = is_array($latestPublications ?? null)
+    ? $latestPublications
+    : [];
+?>
+<?php if ($latestPublications !== []): ?>
+    <section
+        class="section section--tinted"
+        aria-labelledby="latest-publications-title"
+    >
+        <div class="section-heading">
+            <p class="eyebrow">Общая лента</p>
+            <h2 id="latest-publications-title">Последние публикации</h2>
+            <p>
+                Материалы этого сайта и связанных нижестоящих организаций.
+                Для внешних материалов всегда указан исходный сайт.
+            </p>
+        </div>
+
+        <div class="feature-grid">
+            <?php foreach ($latestPublications as $publication): ?>
+                <?php
+                $source = is_array($publication['source'] ?? null)
+                    ? $publication['source']
+                    : [];
+                $isFederation = ($source['kind'] ?? null)
+                    === 'federation';
+                $sourceName = trim(
+                    (string) ($source['name'] ?? '')
+                );
+                $url = trim((string) ($publication['url'] ?? ''));
+                ?>
+                <article class="card">
+                    <p class="card__eyebrow">
+                        <?= $theme->e(
+                            $isFederation
+                                ? 'Источник · ' . (
+                                    $sourceName !== ''
+                                        ? $sourceName
+                                        : 'связанный сайт'
+                                )
+                                : 'Этот сайт'
+                        ) ?>
+                    </p>
+
+                    <h3>
+                        <?php if ($url !== ''): ?>
+                            <a href="<?= $theme->e($url) ?>">
+                                <?= $theme->e(
+                                    (string) ($publication['title'] ?? '')
+                                ) ?>
+                            </a>
+                        <?php else: ?>
+                            <?= $theme->e(
+                                (string) ($publication['title'] ?? '')
+                            ) ?>
+                        <?php endif; ?>
+                    </h3>
+
+                    <?php if (!empty($publication['excerpt'])): ?>
+                        <p>
+                            <?= $theme->e(
+                                (string) $publication['excerpt']
+                            ) ?>
+                        </p>
+                    <?php endif; ?>
+
+                    <?php if (
+                        $isFederation
+                        && $url !== ''
+                    ): ?>
+                        <p>
+                            <a href="<?= $theme->e($url) ?>">
+                                Открыть на исходном сайте
+                            </a>
+                        </p>
+                    <?php endif; ?>
+                </article>
+            <?php endforeach; ?>
+        </div>
+    </section>
+<?php endif; ?>
+
 <section class="section" id="capabilities" aria-labelledby="capabilities-title">
     <div class="section-heading">
         <p class="eyebrow">Основа</p>

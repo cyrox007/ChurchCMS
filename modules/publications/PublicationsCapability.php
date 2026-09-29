@@ -15,4 +15,20 @@ final class PublicationsCapability
     {
         return PublicationService::fromDatabase();
     }
+
+    /**
+     * Безопасная общая лента для публичных блоков темы.
+     *
+     * @return list<array<string,mixed>>
+     */
+    public function latestForPublicTheme(
+        string $siteKey = 'default',
+        int $limit = 6,
+    ): array {
+        return FederatedPublicationFeedService::fromDatabase()
+            ->latest(
+                $siteKey,
+                $limit,
+            );
+    }
 }

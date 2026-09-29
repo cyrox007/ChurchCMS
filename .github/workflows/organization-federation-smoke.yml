@@ -13,6 +13,10 @@ on:
       - 'modules/publications/PublicationRepository.php'
       - 'modules/publications/PublicationApiResource.php'
       - 'modules/publications/FederatedPublicationFeedService.php'
+      - 'modules/publications/PublicationsCapability.php'
+      - 'app/controllers/HealthController.php'
+      - 'themes/default/templates/pages/home.php'
+      - 'tools/federated-publication-theme-smoke.php'
       - 'modules/publications/FederatedPublicationSyndicationProvider.php'
       - 'core/SyndicationEntry.php'
       - 'core/Rss2SyndicationRenderer.php'
@@ -37,6 +41,10 @@ on:
       - 'modules/publications/PublicationRepository.php'
       - 'modules/publications/PublicationApiResource.php'
       - 'modules/publications/FederatedPublicationFeedService.php'
+      - 'modules/publications/PublicationsCapability.php'
+      - 'app/controllers/HealthController.php'
+      - 'themes/default/templates/pages/home.php'
+      - 'tools/federated-publication-theme-smoke.php'
       - 'modules/publications/FederatedPublicationSyndicationProvider.php'
       - 'core/SyndicationEntry.php'
       - 'core/Rss2SyndicationRenderer.php'
@@ -97,6 +105,10 @@ jobs:
           php -l tools/federated-publication-feed-smoke.php
           php -l modules/publications/PublicationRepository.php
           php -l modules/publications/FederatedPublicationFeedService.php
+          php -l modules/publications/PublicationsCapability.php
+          php -l app/controllers/HealthController.php
+          php -l themes/default/templates/pages/home.php
+          php -l tools/federated-publication-theme-smoke.php
           php -l modules/publications/FederatedPublicationSyndicationProvider.php
           php -l core/SyndicationEntry.php
           php -l core/Rss2SyndicationRenderer.php
@@ -154,6 +166,9 @@ jobs:
 
       - name: Проверить агрегированную ленту публикаций
         run: php tools/federated-publication-feed-smoke.php
+
+      - name: Проверить публичный блок агрегированных публикаций
+        run: php tools/federated-publication-theme-smoke.php
 
       - name: Проверить federation discovery endpoint
         shell: bash
