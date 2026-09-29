@@ -46,7 +46,7 @@ Priority is ordered within each section.
   - [x] единый coordinator/CLI вызывает зарегистрированные sync worker и изолирует сбой одного типа данных;
   - [x] sync state разделён по federation link + worker ID; Publications мигрирован с legacy cursor, revoke/reconnect очищают все worker-состояния;
   - [x] Events source-side: publish/withdraw/cancel lifecycle, безопасная partner projection, incremental endpoint и tombstones;
-  - [ ] добавить принимающий sync worker Events;
+  - [x] добавить принимающий sync worker Events с отдельным worker-state, remote projection и tombstones;
   - [ ] добавить source/worker для Worship/Media/Documents и их tombstones;
 - [ ] агрегированные ленты вышестоящих узлов без потери источника;
   - [x] Publications: публичный API `/api/v1/publications/aggregated` объединяет локальные материалы и active remote projections только от `child`-связей с разрешённым входящим scope;
