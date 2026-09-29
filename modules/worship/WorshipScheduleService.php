@@ -170,11 +170,159 @@ final class WorshipScheduleService
         ]);
     }
 
+    public function schedule(
+        string $worshipPublicId,
+        string $siteKey = 'default',
+    ): void {
+        $siteKey = self::siteKey($siteKey);
+        $service = $this->serviceOrFail(
+            $worshipPublicId,
+            $siteKey,
+        );
+
+        $this->setVisibleStatus(
+            $service,
+            'scheduled',
+        );
+    }
+
     public function cancel(
         string $worshipPublicId,
         string $siteKey = 'default',
     ): void {
         $siteKey = self::siteKey($siteKey);
+        $service = $this->serviceOrFail(
+            $worshipPublicId,
+            $siteKey,
+        );
+
+        $this->setVisibleStatus(
+            $service,
+            'cancelled',
+        );
+    }
+
+    public function withdraw(
+        string $worshipPublicId,
+        string $siteKey = 'default',
+    ): void {
+        $siteKey = self::siteKey($siteKey);
+        $service = $this->serviceOrFail(
+            $worshipPublicId,
+            $siteKey,
+        );
+
+        if ($service->status === 'withdrawn') {
+            return;
+        }
+
+        $ownsTransaction = !$this->pdo->inTransaction();
+        if ($ownsTransaction) {
+            $this->pdo->beginTransaction();
+        }
+
+        try {
+            $updatedAt = new DateTimeImmutable(
+                'now',
+                new DateTimeZone('UTC'),
+            );
+
+            if (
+                in_array(
+                    $service->status,
+                    ['scheduled', 'cancelled'],
+                    true,
+                )
+            ) {
+                (new WorshipPartnerTombstoneRepository(
+                    $this->pdo,
+                ))->record(
+                    $service,
+                    'withdrawn',
+                    $updatedAt,
+                );
+            }
+
+            $this->updateStatus(
+                $service,
+                'withdrawn',
+                $updatedAt->format('Y-m-d H:i:s'),
+            );
+
+            if ($ownsTransaction) {
+                $this->pdo->commit();
+            }
+        } catch (Throwable $error) {
+            if (
+                $ownsTransaction
+                && $this->pdo->inTransaction()
+            ) {
+                $this->pdo->rollBack();
+            }
+
+            throw $error;
+        }
+    }
+
+    private function setVisibleStatus(
+        WorshipService $service,
+        string $status,
+    ): void {
+        $ownsTransaction = !$this->pdo->inTransaction();
+        if ($ownsTransaction) {
+            $this->pdo->beginTransaction();
+        }
+
+        try {
+            (new WorshipPartnerTombstoneRepository(
+                $this->pdo,
+            ))->clear($service);
+
+            $this->updateStatus(
+                $service,
+                $status,
+                gmdate('Y-m-d H:i:s'),
+            );
+
+            if ($ownsTransaction) {
+                $this->pdo->commit();
+            }
+        } catch (Throwable $error) {
+            if (
+                $ownsTransaction
+                && $this->pdo->inTransaction()
+            ) {
+                $this->pdo->rollBack();
+            }
+
+            throw $error;
+        }
+    }
+
+    private function updateStatus(
+        WorshipService $service,
+        string $status,
+        string $updatedAt,
+    ): void {
+        $statement = $this->pdo->prepare(
+            'UPDATE worship_services
+             SET status = :status,
+                 updated_at = :updated_at
+             WHERE public_id = :public_id
+               AND site_key = :site_key'
+        );
+        $statement->execute([
+            'status' => $status,
+            'updated_at' => $updatedAt,
+            'public_id' => $service->publicId,
+            'site_key' => $service->siteKey,
+        ]);
+    }
+
+    private function serviceOrFail(
+        string $worshipPublicId,
+        string $siteKey,
+    ): WorshipService {
         $service = $this->worship->findByPublicId(
             $worshipPublicId,
             $siteKey,
@@ -186,19 +334,7 @@ final class WorshipScheduleService
             );
         }
 
-        $statement = $this->pdo->prepare(
-            'UPDATE worship_services
-             SET status = :status,
-                 updated_at = :updated_at
-             WHERE public_id = :public_id
-               AND site_key = :site_key'
-        );
-        $statement->execute([
-            'status' => 'cancelled',
-            'updated_at' => gmdate('Y-m-d H:i:s'),
-            'public_id' => $service->publicId,
-            'site_key' => $siteKey,
-        ]);
+        return $service;
     }
 
     private function resolveOrganization(
