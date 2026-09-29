@@ -106,6 +106,9 @@ Implemented:
 - снятие/отмена только ранее опубликованного события создаёт tombstone, а повторная публикация очищает устаревший tombstone; PostgreSQL/MySQL smoke проверяет весь этот lifecycle;
 - `FederationEventSyncWorker` получает Events и tombstones отдельными bounded-потоками, применяет их как `event` remote projections и подключён к общему coordinator;
 - состояние Events хранится отдельно от Publications в `federation_worker_sync_states`; smoke проверяет частичный сетевой сбой, безопасный повторный запуск и отсутствие перетирания publication cursor;
+- Worship получил source-side federation contract: `scheduled` и `cancelled` остаются partner-visible, `withdraw` создаёт tombstone, а повторное `schedule` очищает его;
+- partner projection Worship отдаёт stable owner, тип службы, статус, время и место, но не экспортирует сырой `description_html`;
+- partner endpoints Worship используют bounded page size и составной курсор `updated_at + public_id`; PostgreSQL/MySQL smoke проверяет lifecycle и отсутствие HTML в projection;
 - `docs/ORGANIZATIONS_AND_FEDERATION.md` фиксирует результаты анализа епархиальных/митрополичьих сайтов и общий domain contract.
 
 Дальше:
