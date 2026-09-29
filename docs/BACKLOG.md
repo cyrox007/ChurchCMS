@@ -49,7 +49,7 @@ Priority is ordered within each section.
   - [x] добавить принимающий sync worker Events с отдельным worker-state, remote projection и tombstones;
   - [x] Worship source-side: безопасная partner projection, incremental endpoint, cancelled-состояние и tombstones при withdraw;
   - [x] добавить принимающий sync worker Worship с отдельным worker-state, remote projection и tombstones;
-  - [ ] определить явную public/federation visibility для Media/Documents, чтобы не экспортировать автоматически все зарегистрированные или черновые записи;
+  - [x] определить явную public/federation visibility для Media/Documents: новые записи private по умолчанию, Documents требуют публикации перед public/federated, federation-репозитории возвращают только явно разрешённые записи;
   - [ ] добавить source/worker для Media/Documents и их tombstones после определения этой границы;
 - [ ] агрегированные ленты вышестоящих узлов без потери источника;
   - [x] Publications: публичный API `/api/v1/publications/aggregated` объединяет локальные материалы и active remote projections только от `child`-связей с разрешённым входящим scope;

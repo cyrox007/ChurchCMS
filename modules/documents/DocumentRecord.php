@@ -12,6 +12,7 @@ final readonly class DocumentRecord
         public string $siteKey,
         public string $ownerOrganizationPublicId,
         public string $status,
+        public string $visibility,
         public string $title,
         public string $documentType,
         public ?string $documentNumber,

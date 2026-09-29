@@ -49,11 +49,26 @@ if (
     || $rootAsset->mimeType !== 'image/jpeg'
     || $rootAsset->sha256 !== $checksum
     || $rootAsset->status !== 'registered'
+    || $rootAsset->visibility !== 'private'
 ) {
     fwrite(
         STDERR,
         "Медиаматериал не получил корректные метаданные/root-владельца.\n",
     );
+    exit(1);
+}
+
+$media->setVisibility(
+    $rootAssetId,
+    'federated',
+    $siteKey,
+);
+$federatedMedia = $repository->forFederation($siteKey);
+if (
+    count($federatedMedia) !== 1
+    || $federatedMedia[0]->publicId !== $rootAssetId
+) {
+    fwrite(STDERR, "Media federation visibility не отфильтрована.\n");
     exit(1);
 }
 

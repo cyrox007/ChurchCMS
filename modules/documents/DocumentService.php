@@ -74,6 +74,7 @@ final class DocumentService
                 site_key,
                 owner_organization_public_id,
                 status,
+                visibility,
                 title,
                 document_type,
                 document_number,
@@ -86,6 +87,7 @@ final class DocumentService
                 :site_key,
                 :owner_organization_public_id,
                 :status,
+                :visibility,
                 :title,
                 :document_type,
                 :document_number,
@@ -100,6 +102,7 @@ final class DocumentService
             'site_key' => $siteKey,
             'owner_organization_public_id' => $owner->publicId,
             'status' => 'draft',
+            'visibility' => 'private',
             'title' => $title,
             'document_type' => $documentType,
             'document_number' => $documentNumber,
@@ -149,6 +152,86 @@ final class DocumentService
         ]);
     }
 
+    public function publish(
+        string $documentPublicId,
+        string $siteKey = 'default',
+    ): void {
+        $siteKey = self::siteKey($siteKey);
+        $document = $this->documents->findByPublicId(
+            $documentPublicId,
+            $siteKey,
+        );
+
+        if ($document === null || $document->status === 'archived') {
+            throw new InvalidArgumentException(
+                'Документ нельзя опубликовать.'
+            );
+        }
+
+        $this->updatePublicationState(
+            $document->publicId,
+            $siteKey,
+            'published',
+            $document->visibility,
+        );
+    }
+
+    public function withdraw(
+        string $documentPublicId,
+        string $siteKey = 'default',
+    ): void {
+        $siteKey = self::siteKey($siteKey);
+        $document = $this->documents->findByPublicId(
+            $documentPublicId,
+            $siteKey,
+        );
+
+        if ($document === null || $document->status === 'archived') {
+            throw new InvalidArgumentException(
+                'Документ нельзя снять с публикации.'
+            );
+        }
+
+        $this->updatePublicationState(
+            $document->publicId,
+            $siteKey,
+            'draft',
+            'private',
+        );
+    }
+
+    public function setVisibility(
+        string $documentPublicId,
+        string $visibility,
+        string $siteKey = 'default',
+    ): void {
+        $siteKey = self::siteKey($siteKey);
+        $visibility = self::visibility($visibility);
+        $document = $this->documents->findByPublicId(
+            $documentPublicId,
+            $siteKey,
+        );
+
+        if ($document === null) {
+            throw new InvalidArgumentException(
+                'Документ не найден.'
+            );
+        }
+
+        if ($visibility !== 'private' && $document->status !== 'published') {
+            throw new InvalidArgumentException(
+                'Публичная видимость доступна только опубликованному документу.'
+            );
+        }
+
+        $this->updatePublicationState(
+            $document->publicId,
+            $siteKey,
+            $document->status,
+            $visibility,
+        );
+    }
+
     public function archive(
         string $documentPublicId,
         string $siteKey = 'default',
@@ -168,14 +251,39 @@ final class DocumentService
         $statement = $this->pdo->prepare(
             'UPDATE documents
              SET status = :status,
+                 visibility = :visibility,
                  updated_at = :updated_at
              WHERE public_id = :public_id
                AND site_key = :site_key'
         );
         $statement->execute([
             'status' => 'archived',
+            'visibility' => 'private',
             'updated_at' => gmdate('Y-m-d H:i:s'),
             'public_id' => $document->publicId,
+            'site_key' => $siteKey,
+        ]);
+    }
+
+    private function updatePublicationState(
+        string $publicId,
+        string $siteKey,
+        string $status,
+        string $visibility,
+    ): void {
+        $statement = $this->pdo->prepare(
+            'UPDATE documents
+             SET status = :status,
+                 visibility = :visibility,
+                 updated_at = :updated_at
+             WHERE public_id = :public_id
+               AND site_key = :site_key'
+        );
+        $statement->execute([
+            'status' => $status,
+            'visibility' => $visibility,
+            'updated_at' => gmdate('Y-m-d H:i:s'),
+            'public_id' => $publicId,
             'site_key' => $siteKey,
         ]);
     }
@@ -217,6 +325,19 @@ final class DocumentService
         ) {
             throw new InvalidArgumentException(
                 'Некорректный site key документов.'
+            );
+        }
+
+        return $value;
+    }
+
+    private static function visibility(string $value): string
+    {
+        $value = trim($value);
+
+        if (!in_array($value, ['private', 'public', 'federated'], true)) {
+            throw new InvalidArgumentException(
+                'Некорректная видимость документа.'
             );
         }
 

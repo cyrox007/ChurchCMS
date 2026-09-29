@@ -72,6 +72,36 @@ final class MediaRepository
         );
     }
 
+    /**
+     * @return list<MediaAsset>
+     */
+    public function forFederation(
+        string $siteKey = 'default',
+        int $limit = 100,
+    ): array {
+        $limit = max(1, min(500, $limit));
+
+        $statement = $this->pdo->prepare(
+            'SELECT *
+             FROM media_assets
+             WHERE site_key = :site_key
+               AND visibility = :visibility
+               AND status <> :archived
+             ORDER BY updated_at ASC, public_id ASC
+             LIMIT ' . $limit
+        );
+        $statement->execute([
+            'site_key' => $siteKey,
+            'visibility' => 'federated',
+            'archived' => 'archived',
+        ]);
+
+        return array_map(
+            self::hydrate(...),
+            $statement->fetchAll(),
+        );
+    }
+
     private static function hydrate(array $row): MediaAsset
     {
         return new MediaAsset(
@@ -81,6 +111,7 @@ final class MediaRepository
             ownerOrganizationPublicId:
                 (string) $row['owner_organization_public_id'],
             status: (string) $row['status'],
+            visibility: (string) ($row['visibility'] ?? 'private'),
             mediaType: (string) $row['media_type'],
             originalName: (string) $row['original_name'],
             mimeType: (string) $row['mime_type'],
