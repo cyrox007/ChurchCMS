@@ -183,26 +183,39 @@ $formAction = $isEdit
                             $status = (string) ($channel['status'] ?? '');
                             $statusLabel = $externalStatusLabels[$status] ?? '';
                             ?>
-                            <label class="choice">
-                                <input
-                                    type="checkbox"
-                                    name="external_channel_ids[]"
-                                    value="<?= $theme->e((string) ($channel['public_id'] ?? '')) ?>"
-                                    <?= !empty($channel['selected']) ? 'checked' : '' ?>
-                                >
-                                <span>
-                                    <strong><?= $theme->e((string) ($channel['name'] ?? 'Внешний канал')) ?></strong>
-                                    <small>
-                                        <?= $theme->e((string) ($channel['provider'] ?? '')) ?>
-                                        <?php if (!empty($channel['target_ref'])): ?>
-                                            · <?= $theme->e((string) $channel['target_ref']) ?>
-                                        <?php endif; ?>
-                                        <?php if ($statusLabel !== ''): ?>
-                                            · <?= $theme->e($statusLabel) ?>
-                                        <?php endif; ?>
-                                    </small>
-                                </span>
-                            </label>
+                            <?php $channelPublicId = (string) ($channel['public_id'] ?? ''); ?>
+                            <div class="external-channel-editor">
+                                <label class="choice">
+                                    <input
+                                        type="checkbox"
+                                        name="external_channel_ids[]"
+                                        value="<?= $theme->e($channelPublicId) ?>"
+                                        <?= !empty($channel['selected']) ? 'checked' : '' ?>
+                                    >
+                                    <span>
+                                        <strong><?= $theme->e((string) ($channel['name'] ?? 'Внешний канал')) ?></strong>
+                                        <small>
+                                            <?= $theme->e((string) ($channel['provider'] ?? '')) ?>
+                                            <?php if (!empty($channel['target_ref'])): ?>
+                                                · <?= $theme->e((string) $channel['target_ref']) ?>
+                                            <?php endif; ?>
+                                            <?php if ($statusLabel !== ''): ?>
+                                                · <?= $theme->e($statusLabel) ?>
+                                            <?php endif; ?>
+                                        </small>
+                                    </span>
+                                </label>
+
+                                <label class="field">
+                                    <span>Текст для этого канала <small>необязательно</small></span>
+                                    <textarea
+                                        name="external_channel_text[<?= $theme->e($channelPublicId) ?>]"
+                                        rows="3"
+                                        maxlength="5000"
+                                        placeholder="Если оставить пустым, будет использовано короткое описание или заголовок публикации."
+                                    ><?= $theme->e((string) ($channel['custom_text'] ?? '')) ?></textarea>
+                                </label>
+                            </div>
                         <?php endforeach; ?>
                     </div>
                 <?php endif; ?>
