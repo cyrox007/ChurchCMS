@@ -1,0 +1,106 @@
+name: Проверка dead-letter внешних каналов
+
+on:
+  push:
+    branches:
+      - develop
+      - main
+    paths:
+      - 'modules/social/SocialPostRepository.php'
+      - 'modules/social/SocialOutboundFailureService.php'
+      - 'modules/social/SocialAdminController.php'
+      - 'modules/social/SocialAdminTaskProvider.php'
+      - 'modules/social/runtime.php'
+      - 'themes/default/templates/admin/external-channels.php'
+      - 'tools/external-channels-dead-letter-smoke.php'
+      - '.github/workflows/external-channels-dead-letter-smoke.yml'
+  pull_request:
+    branches:
+      - develop
+      - main
+    paths:
+      - 'modules/social/SocialPostRepository.php'
+      - 'modules/social/SocialOutboundFailureService.php'
+      - 'modules/social/SocialAdminController.php'
+      - 'modules/social/SocialAdminTaskProvider.php'
+      - 'modules/social/runtime.php'
+      - 'themes/default/templates/admin/external-channels.php'
+      - 'tools/external-channels-dead-letter-smoke.php'
+      - '.github/workflows/external-channels-dead-letter-smoke.yml'
+
+permissions:
+  contents: read
+
+jobs:
+  external-channels-dead-letter:
+    runs-on: ubuntu-latest
+
+    services:
+      postgres:
+        image: postgres:16
+        env:
+          POSTGRES_DB: churchcms
+          POSTGRES_USER: churchcms
+          POSTGRES_PASSWORD: churchcms
+        ports:
+          - 5432:5432
+        options: >-
+          --health-cmd pg_isready
+          --health-interval 10s
+          --health-timeout 5s
+          --health-retries 5
+
+    steps:
+      - name: Получить исходный код
+        uses: actions/checkout@v4
+
+      - name: Подготовить PHP 8.3
+        uses: shivammathur/setup-php@v2
+        with:
+          php-version: '8.3'
+          extensions: pdo, pdo_pgsql, mbstring, openssl
+          coverage: none
+
+      - name: Проверить PHP
+        run: |
+          set -euo pipefail
+          php -l modules/social/SocialPostRepository.php
+          php -l modules/social/SocialOutboundFailureService.php
+          php -l modules/social/SocialAdminController.php
+          php -l modules/social/SocialAdminTaskProvider.php
+          php -l modules/social/runtime.php
+          php -l themes/default/templates/admin/external-channels.php
+          php -l tools/external-channels-dead-letter-smoke.php
+          php bin/migrate.php validate
+          php bin/theme-check.php
+
+      - name: Подготовить тестовую установку
+        run: |
+          set -euo pipefail
+          mkdir -p storage/cache storage/logs storage/sessions storage/rate-limits storage/uploads
+
+          cat > config/local.php <<'PHP'
+          <?php
+
+          declare(strict_types=1);
+
+          return [
+              'installation' => ['completed' => true],
+              'security' => [
+                  'secret_key' => base64_encode(str_repeat('d', 32)),
+              ],
+              'database' => [
+                  'driver' => 'pgsql',
+                  'host' => '127.0.0.1',
+                  'port' => 5432,
+                  'database' => 'churchcms',
+                  'username' => 'churchcms',
+                  'password' => 'churchcms',
+              ],
+          ];
+          PHP
+
+          php bin/migrate.php
+
+      - name: Проверить список и ручной retry
+        run: php tools/external-channels-dead-letter-smoke.php
