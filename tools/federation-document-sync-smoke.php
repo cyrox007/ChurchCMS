@@ -94,7 +94,7 @@ $remoteInstanceId = 'a1000000-0000-4000-8000-000000000001';
 $remoteOrganizationId = 'a2000000-0000-4000-8000-000000000002';
 $remoteOwnerId = 'a3000000-0000-4000-8000-000000000003';
 $remoteDocumentId = 'a4000000-0000-4000-8000-000000000004';
-$token = 'event-federation-worker-token';
+$token = 'document-federation-worker-token';
 
 $federation = FederationService::fromDatabase();
 $linkPublicId = $federation->connect(
@@ -160,13 +160,12 @@ $transport = new ScriptedDocumentFederationTransport([
             [[
                 'id' => $remoteDocumentId,
                 'type' => 'document',
-                'title' => 'Удалённое событие',
-                'excerpt' => 'Краткое описание документа.',
+                'title' => 'Указ удалённой епархии',
+                'document_type' => 'decree',
+                'document_number' => '42/2042',
+                'issued_on' => '2042-03-01',
+                'summary' => 'Тестовая карточка документа.',
                 'organization_owner_id' => $remoteOwnerId,
-                'starts_at' => '2042-03-01T08:00:00+00:00',
-                'ends_at' => null,
-                'all_day' => false,
-                'location' => 'Приходской дом',
                 'updated_at' => $updatedAt,
                 'url' => null,
             ]],
@@ -189,7 +188,7 @@ $transport = new ScriptedDocumentFederationTransport([
                 'id' => $remoteDocumentId,
                 'type' => 'document',
                 'action' => 'delete',
-                'reason' => 'cancelled',
+                'reason' => 'withdrawn',
                 'organization_owner_id' => $remoteOwnerId,
                 'updated_at' => $deletedAt,
             ]],
