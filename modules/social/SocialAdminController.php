@@ -23,6 +23,36 @@ final class SocialAdminController
         );
 
         $service = SocialConnectionService::fromDatabase();
+        $publicationCapability = ModuleRuntimeLoader::capability(
+            'publications',
+            'publications.external-import',
+        );
+        $userId = self::actorId($request) ?? 0;
+        $canLinkExternal = $userId > 0
+            && AdminAuthorization::can(
+                $request,
+                'publications.read',
+            )
+            && $publicationCapability !== null
+            && method_exists(
+                $publicationCapability,
+                'findLinkablePublication',
+            );
+        $canImportExternal = $userId > 0
+            && AdminAuthorization::can(
+                $request,
+                'publications.create',
+            )
+            && $publicationCapability !== null
+            && method_exists(
+                $publicationCapability,
+                'externalImportOwners',
+            );
+        $importOwners = $canImportExternal
+            ? $publicationCapability->externalImportOwners(
+                $userId,
+            )
+            : [];
 
         AdminShell::page(
             $request,
@@ -32,6 +62,9 @@ final class SocialAdminController
                 'connections' => SocialConnectionRepository::fromDatabase()->all(),
                 'adapters' => $service->availableAdapters(),
                 'inboxItems' => ExternalChannelItemRepository::fromDatabase()->pending(),
+                'canLinkExternal' => $canLinkExternal,
+                'canImportExternal' => $canImportExternal,
+                'importOwners' => $importOwners,
                 'channelStatus' => self::status($request),
             ],
             'external-channels',
@@ -149,6 +182,10 @@ final class SocialAdminController
             $request,
             'social.manage',
         );
+        AdminAuthorization::requirePermission(
+            $request,
+            'publications.read',
+        );
 
         $repository = ExternalChannelItemRepository::fromDatabase();
         $item = $repository->findByPublicId($publicId);
@@ -167,27 +204,24 @@ final class SocialAdminController
 
         $capability = ModuleRuntimeLoader::capability(
             'publications',
-            'publications.repository',
+            'publications.external-import',
         );
-
         if (
             $capability === null
-            || !method_exists($capability, 'repository')
+            || !method_exists(
+                $capability,
+                'findLinkablePublication',
+            )
         ) {
             Response::redirectLocal(
                 '/admin/external-channels?status=link-unavailable',
             );
         }
 
-        $publicationRepository = $capability->repository();
-        if (!method_exists($publicationRepository, 'findByPublicId')) {
-            Response::redirectLocal(
-                '/admin/external-channels?status=link-unavailable',
-            );
-        }
-
-        $publication = $publicationRepository->findByPublicId(
-            $publicationPublicId
+        $userId = self::actorId($request) ?? 0;
+        $publication = $capability->findLinkablePublication(
+            $userId,
+            $publicationPublicId,
         );
         if ($publication === null) {
             Response::redirectLocal(
@@ -202,7 +236,7 @@ final class SocialAdminController
 
         AuditLog::emit(
             eventType: 'external_channel.inbox.linked',
-            actorUserId: self::actorId($request),
+            actorUserId: $userId,
             subjectType: 'external_channel_item',
             subjectId: $publicId,
             metadata: [
@@ -216,6 +250,125 @@ final class SocialAdminController
         Response::redirectLocal(
             '/admin/external-channels?status=inbox-linked',
         );
+    }
+
+    public function importInboxItem(
+        Request $request,
+        string $publicId,
+    ): never {
+        AdminAuthorization::requirePermission(
+            $request,
+            'social.manage',
+        );
+        AdminAuthorization::requirePermission(
+            $request,
+            'publications.create',
+        );
+
+        $repository = ExternalChannelItemRepository::fromDatabase();
+        $item = $repository->findByPublicId($publicId);
+        if ($item === null || $item->status !== 'pending') {
+            Response::text('404 Not Found', 404);
+        }
+
+        $ownerPublicId = trim(
+            (string) $request->post(
+                'owner_organization_public_id',
+                '',
+            )
+        );
+        if ($ownerPublicId === '') {
+            Response::redirectLocal(
+                '/admin/external-channels?status=import-invalid',
+            );
+        }
+
+        $capability = ModuleRuntimeLoader::capability(
+            'publications',
+            'publications.external-import',
+        );
+        if (
+            $capability === null
+            || !method_exists(
+                $capability,
+                'importExternalDraft',
+            )
+        ) {
+            Response::redirectLocal(
+                '/admin/external-channels?status=import-unavailable',
+            );
+        }
+
+        try {
+            $userId = self::actorId($request) ?? 0;
+            $draft = $capability->importExternalDraft(
+                userId: $userId,
+                ownerPublicId: $ownerPublicId,
+                title: $item->title ?? '',
+                bodyText: $item->bodyText,
+                kind: $item->kind,
+                canonicalUrl: $item->canonicalUrl,
+            );
+
+            $repository->linkToPublication(
+                $publicId,
+                (int) $draft['id'],
+            );
+
+            AuditLog::emit(
+                eventType: 'external_channel.inbox.imported',
+                actorUserId: $userId,
+                subjectType: 'external_channel_item',
+                subjectId: $publicId,
+                metadata: [
+                    'connection_id' => $item->connectionId,
+                    'remote_id' => $item->remoteId,
+                    'publication_public_id' =>
+                        (string) $draft['public_id'],
+                    'owner_organization_public_id' =>
+                        $ownerPublicId,
+                ],
+                request: $request,
+            );
+
+            Response::redirectLocal(
+                '/admin/publications/'
+                . rawurlencode(
+                    (string) $draft['public_id']
+                )
+                . '?saved=1'
+            );
+        } catch (InvalidArgumentException $e) {
+            error_log(
+                'ChurchCMS импорт внешнего материала: '
+                . $e->getMessage()
+            );
+
+            Response::redirectLocal(
+                '/admin/external-channels?status=import-invalid',
+            );
+        } catch (Throwable $e) {
+            error_log(
+                'ChurchCMS импорт внешнего материала: '
+                . $e->getMessage()
+            );
+
+            AuditLog::emit(
+                eventType: 'external_channel.inbox.import_failed',
+                severity: 'error',
+                actorUserId: self::actorId($request),
+                subjectType: 'external_channel_item',
+                subjectId: $publicId,
+                metadata: [
+                    'error_class' => $e::class,
+                ],
+                request: $request,
+            );
+
+            Response::redirectLocal(
+                '/admin/external-channels?status=import-failed',
+            );
+        }
     }
 
     private static function actorId(Request $request): ?int
@@ -268,6 +421,21 @@ final class SocialAdminController
                 'kind' => 'error',
                 'title' => 'Связь временно недоступна',
                 'message' => 'Модуль публикаций сейчас не предоставляет нужную возможность.',
+            ],
+            'import-invalid' => [
+                'kind' => 'error',
+                'title' => 'Черновик не создан',
+                'message' => 'Выберите доступную организацию-владельца и повторите импорт.',
+            ],
+            'import-unavailable' => [
+                'kind' => 'error',
+                'title' => 'Импорт временно недоступен',
+                'message' => 'Модуль публикаций сейчас не предоставляет безопасный импорт.',
+            ],
+            'import-failed' => [
+                'kind' => 'error',
+                'title' => 'Импорт не завершён',
+                'message' => 'Внешний материал остался в очереди. Подробность записана в журнал сервера.',
             ],
             default => null,
         };
