@@ -78,6 +78,36 @@ final class MediaRepository
     /**
      * @return list<MediaAsset>
      */
+    public function publicVisible(
+        string $siteKey = 'default',
+        int $limit = 100,
+    ): array {
+        $limit = max(1, min(500, $limit));
+
+        $statement = $this->pdo->prepare(
+            'SELECT *
+             FROM media_assets
+             WHERE site_key = :site_key
+               AND visibility = :visibility
+               AND status <> :archived
+             ORDER BY updated_at DESC, public_id ASC
+             LIMIT ' . $limit
+        );
+        $statement->execute([
+            'site_key' => $siteKey,
+            'visibility' => 'public',
+            'archived' => 'archived',
+        ]);
+
+        return array_map(
+            self::hydrate(...),
+            $statement->fetchAll(),
+        );
+    }
+
+    /**
+     * @return list<MediaAsset>
+     */
     public function forFederation(
         string $siteKey = 'default',
         int $limit = 100,
