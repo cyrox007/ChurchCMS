@@ -31,6 +31,7 @@ on:
       - 'tools/federation-remote-projection-smoke.php'
       - 'tools/federation-publication-sync-smoke.php'
       - 'tools/federation-event-sync-smoke.php'
+      - 'tools/federated-event-feed-smoke.php'
       - 'tools/federation-sync-coordinator-smoke.php'
       - 'tools/federation-worker-sync-state-smoke.php'
       - 'tools/federated-publication-feed-smoke.php'
@@ -65,6 +66,7 @@ on:
       - 'tools/federation-remote-projection-smoke.php'
       - 'tools/federation-publication-sync-smoke.php'
       - 'tools/federation-event-sync-smoke.php'
+      - 'tools/federated-event-feed-smoke.php'
       - 'tools/federation-sync-coordinator-smoke.php'
       - 'tools/federation-worker-sync-state-smoke.php'
       - 'tools/federated-publication-feed-smoke.php'
@@ -115,6 +117,7 @@ jobs:
           php -l tools/federation-remote-projection-smoke.php
           php -l tools/federation-publication-sync-smoke.php
           php -l tools/federation-event-sync-smoke.php
+          php -l tools/federated-event-feed-smoke.php
           php -l modules/organizations/FederationEventSyncWorker.php
           php -l tools/federation-sync-coordinator-smoke.php
           php -l tools/federation-worker-sync-state-smoke.php
@@ -193,6 +196,9 @@ jobs:
 
       - name: Проверить агрегированную ленту публикаций
         run: php tools/federated-publication-feed-smoke.php
+
+      - name: Проверить агрегированную ленту событий
+        run: php tools/federated-event-feed-smoke.php
 
       - name: Проверить публичный блок агрегированных публикаций
         run: php tools/federated-publication-theme-smoke.php
