@@ -4,10 +4,11 @@ declare(strict_types=1);
 
 namespace ChurchCMS\Modules\Events;
 
+use ChurchCMS\Core\ApiResource;
 use DateTimeImmutable;
 use DateTimeZone;
 
-final class EventApiResource
+final class EventApiResource implements ApiResource
 {
     public function __construct(
         private readonly Event $event,
