@@ -38,6 +38,7 @@ on:
       - 'tools/federation-remote-projection-smoke.php'
       - 'tools/federation-publication-sync-smoke.php'
       - 'tools/federation-event-sync-smoke.php'
+      - 'tools/federation-worship-sync-smoke.php'
       - 'tools/federation-worker-sync-state-smoke.php'
       - 'tools/federated-publication-feed-smoke.php'
       - 'tools/page-organization-owner-smoke.php'
@@ -247,6 +248,9 @@ jobs:
 
       - name: Проверить federation sync событий в MySQL
         run: php tools/federation-event-sync-smoke.php
+
+      - name: Проверить federation sync богослужений в MySQL
+        run: php tools/federation-worship-sync-smoke.php
 
       - name: Проверить независимое состояние federation worker в MySQL
         run: php tools/federation-worker-sync-state-smoke.php
