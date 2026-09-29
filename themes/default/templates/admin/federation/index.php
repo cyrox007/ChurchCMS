@@ -55,6 +55,7 @@ $workerLabels = [
     'publications' => 'Публикации',
     'events' => 'События',
     'worship' => 'Богослужения',
+    'documents' => 'Документы',
 ];
 
 $syncStatusLabels = [
