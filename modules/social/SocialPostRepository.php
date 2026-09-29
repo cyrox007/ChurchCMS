@@ -5,8 +5,10 @@ declare(strict_types=1);
 namespace ChurchCMS\Modules\Social;
 
 use ChurchCMS\Core\DatabaseManager;
+use ChurchCMS\Core\Uuid;
 use DateTimeImmutable;
 use PDO;
+use Throwable;
 
 final class SocialPostRepository
 {
@@ -116,6 +118,139 @@ final class SocialPostRepository
         }
 
         return $claimed;
+    }
+
+    /**
+     * @param list<int> $connectionIds
+     */
+    public function replaceSelection(
+        int $publicationId,
+        array $connectionIds,
+    ): void {
+        $connectionIds = array_values(array_unique(array_filter(
+            $connectionIds,
+            static fn(mixed $id): bool =>
+                is_int($id) && $id > 0,
+        )));
+        $selected = array_fill_keys($connectionIds, true);
+        $ownsTransaction = !$this->pdo->inTransaction();
+
+        if ($ownsTransaction) {
+            $this->pdo->beginTransaction();
+        }
+
+        try {
+            $statement = $this->pdo->prepare(
+                'SELECT id, connection_id
+                 FROM publication_social_posts
+                 WHERE publication_id = :publication_id'
+            );
+            $statement->execute([
+                'publication_id' => $publicationId,
+            ]);
+
+            $existing = [];
+            foreach ($statement->fetchAll() as $row) {
+                $existing[(int) $row['connection_id']] =
+                    (int) $row['id'];
+            }
+
+            $toggle = $this->pdo->prepare(
+                'UPDATE publication_social_posts
+                 SET enabled = :enabled,
+                     updated_at = :updated_at
+                 WHERE id = :id'
+            );
+            $now = gmdate('Y-m-d H:i:s');
+
+            foreach ($existing as $connectionId => $postId) {
+                $toggle->execute([
+                    'enabled' => isset($selected[$connectionId])
+                        ? 1
+                        : 0,
+                    'updated_at' => $now,
+                    'id' => $postId,
+                ]);
+            }
+
+            $insert = $this->pdo->prepare(
+                'INSERT INTO publication_social_posts (
+                    public_id,
+                    publication_id,
+                    connection_id,
+                    enabled,
+                    custom_text,
+                    status,
+                    attempts,
+                    queued_at,
+                    created_at,
+                    updated_at
+                 ) VALUES (
+                    :public_id,
+                    :publication_id,
+                    :connection_id,
+                    :enabled,
+                    NULL,
+                    :status,
+                    0,
+                    NULL,
+                    :created_at,
+                    :updated_at
+                 )'
+            );
+
+            foreach ($connectionIds as $connectionId) {
+                if (isset($existing[$connectionId])) {
+                    continue;
+                }
+
+                $insert->execute([
+                    'public_id' => Uuid::v4(),
+                    'publication_id' => $publicationId,
+                    'connection_id' => $connectionId,
+                    'enabled' => 1,
+                    'status' => 'idle',
+                    'created_at' => $now,
+                    'updated_at' => $now,
+                ]);
+            }
+
+            if ($ownsTransaction) {
+                $this->pdo->commit();
+            }
+        } catch (Throwable $error) {
+            if ($ownsTransaction && $this->pdo->inTransaction()) {
+                $this->pdo->rollBack();
+            }
+
+            throw $error;
+        }
+    }
+
+    public function queueEnabledForPublication(
+        int $publicationId,
+    ): int {
+        $now = gmdate('Y-m-d H:i:s');
+        $statement = $this->pdo->prepare(
+            'UPDATE publication_social_posts
+             SET status = :pending,
+                 queued_at = :queued_at,
+                 last_error = NULL,
+                 updated_at = :updated_at
+             WHERE publication_id = :publication_id
+               AND enabled = :enabled
+               AND status = :idle'
+        );
+        $statement->execute([
+            'pending' => 'pending',
+            'queued_at' => $now,
+            'updated_at' => $now,
+            'publication_id' => $publicationId,
+            'enabled' => 1,
+            'idle' => 'idle',
+        ]);
+
+        return $statement->rowCount();
     }
 
     public function failedCount(): int
