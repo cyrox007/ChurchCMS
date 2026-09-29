@@ -1,0 +1,320 @@
+<?php
+
+declare(strict_types=1);
+
+namespace ChurchCMS\Modules\Media;
+
+use ChurchCMS\Core\DatabaseManager;
+use ChurchCMS\Core\Uuid;
+use ChurchCMS\Modules\Organizations\OrganizationRepository;
+use ChurchCMS\Modules\Organizations\OrganizationUnit;
+use InvalidArgumentException;
+use PDO;
+
+final class MediaService
+{
+    private MediaRepository $media;
+    private OrganizationRepository $organizations;
+
+    public function __construct(private readonly PDO $pdo)
+    {
+        $this->media = new MediaRepository($pdo);
+        $this->organizations = new OrganizationRepository($pdo);
+    }
+
+    public static function fromDatabase(): self
+    {
+        return new self(
+            DatabaseManager::getInstance()->connection(),
+        );
+    }
+
+    public function registerMetadata(
+        string $mediaType,
+        string $originalName,
+        string $mimeType,
+        int $bytes,
+        string $sha256,
+        ?string $ownerOrganizationPublicId = null,
+        string $siteKey = 'default',
+        ?string $title = null,
+        ?string $altText = null,
+    ): string {
+        $siteKey = self::siteKey($siteKey);
+        $owner = $this->resolveOrganization(
+            $ownerOrganizationPublicId,
+            $siteKey,
+        );
+        $mediaType = self::machineKey(
+            $mediaType,
+            'Некорректный тип медиаматериала.',
+        );
+        $originalName = self::requiredText(
+            $originalName,
+            255,
+            'Имя исходного файла обязательно.',
+        );
+        $mimeType = self::mimeType($mimeType);
+        $sha256 = strtolower(trim($sha256));
+        $title = self::optionalText(
+            $title,
+            255,
+            'Название медиаматериала слишком длинное.',
+        );
+        $altText = self::optionalText(
+            $altText,
+            500,
+            'Альтернативное описание слишком длинное.',
+        );
+
+        if ($bytes < 0) {
+            throw new InvalidArgumentException(
+                'Размер медиаматериала не может быть отрицательным.'
+            );
+        }
+
+        if (preg_match('/^[a-f0-9]{64}$/D', $sha256) !== 1) {
+            throw new InvalidArgumentException(
+                'Некорректная SHA-256 сумма медиаматериала.'
+            );
+        }
+
+        $publicId = Uuid::v4();
+        $now = gmdate('Y-m-d H:i:s');
+
+        $statement = $this->pdo->prepare(
+            'INSERT INTO media_assets (
+                public_id,
+                site_key,
+                owner_organization_public_id,
+                status,
+                media_type,
+                original_name,
+                mime_type,
+                bytes,
+                sha256,
+                title,
+                alt_text,
+                created_at,
+                updated_at
+             ) VALUES (
+                :public_id,
+                :site_key,
+                :owner_organization_public_id,
+                :status,
+                :media_type,
+                :original_name,
+                :mime_type,
+                :bytes,
+                :sha256,
+                :title,
+                :alt_text,
+                :created_at,
+                :updated_at
+             )'
+        );
+        $statement->execute([
+            'public_id' => $publicId,
+            'site_key' => $siteKey,
+            'owner_organization_public_id' => $owner->publicId,
+            'status' => 'registered',
+            'media_type' => $mediaType,
+            'original_name' => $originalName,
+            'mime_type' => $mimeType,
+            'bytes' => $bytes,
+            'sha256' => $sha256,
+            'title' => $title,
+            'alt_text' => $altText,
+            'created_at' => $now,
+            'updated_at' => $now,
+        ]);
+
+        return $publicId;
+    }
+
+    public function assignOrganizationOwner(
+        string $mediaPublicId,
+        string $organizationPublicId,
+        string $siteKey = 'default',
+    ): void {
+        $siteKey = self::siteKey($siteKey);
+        $asset = $this->media->findByPublicId(
+            $mediaPublicId,
+            $siteKey,
+        );
+
+        if ($asset === null) {
+            throw new InvalidArgumentException(
+                'Медиаматериал не найден.'
+            );
+        }
+
+        $organization = $this->resolveOrganization(
+            $organizationPublicId,
+            $siteKey,
+        );
+
+        $statement = $this->pdo->prepare(
+            'UPDATE media_assets
+             SET owner_organization_public_id = :organization_id,
+                 updated_at = :updated_at
+             WHERE public_id = :public_id
+               AND site_key = :site_key'
+        );
+        $statement->execute([
+            'organization_id' => $organization->publicId,
+            'updated_at' => gmdate('Y-m-d H:i:s'),
+            'public_id' => $asset->publicId,
+            'site_key' => $siteKey,
+        ]);
+    }
+
+    public function archive(
+        string $mediaPublicId,
+        string $siteKey = 'default',
+    ): void {
+        $siteKey = self::siteKey($siteKey);
+        $asset = $this->media->findByPublicId(
+            $mediaPublicId,
+            $siteKey,
+        );
+
+        if ($asset === null) {
+            throw new InvalidArgumentException(
+                'Медиаматериал не найден.'
+            );
+        }
+
+        $statement = $this->pdo->prepare(
+            'UPDATE media_assets
+             SET status = :status,
+                 updated_at = :updated_at
+             WHERE public_id = :public_id
+               AND site_key = :site_key'
+        );
+        $statement->execute([
+            'status' => 'archived',
+            'updated_at' => gmdate('Y-m-d H:i:s'),
+            'public_id' => $asset->publicId,
+            'site_key' => $siteKey,
+        ]);
+    }
+
+    private function resolveOrganization(
+        ?string $publicId,
+        string $siteKey,
+    ): OrganizationUnit {
+        $publicId = trim((string) ($publicId ?? ''));
+
+        $organization = $publicId !== ''
+            ? $this->organizations->findByPublicId(
+                $publicId,
+                $siteKey,
+            )
+            : $this->organizations->siteRoot($siteKey);
+
+        if (
+            $organization === null
+            || $organization->status !== 'active'
+        ) {
+            throw new InvalidArgumentException(
+                'Активная организация для медиаматериала не найдена.'
+            );
+        }
+
+        return $organization;
+    }
+
+    private static function siteKey(string $value): string
+    {
+        $value = trim($value);
+
+        if (
+            preg_match(
+                '/^[a-z0-9][a-z0-9_.-]{0,63}$/D',
+                $value,
+            ) !== 1
+        ) {
+            throw new InvalidArgumentException(
+                'Некорректный site key медиатеки.'
+            );
+        }
+
+        return $value;
+    }
+
+    private static function machineKey(
+        string $value,
+        string $message,
+    ): string {
+        $value = trim($value);
+
+        if (
+            preg_match(
+                '/^[a-z][a-z0-9_.:-]{1,63}$/D',
+                $value,
+            ) !== 1
+        ) {
+            throw new InvalidArgumentException($message);
+        }
+
+        return $value;
+    }
+
+    private static function mimeType(string $value): string
+    {
+        $value = strtolower(trim($value));
+
+        if (
+            preg_match(
+                '~^[a-z0-9][a-z0-9!#$&^_.+-]{0,126}/[a-z0-9][a-z0-9!#$&^_.+-]{0,126}$~D',
+                $value,
+            ) !== 1
+        ) {
+            throw new InvalidArgumentException(
+                'Некорректный MIME type медиаматериала.'
+            );
+        }
+
+        return $value;
+    }
+
+    private static function requiredText(
+        string $value,
+        int $limit,
+        string $message,
+    ): string {
+        $value = trim($value);
+
+        if ($value === '' || self::length($value) > $limit) {
+            throw new InvalidArgumentException($message);
+        }
+
+        return $value;
+    }
+
+    private static function optionalText(
+        ?string $value,
+        int $limit,
+        string $message,
+    ): ?string {
+        $value = trim((string) ($value ?? ''));
+
+        if ($value === '') {
+            return null;
+        }
+
+        if (self::length($value) > $limit) {
+            throw new InvalidArgumentException($message);
+        }
+
+        return $value;
+    }
+
+    private static function length(string $value): int
+    {
+        return function_exists('mb_strlen')
+            ? mb_strlen($value, 'UTF-8')
+            : strlen($value);
+    }
+}

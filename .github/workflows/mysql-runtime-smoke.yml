@@ -25,11 +25,13 @@ on:
       - 'modules/people/**'
       - 'modules/worship/**'
       - 'modules/events/**'
+      - 'modules/media/**'
       - 'tools/publication-organization-owner-smoke.php'
       - 'tools/publication-partner-tombstone-smoke.php'
       - 'tools/people-organization-smoke.php'
       - 'tools/worship-organization-smoke.php'
       - 'tools/event-organization-smoke.php'
+      - 'tools/media-organization-smoke.php'
       - 'tools/federation-remote-projection-smoke.php'
       - 'tools/federation-publication-sync-smoke.php'
       - 'tools/federated-publication-feed-smoke.php'
@@ -59,9 +61,11 @@ on:
       - 'modules/people/**'
       - 'modules/worship/**'
       - 'modules/events/**'
+      - 'modules/media/**'
       - 'tools/people-organization-smoke.php'
       - 'tools/worship-organization-smoke.php'
       - 'tools/event-organization-smoke.php'
+      - 'tools/media-organization-smoke.php'
       - 'tools/federation-remote-projection-smoke.php'
       - 'tools/publication-organization-owner-smoke.php'
       - 'tools/publication-partner-tombstone-smoke.php'
@@ -250,3 +254,6 @@ jobs:
 
       - name: Проверить события в MySQL
         run: php tools/event-organization-smoke.php
+
+      - name: Проверить Media foundation в MySQL
+        run: php tools/media-organization-smoke.php
