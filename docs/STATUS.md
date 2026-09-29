@@ -98,12 +98,16 @@ Implemented:
 - federation sync вынесен в общий `FederationSyncWorker` contract и `FederationSyncCoordinator`;
 - существующий Publications worker реализует общий contract, а `bin/federation-sync.php` запускает coordinator вместо жёсткого вызова одного типа данных;
 - coordinator суммирует результаты worker'ов и не останавливает остальные типы, если один worker завершился исключением; отдельный smoke проверяет несколько worker, агрегацию статистики, изоляцию ошибки и запрет повторяющихся worker ID;
+- Events получил source-side federation contract: publish/withdraw/cancel lifecycle, incremental partner feed по `updated_at + public_id` и отдельный tombstone поток;
+- partner projection Events реализует `ApiResource` и не отдаёт сырой `description_html`; наружу идут только безопасные поля списка и stable organization owner;
+- снятие/отмена только ранее опубликованного события создаёт tombstone, а повторная публикация очищает устаревший tombstone; PostgreSQL/MySQL smoke проверяет весь этот lifecycle;
 - `docs/ORGANIZATIONS_AND_FEDERATION.md` фиксирует результаты анализа епархиальных/митрополичьих сайтов и общий domain contract.
 
 Дальше:
 
 - Admin/public/API слой People и расширенные сведения о духовенстве;
-- добавить federation sync worker для Events/Worship/Media/Documents поверх готового общего coordinator;
+- добавить принимающий federation sync worker Events поверх готового source contract;
+- добавить source/worker federation sync для Worship/Media/Documents;
 - Admin/public/API и повторяющиеся правила Worship;
 - Admin/public/API, публикация и календарные представления Events;
 - безопасный upload/storage pipeline Media, MIME sniffing, derivatives и usage references;

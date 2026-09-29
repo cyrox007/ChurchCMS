@@ -35,13 +35,25 @@ PostgreSQL/MySQL.
 
 Время нормализуется в UTC. Окончание не может быть раньше начала.
 
-Новая запись имеет статус `draft`. Отмена переводит её в `cancelled`
-без физического удаления и без потери stable public ID.
+Новая запись имеет статус `draft`. `publish()` переводит её в
+`published`. `withdraw()` снимает опубликованное событие, а `cancel()`
+переводит его в `cancelled` без физического удаления и без потери stable
+public ID.
+
+Если событие уже было опубликовано, снятие или отмена создаёт partner
+tombstone. Повторная публикация очищает устаревший tombstone.
 
 ## Текущее состояние
 
-Реализованы схема, доменный объект, репозиторий/сервис и smoke-проверка
-organization owner.
+Реализованы:
 
-Admin Shell, публикация, public/API, категории событий, повторяющиеся правила,
-календарные представления и federation sync остаются следующими инкрементами.
+- схема и organization owner;
+- publish/withdraw/cancel lifecycle;
+- безопасная partner projection без сырого `description_html`;
+- incremental partner endpoint с составным курсором;
+- отдельный tombstone endpoint;
+- PostgreSQL/MySQL smoke source-side federation lifecycle.
+
+Admin Shell, публичный Events API/страницы, категории, повторяющиеся правила,
+календарные представления и принимающий federation sync worker остаются
+следующими инкрементами.

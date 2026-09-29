@@ -44,7 +44,9 @@ Priority is ordered within each section.
   - [x] remote projections и применение tombstone на принимающем узле;
   - [x] Publications: фоновый обработчик синхронизации с раздельными составными курсорами для публикаций/tombstones, безопасным повторным запуском, CLI для cron и отдельным состоянием ошибки sync;
   - [x] единый coordinator/CLI вызывает зарегистрированные sync worker и изолирует сбой одного типа данных;
-  - [ ] добавить sync worker для Events/Worship/Media/Documents и их tombstones;
+  - [x] Events source-side: publish/withdraw/cancel lifecycle, безопасная partner projection, incremental endpoint и tombstones;
+  - [ ] добавить принимающий sync worker Events;
+  - [ ] добавить source/worker для Worship/Media/Documents и их tombstones;
 - [ ] агрегированные ленты вышестоящих узлов без потери источника;
   - [x] Publications: публичный API `/api/v1/publications/aggregated` объединяет локальные материалы и active remote projections только от `child`-связей с разрешённым входящим scope;
   - [x] агрегированный элемент сохраняет source `instance_id`, organization owner, имя и canonical URL и не выдаёт сырой remote `body_html`;

@@ -501,3 +501,18 @@ Coordinator запрещает повторяющиеся или некорре�
 Файл документа должен появляться через отдельную связь с проверенным Media asset после реализации безопасного upload/storage pipeline. Это разделяет редакционный lifecycle документа и физическое хранение blob, позволяет заменять версии файла без смены canonical ID документа и не создаёт обход MIME/checksum-проверок Media.
 
 Архивирование сохраняет stable public ID вместо hard-delete. Admin Shell, публикация, public/API, связь с Media, версии файла и federation sync остаются следующими инкрементами.
+
+
+## D-049 — Events federation source экспортирует только безопасную projection и явные tombstone
+
+Принято.
+
+Federation source для Events использует два независимых incremental-потока: опубликованные события и tombstone. Оба имеют bounded page size и составной курсор `updated_at + public_id`, чтобы несколько изменений в одну секунду не терялись и не повторялись бесконечно.
+
+Partner projection события реализует общий `ApiResource` и содержит только stable public ID, тип, заголовок, excerpt, `organization_owner_id`, время начала/окончания, `all_day`, место и `updated_at`. Сырой `description_html` не экспортируется, пока Events не получил отдельный sanitizer/public rendering contract.
+
+Tombstone создаётся только когда из partner-visible состояния уходит ранее опубликованное событие. `withdraw` создаёт reason `withdrawn`, отмена опубликованного события — `cancelled`; отмена черновика tombstone не создаёт.
+
+Повторная публикация очищает старый tombstone. Это обязательно для полного sync нового принимающего узла: старое удаление не должно применяться после более нового активного состояния.
+
+Endpoints `/api/v1/partner/events` и `/api/v1/partner/events/tombstones` требуют `content.read`. Принимающий Events worker, remote projection/aggregation и публичный календарь остаются отдельными следующими инкрементами.

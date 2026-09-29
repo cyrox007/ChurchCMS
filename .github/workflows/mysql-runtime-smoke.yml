@@ -32,6 +32,7 @@ on:
       - 'tools/people-organization-smoke.php'
       - 'tools/worship-organization-smoke.php'
       - 'tools/event-organization-smoke.php'
+      - 'tools/event-partner-sync-smoke.php'
       - 'tools/media-organization-smoke.php'
       - 'tools/document-organization-smoke.php'
       - 'tools/federation-remote-projection-smoke.php'
@@ -68,6 +69,7 @@ on:
       - 'tools/people-organization-smoke.php'
       - 'tools/worship-organization-smoke.php'
       - 'tools/event-organization-smoke.php'
+      - 'tools/event-partner-sync-smoke.php'
       - 'tools/media-organization-smoke.php'
       - 'tools/document-organization-smoke.php'
       - 'tools/federation-remote-projection-smoke.php'
@@ -258,6 +260,9 @@ jobs:
 
       - name: Проверить события в MySQL
         run: php tools/event-organization-smoke.php
+
+      - name: Проверить partner sync источник Events в MySQL
+        run: php tools/event-partner-sync-smoke.php
 
       - name: Проверить Media foundation в MySQL
         run: php tools/media-organization-smoke.php

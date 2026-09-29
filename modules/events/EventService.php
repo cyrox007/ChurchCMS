@@ -175,11 +175,152 @@ final class EventService
         ]);
     }
 
+    public function publish(
+        string $eventPublicId,
+        string $siteKey = 'default',
+    ): void {
+        $siteKey = self::siteKey($siteKey);
+        $event = $this->eventOrFail(
+            $eventPublicId,
+            $siteKey,
+        );
+        $ownsTransaction = !$this->pdo->inTransaction();
+
+        if ($ownsTransaction) {
+            $this->pdo->beginTransaction();
+        }
+
+        try {
+            (new EventPartnerTombstoneRepository(
+                $this->pdo,
+            ))->clear($event);
+
+            $this->updateStatus(
+                $event,
+                'published',
+                gmdate('Y-m-d H:i:s'),
+            );
+
+            if ($ownsTransaction) {
+                $this->pdo->commit();
+            }
+        } catch (Throwable $error) {
+            if (
+                $ownsTransaction
+                && $this->pdo->inTransaction()
+            ) {
+                $this->pdo->rollBack();
+            }
+
+            throw $error;
+        }
+    }
+
+    public function withdraw(
+        string $eventPublicId,
+        string $siteKey = 'default',
+    ): void {
+        $siteKey = self::siteKey($siteKey);
+        $event = $this->eventOrFail(
+            $eventPublicId,
+            $siteKey,
+        );
+
+        $this->leavePublishedState(
+            $event,
+            'withdrawn',
+            'withdrawn',
+        );
+    }
+
     public function cancel(
         string $eventPublicId,
         string $siteKey = 'default',
     ): void {
         $siteKey = self::siteKey($siteKey);
+        $event = $this->eventOrFail(
+            $eventPublicId,
+            $siteKey,
+        );
+
+        $this->leavePublishedState(
+            $event,
+            'cancelled',
+            'cancelled',
+        );
+    }
+
+    private function leavePublishedState(
+        Event $event,
+        string $nextStatus,
+        string $reason,
+    ): void {
+        $ownsTransaction = !$this->pdo->inTransaction();
+        if ($ownsTransaction) {
+            $this->pdo->beginTransaction();
+        }
+
+        try {
+            $updatedAt = new DateTimeImmutable(
+                'now',
+                new DateTimeZone('UTC'),
+            );
+
+            if ($event->status === 'published') {
+                (new EventPartnerTombstoneRepository(
+                    $this->pdo,
+                ))->record(
+                    $event,
+                    $reason,
+                    $updatedAt,
+                );
+            }
+
+            $this->updateStatus(
+                $event,
+                $nextStatus,
+                $updatedAt->format('Y-m-d H:i:s'),
+            );
+
+            if ($ownsTransaction) {
+                $this->pdo->commit();
+            }
+        } catch (Throwable $error) {
+            if (
+                $ownsTransaction
+                && $this->pdo->inTransaction()
+            ) {
+                $this->pdo->rollBack();
+            }
+
+            throw $error;
+        }
+    }
+
+    private function updateStatus(
+        Event $event,
+        string $status,
+        string $updatedAt,
+    ): void {
+        $statement = $this->pdo->prepare(
+            'UPDATE events
+             SET status = :status,
+                 updated_at = :updated_at
+             WHERE public_id = :public_id
+               AND site_key = :site_key'
+        );
+        $statement->execute([
+            'status' => $status,
+            'updated_at' => $updatedAt,
+            'public_id' => $event->publicId,
+            'site_key' => $event->siteKey,
+        ]);
+    }
+
+    private function eventOrFail(
+        string $eventPublicId,
+        string $siteKey,
+    ): Event {
         $event = $this->events->findByPublicId(
             $eventPublicId,
             $siteKey,
@@ -191,19 +332,7 @@ final class EventService
             );
         }
 
-        $statement = $this->pdo->prepare(
-            'UPDATE events
-             SET status = :status,
-                 updated_at = :updated_at
-             WHERE public_id = :public_id
-               AND site_key = :site_key'
-        );
-        $statement->execute([
-            'status' => 'cancelled',
-            'updated_at' => gmdate('Y-m-d H:i:s'),
-            'public_id' => $event->publicId,
-            'site_key' => $siteKey,
-        ]);
+        return $event;
     }
 
     private function resolveOrganization(
