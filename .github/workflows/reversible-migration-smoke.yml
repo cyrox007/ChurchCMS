@@ -1,0 +1,228 @@
+name: Проверка обратимых миграций
+
+on:
+  push:
+    branches:
+      - develop
+      - main
+    paths:
+      - 'core/Migration.php'
+      - 'core/ReversibleMigration.php'
+      - 'core/MigrationRunner.php'
+      - '.github/workflows/reversible-migration-smoke.yml'
+  pull_request:
+    branches:
+      - develop
+      - main
+    paths:
+      - 'core/Migration.php'
+      - 'core/ReversibleMigration.php'
+      - 'core/MigrationRunner.php'
+      - '.github/workflows/reversible-migration-smoke.yml'
+
+permissions:
+  contents: read
+
+jobs:
+  reversible-migration-smoke:
+    runs-on: ubuntu-latest
+
+    services:
+      postgres:
+        image: postgres:16
+        env:
+          POSTGRES_DB: churchcms
+          POSTGRES_USER: churchcms
+          POSTGRES_PASSWORD: churchcms
+        ports:
+          - 5432:5432
+        options: >-
+          --health-cmd pg_isready
+          --health-interval 10s
+          --health-timeout 5s
+          --health-retries 5
+
+    steps:
+      - name: Получить исходный код
+        uses: actions/checkout@v4
+
+      - name: Подготовить PHP 8.3
+        uses: shivammathur/setup-php@v2
+        with:
+          php-version: '8.3'
+          extensions: pdo, pdo_pgsql
+          coverage: none
+
+      - name: Проверить синтаксис
+        run: |
+          set -euo pipefail
+          php -l core/ReversibleMigration.php
+          php -l core/MigrationRunner.php
+
+      - name: Настроить тестовую БД
+        run: |
+          set -euo pipefail
+          cat > config/local.php <<'PHP'
+          <?php
+
+          declare(strict_types=1);
+
+          return [
+              'installation' => ['completed' => true],
+              'security' => ['secret_key' => base64_encode(str_repeat('r', 32))],
+              'database' => [
+                  'driver' => 'pgsql',
+                  'host' => '127.0.0.1',
+                  'port' => 5432,
+                  'database' => 'churchcms',
+                  'username' => 'churchcms',
+                  'password' => 'churchcms',
+              ],
+          ];
+          PHP
+
+      - name: Добавить временные миграции
+        run: |
+          set -euo pipefail
+          cat > database/migrations/20990101_000000_reversible_smoke_one.php <<'PHP'
+          <?php
+
+          declare(strict_types=1);
+
+          use ChurchCMS\Core\ReversibleMigration;
+          use PDO;
+
+          return new class implements ReversibleMigration {
+              public function id(): string
+              {
+                  return '20990101_000000_reversible_smoke_one';
+              }
+
+              public function up(PDO $pdo, string $driver): void
+              {
+                  $pdo->exec('CREATE TABLE reversible_smoke_one (id INTEGER PRIMARY KEY)');
+              }
+
+              public function down(PDO $pdo, string $driver): void
+              {
+                  $pdo->exec('DROP TABLE reversible_smoke_one');
+              }
+          };
+          PHP
+
+          cat > database/migrations/20990101_000001_reversible_smoke_two.php <<'PHP'
+          <?php
+
+          declare(strict_types=1);
+
+          use ChurchCMS\Core\ReversibleMigration;
+          use PDO;
+
+          return new class implements ReversibleMigration {
+              public function id(): string
+              {
+                  return '20990101_000001_reversible_smoke_two';
+              }
+
+              public function up(PDO $pdo, string $driver): void
+              {
+                  $pdo->exec('CREATE TABLE reversible_smoke_two (id INTEGER PRIMARY KEY)');
+              }
+
+              public function down(PDO $pdo, string $driver): void
+              {
+                  $pdo->exec('DROP TABLE reversible_smoke_two');
+              }
+          };
+          PHP
+
+          cat > database/migrations/20990101_000002_irreversible_smoke.php <<'PHP'
+          <?php
+
+          declare(strict_types=1);
+
+          use ChurchCMS\Core\Migration;
+          use PDO;
+
+          return new class implements Migration {
+              public function id(): string
+              {
+                  return '20990101_000002_irreversible_smoke';
+              }
+
+              public function up(PDO $pdo, string $driver): void
+              {
+                  $pdo->exec('CREATE TABLE irreversible_smoke (id INTEGER PRIMARY KEY)');
+              }
+          };
+          PHP
+
+      - name: Проверить предварительный отказ и обратный порядок
+        run: |
+          set -euo pipefail
+          php bin/migrate.php
+
+          php <<'PHP'
+          <?php
+
+          declare(strict_types=1);
+
+          require 'core.php';
+
+          use ChurchCMS\Core\DatabaseManager;
+          use ChurchCMS\Core\MigrationRunner;
+          use RuntimeException;
+
+          $runner = new MigrationRunner(DatabaseManager::getInstance(), CHURCHCMS_ROOT);
+          $pdo = DatabaseManager::getInstance()->connection();
+
+          try {
+              $runner->rollback([
+                  '20990101_000000_reversible_smoke_one',
+                  '20990101_000002_irreversible_smoke',
+              ]);
+              fwrite(STDERR, "Необратимая миграция ошибочно допущена к откату.\n");
+              exit(1);
+          } catch (RuntimeException $e) {
+              if (!str_contains($e->getMessage(), 'не поддерживает безопасный откат')) {
+                  throw $e;
+              }
+          }
+
+          foreach (['reversible_smoke_one', 'irreversible_smoke'] as $table) {
+              $statement = $pdo->prepare(
+                  "SELECT COUNT(*) FROM information_schema.tables WHERE table_schema = 'public' AND table_name = :table"
+              );
+              $statement->execute(['table' => $table]);
+              if ((int) $statement->fetchColumn() !== 1) {
+                  fwrite(STDERR, "Предварительная проверка изменила БД до отказа.\n");
+                  exit(1);
+              }
+          }
+
+          $rolledBack = $runner->rollback([
+              '20990101_000000_reversible_smoke_one',
+              '20990101_000001_reversible_smoke_two',
+          ]);
+
+          if ($rolledBack !== [
+              '20990101_000001_reversible_smoke_two',
+              '20990101_000000_reversible_smoke_one',
+          ]) {
+              fwrite(STDERR, "Нарушен обратный порядок отката миграций.\n");
+              exit(1);
+          }
+
+          foreach (['reversible_smoke_one', 'reversible_smoke_two'] as $table) {
+              $statement = $pdo->prepare(
+                  "SELECT COUNT(*) FROM information_schema.tables WHERE table_schema = 'public' AND table_name = :table"
+              );
+              $statement->execute(['table' => $table]);
+              if ((int) $statement->fetchColumn() !== 0) {
+                  fwrite(STDERR, "Таблица осталась после отката: {$table}\n");
+                  exit(1);
+              }
+          }
+
+          echo "Контракт обратимых миграций проверен\n";
+          PHP
