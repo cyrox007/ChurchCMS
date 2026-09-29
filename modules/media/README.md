@@ -52,6 +52,15 @@ PostgreSQL/MySQL.
 Само переключение видимости не создаёт URL и не делает файл загруженным.
 Federation-репозиторий возвращает только `federated` и неархивные записи.
 
+Source-side обмен использует два bounded incremental-потока с составным
+курсором `updated_at + public_id`: активные metadata-only записи и tombstone.
+`GET /api/v1/partner/media` не передаёт исходное имя файла, путь или blob и
+явно возвращает `blob_available=false`. Значения MIME/размера/SHA-256 пока
+являются метаданными карточки, а не доказательством наличия проверенного файла.
+
+Уход ранее federated-записи в локальную видимость или archive атомарно создаёт
+tombstone. Повторное включение `federated` очищает старый tombstone.
+
 ## Следующие инкременты
 
 Остаются:
@@ -65,4 +74,4 @@ Federation-репозиторий возвращает только `federated` 
 - Admin Shell;
 - public/API;
 - Galleries/Documents;
-- federation sync.
+- принимающий federation worker, remote projection и агрегация Media.

@@ -216,6 +216,15 @@ Pending:
 - PostgreSQL/MySQL smoke проверяет фильтрацию private-документов, безопасную projection, lifecycle tombstone и отказ некорректного public-ID cursor;
 - принимающий Documents worker, remote projection и aggregation остаются следующим federation-инкрементом.
 
+## Source-side federation Media
+
+- наружу попадают только явно разрешённые неархивные записи с видимостью `federated` через `/api/v1/partner/media`;
+- выдаётся только безопасная карточка метаданных: без исходного имени файла, серверного пути и blob; `blob_available=false` явно показывает, что этот контракт не подтверждает наличие загруженного файла;
+- MIME, размер и SHA-256 в текущей модели являются заявленными метаданными карточки и не заменяют будущую проверку фактического blob;
+- смена видимости с `federated` и архивирование атомарно записывают tombstone, а повторное включение federation очищает устаревшее удаление;
+- PostgreSQL/MySQL smoke проверяет фильтрацию приватных записей, безопасную projection, lifecycle tombstone и составной курсор `updated_at + public_id`;
+- принимающий Media worker, remote projection, агрегация и передача реального файла остаются отдельными следующими инкрементами.
+
 ## Security / administration
 
 Implemented:

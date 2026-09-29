@@ -31,7 +31,7 @@ Status: in progress.
 - [ ] Публикации (основной процесс, public/admin/API/синдикация, категории/теги и отложенная публикация реализованы; остаются ревизии и связь с Media).
 - [x] Pages/content tree (schema, domain, public API, organization-scoped Admin Shell and public canonical HTML implemented).
 - [ ] Navigation/menu.
-- [ ] Media library (foundation метаданных и organization owner реализован; безопасный upload/storage, MIME sniffing, derivatives, usage references, Admin/public/API остаются).
+- [ ] Media library (foundation метаданных, organization owner, явная visibility и source-side federation/tombstones реализованы; безопасный upload/storage, MIME sniffing, derivatives, usage references, Admin/public/API, принимающий worker и агрегация остаются).
 - [ ] People/clergy (основа схемы, доменного слоя и организационных связей назначений реализована; Admin Shell, публичная часть и API остаются).
 - [ ] Worship schedule (schema/domain foundation с обязательным organization owner реализован; Admin Shell, public/API, повторяющиеся правила и праздничные шаблоны остаются).
 - [ ] Events (schema/domain foundation с обязательным organization owner реализован; Admin Shell, публикация, public/API, календарные представления и повторяющиеся правила остаются).
@@ -95,7 +95,7 @@ Status: in progress.
 - [x] Federation pairing wizard и отзыв доверия.
 - [x] Organization-scoped RBAC enforcement.
 - [x] Organization ownership/references для Publications/Pages/People/Worship/Events/Media/Documents (organization owner/reference foundation реализован для всех перечисленных типов).
-- [ ] Parent/child aggregation и remote projections/tombstones (Publications полностью проходит source → worker → projection → aggregation; Events и Worship проходят source → worker → remote projection/tombstone → безопасную агрегированную API-ленту; Documents имеет явную visibility и source-side поток/tombstones; для него остаются worker/projection/aggregation, для Media — source/worker и aggregation).
+- [ ] Parent/child aggregation и remote projections/tombstones (Publications полностью проходит source → worker → projection → aggregation; Events и Worship проходят source → worker → remote projection/tombstone → безопасную агрегированную API-ленту; Documents и Media имеют явную visibility и source-side потоки/tombstones; для них остаются worker/projection/aggregation).
 - [x] Federation health/sync dashboard (health/retry/conflict UI, отдельные состояния Publications/Events/Worship, безопасный прогресс и сводные метрики реализованы).
 
 ## Cross-cutting — External channels

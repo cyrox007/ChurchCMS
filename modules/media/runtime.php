@@ -2,13 +2,23 @@
 
 declare(strict_types=1);
 
+use ChurchCMS\App\Middlewares\ApiCorsMiddleware;
+use ChurchCMS\App\Middlewares\ApiEnabledMiddleware;
+use ChurchCMS\App\Middlewares\ApiPartnerRateLimitMiddleware;
+use ChurchCMS\App\Middlewares\PartnerApiMiddleware;
 use ChurchCMS\Core\ModuleRuntimeProvider;
+use ChurchCMS\Core\Router;
+use ChurchCMS\Modules\Media\MediaApiController;
 
 $moduleRoot = __DIR__;
 foreach ([
     'MediaAsset.php',
     'MediaRepository.php',
+    'MediaApiResource.php',
+    'MediaPartnerTombstoneRepository.php',
+    'MediaPartnerTombstoneApiResource.php',
     'MediaService.php',
+    'MediaApiController.php',
 ] as $file) {
     require_once $moduleRoot . '/' . $file;
 }
@@ -26,5 +36,32 @@ return new class implements ModuleRuntimeProvider {
 
     public function boot(): void
     {
+        $router = Router::getInstance();
+
+        $router->add(
+            'GET',
+            '/api/v1/partner/media',
+            [MediaApiController::class, 'partnerIndex'],
+            [
+                ApiEnabledMiddleware::class,
+                ApiCorsMiddleware::class,
+                PartnerApiMiddleware::class,
+                ApiPartnerRateLimitMiddleware::class,
+            ],
+            'api_v1_partner_media',
+        );
+
+        $router->add(
+            'GET',
+            '/api/v1/partner/media/tombstones',
+            [MediaApiController::class, 'partnerTombstones'],
+            [
+                ApiEnabledMiddleware::class,
+                ApiCorsMiddleware::class,
+                PartnerApiMiddleware::class,
+                ApiPartnerRateLimitMiddleware::class,
+            ],
+            'api_v1_partner_media_tombstones',
+        );
     }
 };
