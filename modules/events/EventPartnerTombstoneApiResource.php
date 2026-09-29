@@ -4,10 +4,11 @@ declare(strict_types=1);
 
 namespace ChurchCMS\Modules\Events;
 
+use ChurchCMS\Core\ApiResource;
 use DateTimeImmutable;
 use DateTimeZone;
 
-final class EventPartnerTombstoneApiResource
+final class EventPartnerTombstoneApiResource implements ApiResource
 {
     /**
      * @param array{
