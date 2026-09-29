@@ -1,6 +1,6 @@
 # ChurchCMS implementation status
 
-Last updated: 2026-09-28
+Last updated: 2026-09-29
 
 ## Current branch
 
@@ -208,6 +208,11 @@ Pending:
 - безопасный rollback старой схемы/данных для schema-changing пакетов: текущий логический backup не является DDL snapshot, поэтому автоматический apply migration-файлов намеренно запрещён;
 - доверенная автоматическая загрузка релизного пакета из удалённого источника; криптографическая аутентичность локального/staged пакета уже проверяется;
 - получение подписанного релизного пакета из Admin Shell без ручного staging.
+
+- Documents source-side federation отдаёт только `published/federated` карточки через `/api/v1/partner/documents`, без filesystem path/blob; отдельный endpoint tombstones использует тот же составной курсор `updated_at + public_id`;
+- уход опубликованного документа из `federated` при смене visibility, withdraw или archive атомарно записывает tombstone; возврат в federation очищает устаревшее удаление;
+- PostgreSQL/MySQL smoke проверяет фильтрацию private-документов, безопасную projection, lifecycle tombstone и отказ некорректного public-ID cursor;
+- принимающий Documents worker, remote projection и aggregation остаются следующим federation-инкрементом.
 
 ## Security / administration
 
