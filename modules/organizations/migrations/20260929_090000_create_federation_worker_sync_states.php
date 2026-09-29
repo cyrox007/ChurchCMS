@@ -96,7 +96,7 @@ SQL,
 INSERT INTO federation_worker_sync_states (
     federation_link_id,
     worker_id,
-    cursor,
+    sync_cursor,
     last_sync_at,
     last_sync_error,
     created_at,
