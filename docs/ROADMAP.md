@@ -105,7 +105,7 @@ Status: in progress.
 - [x] Encrypted integration credentials.
 - [x] Admin connection wizard.
 - [x] Outbound worker and retry/dead-letter processing.
-- [ ] Inbound review/import workflow.
+- [x] Inbound review/import workflow.
 - [ ] Built-in Telegram/VK/MAX adapters.
 - [ ] Built-in YouTube/Rutube adapters.
 - [ ] Adapter SDK documentation for other/future platforms.
