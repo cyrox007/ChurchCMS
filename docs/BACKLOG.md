@@ -248,7 +248,7 @@ Priority is ordered within each section.
 - [x] polling sync service foundation;
 - [x] channel runtime/capability registration;
 - [x] outbound dispatcher worker;
-- [ ] inbox review/admin UI;
+- [x] inbox review/admin UI;
 - [x] connection setup/testing UI;
 - [ ] per-publication external channel selector;
 - [ ] per-channel custom post text;
