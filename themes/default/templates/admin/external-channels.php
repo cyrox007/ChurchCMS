@@ -4,6 +4,7 @@ declare(strict_types=1);
 
 $connections = is_array($connections ?? null) ? $connections : [];
 $adapters = is_array($adapters ?? null) ? $adapters : [];
+$inboxItems = is_array($inboxItems ?? null) ? $inboxItems : [];
 $status = is_array($channelStatus ?? null) ? $channelStatus : null;
 ?>
 <section class="admin-shell">
@@ -53,6 +54,82 @@ $status = is_array($channelStatus ?? null) ? $channelStatus : null;
                                 · исходящие: <?= $connection->outboundEnabled ? 'да' : 'нет' ?>
                                 · входящие: <?= $connection->inboundEnabled ? 'да' : 'нет' ?>
                             </small>
+                        </div>
+                    </article>
+                <?php endforeach; ?>
+            </div>
+        <?php endif; ?>
+    </section>
+
+    <section class="admin-operations-section" aria-labelledby="external-inbox-title">
+        <div class="admin-operations-heading">
+            <div>
+                <p class="card__eyebrow">Входящие материалы</p>
+                <h2 id="external-inbox-title">Очередь проверки</h2>
+                <p>Внешний текст показывается только как обычный текст. Он не считается доверенным HTML и не публикуется автоматически.</p>
+            </div>
+        </div>
+
+        <?php if ($inboxItems === []): ?>
+            <?= $theme->component('admin.state', [
+                'kind' => 'empty',
+                'title' => 'Очередь пуста',
+                'message' => 'Новых входящих материалов сейчас нет.',
+            ]) ?>
+        <?php else: ?>
+            <div class="admin-operations-list" role="list">
+                <?php foreach ($inboxItems as $item): ?>
+                    <article class="admin-operations-row" role="listitem">
+                        <div class="admin-operations-row__body">
+                            <strong><?= $theme->e($item->title ?? 'Материал без заголовка') ?></strong>
+                            <span>
+                                Тип: <?= $theme->e($item->kind) ?>
+                                · внешний ID: <?= $theme->e($item->remoteId) ?>
+                            </span>
+                            <?php if ($item->canonicalUrl !== null): ?>
+                                <small><?= $theme->e($item->canonicalUrl) ?></small>
+                            <?php endif; ?>
+                            <?php if (trim($item->bodyText) !== ''): ?>
+                                <p><?= nl2br($theme->e($item->bodyText), false) ?></p>
+                            <?php endif; ?>
+                        </div>
+
+                        <div>
+                            <form
+                                method="post"
+                                action="<?= $theme->e($theme->route(
+                                    'admin_external_channels_inbox_ignore',
+                                    ['publicId' => $item->publicId],
+                                )) ?>"
+                            >
+                                <?= $theme->csrfInput() ?>
+                                <button class="button button--quiet" type="submit">
+                                    Игнорировать
+                                </button>
+                            </form>
+
+                            <form
+                                class="admin-update-apply"
+                                method="post"
+                                action="<?= $theme->e($theme->route(
+                                    'admin_external_channels_inbox_link',
+                                    ['publicId' => $item->publicId],
+                                )) ?>"
+                            >
+                                <?= $theme->csrfInput() ?>
+                                <label>
+                                    <span>Публичный ID публикации</span>
+                                    <input
+                                        type="text"
+                                        name="publication_public_id"
+                                        required
+                                        autocomplete="off"
+                                    >
+                                </label>
+                                <button class="button button--quiet" type="submit">
+                                    Связать с публикацией
+                                </button>
+                            </form>
                         </div>
                     </article>
                 <?php endforeach; ?>
