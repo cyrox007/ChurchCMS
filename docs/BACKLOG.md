@@ -37,7 +37,8 @@ Priority is ordered within each section.
   - [x] People/назначения: основа схемы и доменного слоя, обязательный владелец-организация карточки и отдельная ссылка на организацию каждого назначения;
   - [x] Worship: схема и доменный слой с обязательным organization owner, site-root по умолчанию и cross-site защитой;
   - [x] Events: схема и доменный слой с обязательным organization owner, site-root по умолчанию и cross-site защитой;
-  - [ ] Media и Documents: organization binding;
+  - [x] Media: foundation метаданных с обязательным organization owner, site-root по умолчанию и cross-site защитой;
+  - [ ] Documents: organization binding;
 - [ ] incremental federation sync с canonical owner и tombstones;
   - [x] Publications: устойчивый tombstone при снятии ранее опубликованного материала с target `diocese` и отдельный partner endpoint;
   - [x] remote projections и применение tombstone на принимающем узле;
