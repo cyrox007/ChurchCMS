@@ -31,6 +31,7 @@ on:
       - 'tools/federation-remote-projection-smoke.php'
       - 'tools/federation-publication-sync-smoke.php'
       - 'tools/federation-event-sync-smoke.php'
+      - 'tools/federation-worship-sync-smoke.php'
       - 'tools/federation-sync-coordinator-smoke.php'
       - 'tools/federation-worker-sync-state-smoke.php'
       - 'tools/federated-publication-feed-smoke.php'
@@ -65,6 +66,7 @@ on:
       - 'tools/federation-remote-projection-smoke.php'
       - 'tools/federation-publication-sync-smoke.php'
       - 'tools/federation-event-sync-smoke.php'
+      - 'tools/federation-worship-sync-smoke.php'
       - 'tools/federation-sync-coordinator-smoke.php'
       - 'tools/federation-worker-sync-state-smoke.php'
       - 'tools/federated-publication-feed-smoke.php'
@@ -116,6 +118,8 @@ jobs:
           php -l tools/federation-publication-sync-smoke.php
           php -l tools/federation-event-sync-smoke.php
           php -l modules/organizations/FederationEventSyncWorker.php
+          php -l tools/federation-worship-sync-smoke.php
+          php -l modules/organizations/FederationWorshipSyncWorker.php
           php -l tools/federation-sync-coordinator-smoke.php
           php -l tools/federation-worker-sync-state-smoke.php
           php -l modules/organizations/FederationSyncWorker.php
@@ -184,6 +188,9 @@ jobs:
 
       - name: Проверить federation sync событий
         run: php tools/federation-event-sync-smoke.php
+
+      - name: Проверить federation sync богослужений
+        run: php tools/federation-worship-sync-smoke.php
 
       - name: Проверить общий координатор federation sync
         run: php tools/federation-sync-coordinator-smoke.php
