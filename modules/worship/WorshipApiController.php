@@ -33,8 +33,8 @@ final class WorshipApiController
             );
 
         $items = array_map(
-            static fn(Event $event): array =>
-                (new WorshipApiResource($event))->toApiArray(),
+            static fn(WorshipService $service): array =>
+                (new WorshipApiResource($service))->toApiArray(),
             $services,
         );
 
