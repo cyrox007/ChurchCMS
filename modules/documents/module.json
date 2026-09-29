@@ -1,0 +1,7 @@
+{
+  "id": "documents",
+  "name": "Документы",
+  "version": "0.1.0",
+  "runtime": "runtime.php",
+  "capabilities": []
+}

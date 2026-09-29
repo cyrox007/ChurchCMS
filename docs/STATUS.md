@@ -92,6 +92,9 @@ Implemented:
 - модуль `media` хранит только безопасный foundation метаданных: stable public ID, organization owner, тип, исходное имя, MIME, размер, SHA-256, title/alt и статус;
 - `MediaService` назначает site root владельцем по умолчанию, валидирует MIME/SHA-256/размер и запрещает cross-site/архивного владельца;
 - Media foundation намеренно не хранит произвольный filesystem path и не объявляет upload реализованным; PostgreSQL/MySQL smoke проверяет metadata lifecycle, owner FK и запрет чужого `site_key`;
+- модуль `documents` хранит карточку документа с обязательным `owner_organization_public_id`, типом, номером, датой и кратким описанием;
+- `DocumentService` назначает site root владельцем по умолчанию, валидирует дату и запрещает cross-site/архивного владельца; PostgreSQL/MySQL smoke проверяет owner FK, смену владельца и архивирование;
+- Documents foundation намеренно не хранит filesystem path и не считает файл прикреплённым до отдельной связи с проверенным Media asset;
 - federation sync вынесен в общий `FederationSyncWorker` contract и `FederationSyncCoordinator`;
 - существующий Publications worker реализует общий contract, а `bin/federation-sync.php` запускает coordinator вместо жёсткого вызова одного типа данных;
 - coordinator суммирует результаты worker'ов и не останавливает остальные типы, если один worker завершился исключением; отдельный smoke проверяет несколько worker, агрегацию статистики, изоляцию ошибки и запрет повторяющихся worker ID;
@@ -99,12 +102,12 @@ Implemented:
 
 Дальше:
 
-- organization ownership для Documents;
 - Admin/public/API слой People и расширенные сведения о духовенстве;
 - добавить federation sync worker для Events/Worship/Media/Documents поверх готового общего coordinator;
 - Admin/public/API и повторяющиеся правила Worship;
 - Admin/public/API, публикация и календарные представления Events;
 - безопасный upload/storage pipeline Media, MIME sniffing, derivatives и usage references;
+- связь Documents → проверенный Media asset, Admin/public/API и версии файла;
 - расширить source-preserving federation-контракт с Publications на Events/Worship/Media/Documents.
 
 ## Installation

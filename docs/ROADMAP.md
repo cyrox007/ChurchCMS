@@ -36,7 +36,7 @@ Status: in progress.
 - [ ] Worship schedule (schema/domain foundation с обязательным organization owner реализован; Admin Shell, public/API, повторяющиеся правила и праздничные шаблоны остаются).
 - [ ] Events (schema/domain foundation с обязательным organization owner реализован; Admin Shell, публикация, public/API, календарные представления и повторяющиеся правила остаются).
 - [ ] Galleries.
-- [ ] Documents.
+- [ ] Documents (foundation карточки и organization owner реализован; связь с Media, Admin Shell, публикация, public/API, версии файла и federation sync остаются).
 - [ ] Search.
 - [x] SEO foundation: metadata, canonical, OG/social cards, robots, sitemap, sharing.
 - [ ] Redirect manager.
@@ -94,7 +94,7 @@ Status: in progress.
 - [x] Admin UI дерева организаций/подразделений.
 - [x] Federation pairing wizard и отзыв доверия.
 - [x] Organization-scoped RBAC enforcement.
-- [ ] Organization ownership/references для Publications/Pages/People/Worship/Events/Media/Documents (Publications Admin/RBAC, Pages Admin/API RBAC, foundation People/назначений, Worship, Events и Media реализованы; Documents остаются).
+- [x] Organization ownership/references для Publications/Pages/People/Worship/Events/Media/Documents (organization owner/reference foundation реализован для всех перечисленных типов).
 - [ ] Parent/child aggregation и remote projections/tombstones (для Publications реализованы tombstone, remote projections, фоновая синхронизация, безопасная агрегированная API-лента, RSS и публичный блок; единый coordinator/CLI для sync worker готов, сами worker остальных типов остаются).
 - [ ] Federation health/sync dashboard (health/retry/conflict UI и последние sync/error состояния реализованы; подробный прогресс и метрики синхронизации остаются).
 
