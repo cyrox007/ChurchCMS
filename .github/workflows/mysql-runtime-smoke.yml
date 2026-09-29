@@ -31,6 +31,7 @@ on:
       - 'tools/publication-partner-tombstone-smoke.php'
       - 'tools/people-organization-smoke.php'
       - 'tools/worship-organization-smoke.php'
+      - 'tools/worship-partner-sync-smoke.php'
       - 'tools/event-organization-smoke.php'
       - 'tools/event-partner-sync-smoke.php'
       - 'tools/media-organization-smoke.php'
@@ -71,6 +72,7 @@ on:
       - 'modules/documents/**'
       - 'tools/people-organization-smoke.php'
       - 'tools/worship-organization-smoke.php'
+      - 'tools/worship-partner-sync-smoke.php'
       - 'tools/event-organization-smoke.php'
       - 'tools/event-partner-sync-smoke.php'
       - 'tools/media-organization-smoke.php'
@@ -269,6 +271,9 @@ jobs:
 
       - name: Проверить расписание богослужений в MySQL
         run: php tools/worship-organization-smoke.php
+
+      - name: Проверить partner sync источник Worship в MySQL
+        run: php tools/worship-partner-sync-smoke.php
 
       - name: Проверить события в MySQL
         run: php tools/event-organization-smoke.php
