@@ -1,30 +1,30 @@
-# External Channels
+# Внешние каналы
 
-The `social` module is evolving into a provider-agnostic External Channels subsystem.
+Модуль `social` реализует независимую от конкретного провайдера подсистему внешних каналов.
 
-It handles social networks, messengers and video hosting platforms through the same adapter boundary.
+Один и тот же контракт используется для социальных сетей, мессенджеров, видеоплатформ и будущих интеграций.
 
-## Why it is not a fixed provider list
+## Почему список провайдеров открыт
 
-A church or theological school may use:
+Приход, епархия или духовная школа могут использовать разные площадки:
 
 - VK;
 - Telegram;
 - MAX;
-- Odnoklassniki;
-- Dzen;
+- Одноклассники;
+- Дзен;
 - YouTube;
 - Rutube;
-- regional/diocesan platforms;
-- future platforms that do not exist yet.
+- региональные и епархиальные площадки;
+- будущие сервисы.
 
-Therefore `provider` is an open validated identifier, not a database enum.
+Поэтому `provider` — это проверяемый открытый идентификатор, а не enum в БД. Сторонний модуль может зарегистрировать новый адаптер без изменения ядра и схемы данных.
 
-## Capabilities
+## Возможности адаптера
 
-An adapter declares what it supports:
+Адаптер объявляет только реально поддерживаемые возможности:
 
-```
+```text
 publish.text
 publish.link
 publish.image
@@ -37,87 +37,97 @@ sync.webhook
 sync.polling
 ```
 
-The UI must show only operations actually supported by the selected adapter.
+Административный интерфейс и фоновые обработчики не должны предполагать наличие функции, которую адаптер не объявил.
 
-## Outbound flow
+## Мастер подключения в Admin Shell
 
-```
-Publication approved/published
-        |
-editor selects external channels
-        |
-outbox records created
-        |
-background dispatcher
-        |
-provider adapter
-        |
-remote IDs/status/errors saved
-```
+Раздел «Внешние каналы» показывает зарегистрированные адаптеры и уже сохранённые подключения.
 
-A slow/down remote platform never delays the public website.
+Для безопасного создания подключения адаптер должен дополнительно реализовать `ChannelConnectionTester`. Последовательность такая:
 
-## Inbound flow
+1. оператор выбирает адаптер;
+2. вводит название, идентификатор канала и секрет;
+3. ChurchCMS вызывает `testConnection()` до записи в БД;
+4. при неудачной проверке секрет не сохраняется;
+5. при успешной проверке секрет шифруется через `SecretVault` и только затем создаётся `social_connections`;
+6. открытый секрет после этого не выводится в Admin Shell и не попадает в audit metadata.
 
-```
-provider webhook/polling
+Адаптеры без безопасной проверки видны как недоступные для мастера, пока не реализуют этот контракт.
+
+## Исходящая публикация
+
+```text
+Публикация готова
         |
-adapter converts remote payload
+редактор выбирает внешние каналы
         |
-generic ChannelInboundItem
+создаются записи очереди
         |
-external_channel_items inbox
+фоновый отправщик
         |
-operator review
+адаптер провайдера
         |
-ignore / link / import as draft
+сохраняются внешний ID, статус и ошибка
 ```
 
-Default inbound policy is `review`.
+Медленная или недоступная внешняя платформа не должна замедлять публичный сайт.
 
-## Source of truth
+## Входящий поток
 
-ChurchCMS official publication is authoritative for official website news.
+```text
+webhook или polling провайдера
+        |
+адаптер нормализует ответ
+        |
+ChannelInboundItem
+        |
+external_channel_items
+        |
+проверка оператором
+        |
+игнорировать / связать / импортировать как черновик
+```
 
-External channels may contain content that is intentionally absent from the website.
+По умолчанию входящий материал требует ручной проверки.
 
-External edits never silently replace official content.
+## Источник истины
 
-## Loop prevention
+Официальная публикация ChurchCMS является источником истины для сайта.
 
-Every inbound item stores:
+Во внешних каналах допустимы материалы, которых нет на сайте. Изменение внешнего объекта никогда не должно молча перезаписывать официальную публикацию.
 
-- connection;
-- remote ID;
+## Защита от циклов
+
+Для входящего элемента сохраняются:
+
+- подключение;
+- внешний ID;
 - fingerprint;
-- remote timestamps;
+- внешние даты изменения;
 - canonical URL;
-- linked publication ID.
+- связанная публикация ChurchCMS.
 
-A connection + remote ID is unique.
+Пара «подключение + внешний ID» уникальна. Это позволяет распознавать уже известный объект при последующей двусторонней синхронизации.
 
-Imported/linked items can therefore be recognized when outbound synchronization later sees the same remote object.
+## Безопасность
 
-## Security
+- секреты шифруются в состоянии покоя через AES-256-GCM;
+- ключ шифрования создаётся при установке и хранится только в локальной конфигурации;
+- открытые credentials не выводятся в публичный API и шаблоны;
+- мастер подключения не сохраняет секрет до успешной проверки адаптером;
+- HTTP-клиент адаптеров требует HTTPS;
+- webhook-адаптеры должны проверять подпись или секрет провайдера, если платформа это поддерживает;
+- сырой внешний payload нельзя напрямую выводить как доверенный HTML.
 
-- credentials encrypted at rest with AES-256-GCM;
-- encryption key generated during installation and stored in local configuration;
-- credentials never exposed to public API/templates;
-- adapter HTTP client requires HTTPS;
-- webhook adapters must validate provider signatures/secrets when available;
-- external raw payload is never directly rendered as trusted HTML.
+## Видео
 
-## Video
+Видео является отдельным видом входящего и исходящего контента.
 
-Video is a first-class inbound/outbound content kind.
+Контракт поддерживает видео, но загрузка бинарных файлов и перекодирование относятся к Media-подсистеме. Адаптеры YouTube/Rutube могут сначала работать с метаданными и ссылками, а позже — с локальными Media-ресурсами и возобновляемой загрузкой.
 
-The channel contract supports `video`, but binary upload/transcoding belongs to the future Media subsystem.
+## Встроенные адаптеры
 
-Adapters such as YouTube/Rutube can first import metadata/links and later publish local Media assets through resumable upload workflows.
-
-## Built-in adapters
-
-Planned first:
+Планируемая первая группа:
 
 - Telegram;
 - VK;
@@ -125,4 +135,4 @@ Planned first:
 - YouTube;
 - Rutube.
 
-Other adapters can be separate modules and register themselves with `ChannelAdapterRegistry` without database/core changes.
+Другие интеграции могут поставляться отдельными модулями и регистрироваться через `ChannelAdapterRegistry`.

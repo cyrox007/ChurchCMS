@@ -75,6 +75,81 @@ final class SocialConnectionRepository
         );
     }
 
+    public function create(
+        string $provider,
+        string $name,
+        string $targetRef,
+        string $tokenEncrypted,
+        array $settings = [],
+        bool $enabled = true,
+        bool $outboundEnabled = true,
+        bool $inboundEnabled = false,
+        string $inboundPolicy = 'review',
+        string $connectionKind = 'social',
+    ): SocialConnection {
+        $publicId = bin2hex(random_bytes(16));
+        $now = gmdate('Y-m-d H:i:s');
+
+        $statement = $this->pdo->prepare(
+            'INSERT INTO social_connections (
+                public_id,
+                provider,
+                name,
+                target_ref,
+                token_encrypted,
+                settings_json,
+                enabled,
+                outbound_enabled,
+                inbound_enabled,
+                inbound_policy,
+                connection_kind,
+                created_at,
+                updated_at
+             ) VALUES (
+                :public_id,
+                :provider,
+                :name,
+                :target_ref,
+                :token_encrypted,
+                :settings_json,
+                :enabled,
+                :outbound_enabled,
+                :inbound_enabled,
+                :inbound_policy,
+                :connection_kind,
+                :created_at,
+                :updated_at
+             )'
+        );
+        $statement->execute([
+            'public_id' => $publicId,
+            'provider' => SocialProvider::normalize($provider),
+            'name' => $name,
+            'target_ref' => $targetRef,
+            'token_encrypted' => $tokenEncrypted,
+            'settings_json' => json_encode(
+                $settings,
+                JSON_THROW_ON_ERROR | JSON_UNESCAPED_UNICODE | JSON_UNESCAPED_SLASHES,
+            ),
+            'enabled' => $enabled ? 1 : 0,
+            'outbound_enabled' => $outboundEnabled ? 1 : 0,
+            'inbound_enabled' => $inboundEnabled ? 1 : 0,
+            'inbound_policy' => $inboundPolicy,
+            'connection_kind' => $connectionKind,
+            'created_at' => $now,
+            'updated_at' => $now,
+        ]);
+
+        $connection = $this->findByPublicId($publicId);
+        if ($connection === null) {
+            throw new \RuntimeException(
+                'Созданное подключение внешнего канала не удалось перечитать.'
+            );
+        }
+
+        return $connection;
+    }
+
     public function findByPublicId(string $publicId): ?SocialConnection
     {
         $statement = $this->pdo->prepare(

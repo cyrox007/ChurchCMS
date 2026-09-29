@@ -103,7 +103,7 @@ Status: in progress.
 - [x] Provider-agnostic adapter architecture.
 - [x] Bidirectional inbox/outbox persistence foundation.
 - [x] Encrypted integration credentials.
-- [ ] Admin connection wizard.
+- [x] Admin connection wizard.
 - [x] Outbound worker and retry/dead-letter processing.
 - [ ] Inbound review/import workflow.
 - [ ] Built-in Telegram/VK/MAX adapters.
