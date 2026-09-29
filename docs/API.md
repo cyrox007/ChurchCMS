@@ -310,6 +310,37 @@ canonical URL. Filesystem path, blob и непроверенный файл не
 Если `has_more=true`, следующий запрос должен передать одновременно
 `next_updated_since` и `next_after`.
 
+## Partner sync Media
+
+Media использует составной incremental-курсор `updated_at + public_id`.
+
+Доступны endpoints:
+
+```
+GET /api/v1/partner/media
+GET /api/v1/partner/media/tombstones
+```
+
+Оба требуют Bearer token со scope `content.read`. В активный поток входят
+только неархивные записи с явной видимостью `federated`.
+
+Projection передаёт stable public ID, тип материала, заявленные MIME, размер и
+SHA-256, title/alt, `organization_owner_id`, `updated_at`,
+`blob_available=false` и пока пустой canonical URL. Исходное имя файла,
+filesystem path и blob не выдаются.
+
+Пока безопасный upload/storage pipeline не реализован, MIME, размер и SHA-256
+являются метаданными карточки, а не подтверждением проверки фактического файла.
+Принимающая сторона не должна считать такую запись доступным для скачивания
+blob.
+
+Если ранее federated-запись переводится в локальную видимость или архивируется,
+source-side атомарно создаёт tombstone с `action=delete`. Повторное включение
+`federated` очищает устаревший tombstone.
+
+Если `has_more=true`, следующий запрос должен передать одновременно
+`next_updated_since` и `next_after`.
+
 ## Response envelope
 
 Successful response:
