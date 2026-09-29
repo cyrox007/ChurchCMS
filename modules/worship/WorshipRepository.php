@@ -140,7 +140,48 @@ final class WorshipRepository
         );
     }
 
-    private static function hydrate(array $row): WorshipService
+
+    /**
+     * @return list<WorshipService>
+     */
+    public function visibleUpcoming(
+        string $siteKey = 'default',
+        int $limit = 100,
+        ?DateTimeImmutable $from = null,
+    ): array {
+        $limit = max(1, min(200, $limit));
+        $from ??= new DateTimeImmutable(
+            'now',
+            new DateTimeZone('UTC'),
+        );
+        $from = $from->setTimezone(
+            new DateTimeZone('UTC'),
+        );
+
+        $statement = $this->pdo->prepare(
+            'SELECT *
+             FROM worship_services
+             WHERE site_key = :site_key
+               AND status IN (\'scheduled\', \'cancelled\')
+               AND starts_at >= :starts_at
+             ORDER BY starts_at ASC, public_id ASC
+             LIMIT :limit'
+        );
+        $statement->bindValue(':site_key', $siteKey);
+        $statement->bindValue(
+            ':starts_at',
+            $from->format('Y-m-d H:i:s'),
+        );
+        $statement->bindValue(':limit', $limit, PDO::PARAM_INT);
+        $statement->execute();
+
+        return array_map(
+            self::hydrate(...),
+            $statement->fetchAll(),
+        );
+    }
+
+private static function hydrate(array $row): WorshipService
     {
         return new WorshipService(
             id: (int) $row['id'],
