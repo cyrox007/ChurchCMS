@@ -49,7 +49,8 @@ Priority is ordered within each section.
   - [x] добавить принимающий sync worker Events с отдельным worker-state, remote projection и tombstones;
   - [x] Worship source-side: безопасная partner projection, incremental endpoint, cancelled-состояние и tombstones при withdraw;
   - [x] добавить принимающий sync worker Worship с отдельным worker-state, remote projection и tombstones;
-  - [ ] добавить source/worker для Media/Documents и их tombstones;
+  - [ ] определить явную public/federation visibility для Media/Documents, чтобы не экспортировать автоматически все зарегистрированные или черновые записи;
+  - [ ] добавить source/worker для Media/Documents и их tombstones после определения этой границы;
 - [ ] агрегированные ленты вышестоящих узлов без потери источника;
   - [x] Publications: публичный API `/api/v1/publications/aggregated` объединяет локальные материалы и active remote projections только от `child`-связей с разрешённым входящим scope;
   - [x] агрегированный элемент сохраняет source `instance_id`, organization owner, имя и canonical URL и не выдаёт сырой remote `body_html`;
@@ -57,7 +58,9 @@ Priority is ordered within each section.
   - [x] подключить агрегированную Publications-ленту к публичному блоку главной страницы с явным источником;
   - [x] Events: объединять ближайшие локальные события и active remote projections только от `child`-связей с `content.read`, сохраняя `instance_id`, organization owner, имя и canonical URL источника;
   - [x] Events: публичный `GET /api/v1/events/aggregated` не отдаёт сырой `description_html`, исключает tombstone/peer/parent/no-scope и сортирует по времени начала;
-  - [ ] расширить тот же контракт агрегации на Worship/Media/Documents;
+  - [x] Worship: объединять ближайшие локальные `scheduled/cancelled` записи и active remote projections только от `child`-связей с `content.read`, сохраняя источник и не отдавая `description_html`;
+  - [x] Worship: публичный `GET /api/v1/worship/aggregated` исключает tombstone/peer/parent/no-scope и сохраняет `cancelled` как видимое состояние;
+  - [ ] расширить тот же контракт агрегации на Media/Documents после определения их публичной видимости;
 - [x] federation health/retry/conflict UI.
 
 ## P0 — Installation and operator UX
