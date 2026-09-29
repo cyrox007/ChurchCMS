@@ -193,6 +193,9 @@ final class PublicationsAdminController
         }
 
         try {
+            $externalSelection =
+                $this->validatedExternalSelection($request);
+
             PublicationService::fromDatabase()->update(
                 publicId: $publicId,
                 title: $form['title'],
@@ -215,6 +218,10 @@ final class PublicationsAdminController
             $updated = $repository->findByPublicId($publicId);
             if ($updated !== null) {
                 $this->saveSeo($updated, $form);
+                $this->saveExternalSelection(
+                    $updated,
+                    $externalSelection,
+                );
             }
 
             $this->audit($request, 'publication.updated', $publicId);
@@ -245,6 +252,7 @@ final class PublicationsAdminController
         );
 
         PublicationService::fromDatabase()->publish($publicId);
+        $this->queueExternalPublication($publication);
         $this->audit($request, 'publication.published', $publicId);
 
         Response::redirectLocal('/admin/publications/' . rawurlencode($publicId) . '?saved=1');
@@ -415,6 +423,16 @@ final class PublicationsAdminController
             );
         }
 
+        $canExternalPublish = AdminAuthorization::can(
+            $request,
+            'social.publish',
+        );
+        $externalChannels = $this->externalEditorConnections(
+            $publication,
+            $form,
+            $canExternalPublish,
+        );
+
         AdminShell::page($request, 'admin.publications.editor', [
             'title' => $publication === null ? 'Новая публикация' : 'Редактирование публикации',
             'publication' => $publication,
@@ -424,6 +442,8 @@ final class PublicationsAdminController
             'organizationUnits' => $organizationUnits,
             'canPublish' => $canPublish,
             'canSyndicate' => AdminAuthorization::can($request, 'publications.syndicate'),
+            'canExternalPublish' => $canExternalPublish,
+            'externalChannels' => $externalChannels,
             'scheduleTimezone' => $this->applicationTimezone()
                 ->getName(),
             'scheduledAtLocal' => $this->scheduledAtLocal(
@@ -448,6 +468,9 @@ final class PublicationsAdminController
             'comments_enabled' => $request->post('comments_enabled') === '1',
             'categories' => trim((string) $request->post('categories', '')),
             'tags' => trim((string) $request->post('tags', '')),
+            'external_channel_ids' => self::stringList(
+                $request->post('external_channel_ids', []),
+            ),
             'seo_title' => trim((string) $request->post('seo_title', '')),
             'seo_description' => trim((string) $request->post('seo_description', '')),
             'seo_keywords' => trim((string) $request->post('seo_keywords', '')),
@@ -526,6 +549,161 @@ final class PublicationsAdminController
             'robots_index' => true,
             'robots_follow' => true,
         ];
+    }
+
+    /**
+     * @return list<string>|null
+     */
+    private function validatedExternalSelection(
+        Request $request,
+    ): ?array {
+        if (!AdminAuthorization::can($request, 'social.publish')) {
+            return null;
+        }
+
+        $capability = ModuleRuntimeLoader::capability(
+            'social',
+            'social.publication',
+        );
+        if (
+            $capability === null
+            || !method_exists(
+                $capability,
+                'validatePublicationSelection',
+            )
+        ) {
+            return null;
+        }
+
+        return $capability->validatePublicationSelection(
+            self::stringList(
+                $request->post(
+                    'external_channel_ids',
+                    [],
+                ),
+            ),
+        );
+    }
+
+    /**
+     * @param list<string>|null $selection
+     */
+    private function saveExternalSelection(
+        Publication $publication,
+        ?array $selection,
+    ): void {
+        if ($selection === null) {
+            return;
+        }
+
+        $capability = ModuleRuntimeLoader::capability(
+            'social',
+            'social.publication',
+        );
+        if (
+            $capability === null
+            || !method_exists(
+                $capability,
+                'savePublicationSelection',
+            )
+        ) {
+            return;
+        }
+
+        $capability->savePublicationSelection(
+            $publication->id,
+            $selection,
+        );
+    }
+
+    private function queueExternalPublication(
+        Publication $publication,
+    ): void {
+        $capability = ModuleRuntimeLoader::capability(
+            'social',
+            'social.publication',
+        );
+        if (
+            $capability === null
+            || !method_exists($capability, 'queuePublication')
+        ) {
+            return;
+        }
+
+        $capability->queuePublication($publication->id);
+    }
+
+    /**
+     * @return list<array<string,mixed>>
+     */
+    private function externalEditorConnections(
+        ?Publication $publication,
+        array $form,
+        bool $allowed,
+    ): array {
+        if (!$allowed || $publication === null) {
+            return [];
+        }
+
+        $capability = ModuleRuntimeLoader::capability(
+            'social',
+            'social.publication',
+        );
+        if (
+            $capability === null
+            || !method_exists(
+                $capability,
+                'publicationEditorConnections',
+            )
+        ) {
+            return [];
+        }
+
+        $connections = $capability->publicationEditorConnections(
+            $publication->id,
+        );
+        $requested = $form['external_channel_ids'] ?? null;
+        if (!is_array($requested)) {
+            return $connections;
+        }
+
+        $selected = array_fill_keys(
+            self::stringList($requested),
+            true,
+        );
+
+        foreach ($connections as &$connection) {
+            $connection['selected'] = isset(
+                $selected[(string) ($connection['public_id'] ?? '')]
+            );
+        }
+        unset($connection);
+
+        return $connections;
+    }
+
+    /**
+     * @return list<string>
+     */
+    private static function stringList(mixed $value): array
+    {
+        if (!is_array($value)) {
+            return [];
+        }
+
+        $result = [];
+        foreach ($value as $item) {
+            if (!is_string($item)) {
+                continue;
+            }
+
+            $item = trim($item);
+            if ($item !== '') {
+                $result[$item] = true;
+            }
+        }
+
+        return array_keys($result);
     }
 
     private function applicationTimezone(): DateTimeZone
