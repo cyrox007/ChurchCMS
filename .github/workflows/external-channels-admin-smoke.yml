@@ -1,0 +1,227 @@
+name: Проверка мастера внешних каналов
+
+on:
+  push:
+    branches:
+      - develop
+      - main
+    paths:
+      - 'modules/social/ChannelConnectionTester.php'
+      - 'modules/social/ChannelConnectionTestResult.php'
+      - 'modules/social/SocialConnectionRepository.php'
+      - 'modules/social/SocialConnectionService.php'
+      - 'modules/social/SocialAdminController.php'
+      - 'modules/social/runtime.php'
+      - 'themes/default/templates/admin/external-channels.php'
+      - '.github/workflows/external-channels-admin-smoke.yml'
+  pull_request:
+    branches:
+      - develop
+      - main
+    paths:
+      - 'modules/social/ChannelConnectionTester.php'
+      - 'modules/social/ChannelConnectionTestResult.php'
+      - 'modules/social/SocialConnectionRepository.php'
+      - 'modules/social/SocialConnectionService.php'
+      - 'modules/social/SocialAdminController.php'
+      - 'modules/social/runtime.php'
+      - 'themes/default/templates/admin/external-channels.php'
+      - '.github/workflows/external-channels-admin-smoke.yml'
+
+permissions:
+  contents: read
+
+jobs:
+  external-channels-admin-smoke:
+    runs-on: ubuntu-latest
+
+    services:
+      postgres:
+        image: postgres:16
+        env:
+          POSTGRES_DB: churchcms
+          POSTGRES_USER: churchcms
+          POSTGRES_PASSWORD: churchcms
+        ports:
+          - 5432:5432
+        options: >-
+          --health-cmd pg_isready
+          --health-interval 10s
+          --health-timeout 5s
+          --health-retries 5
+
+    steps:
+      - name: Получить исходный код
+        uses: actions/checkout@v4
+
+      - name: Подготовить PHP 8.3
+        uses: shivammathur/setup-php@v2
+        with:
+          php-version: '8.3'
+          extensions: pdo, pdo_pgsql, openssl
+          coverage: none
+
+      - name: Проверить синтаксис
+        run: |
+          set -euo pipefail
+          php -l modules/social/ChannelConnectionTester.php
+          php -l modules/social/ChannelConnectionTestResult.php
+          php -l modules/social/SocialConnectionRepository.php
+          php -l modules/social/SocialConnectionService.php
+          php -l modules/social/SocialAdminController.php
+          php -l modules/social/runtime.php
+          php -l themes/default/templates/admin/external-channels.php
+
+      - name: Настроить тестовую установку
+        run: |
+          set -euo pipefail
+          mkdir -p storage/cache storage/logs storage/sessions storage/rate-limits storage/uploads
+
+          cat > config/local.php <<'PHP'
+          <?php
+
+          declare(strict_types=1);
+
+          return [
+              'installation' => ['completed' => true],
+              'security' => [
+                  'secret_key' => base64_encode(str_repeat('c', 32)),
+              ],
+              'database' => [
+                  'driver' => 'pgsql',
+                  'host' => '127.0.0.1',
+                  'port' => 5432,
+                  'database' => 'churchcms',
+                  'username' => 'churchcms',
+                  'password' => 'churchcms',
+              ],
+          ];
+          PHP
+
+          php bin/migrate.php
+
+      - name: Проверить создание и шифрование подключения
+        run: |
+          set -euo pipefail
+
+          php <<'PHP'
+          <?php
+
+          declare(strict_types=1);
+
+          require 'core.php';
+
+          use ChurchCMS\Core\DatabaseManager;
+          use ChurchCMS\Core\SecretVault;
+          use ChurchCMS\Modules\Social\ChannelAdapter;
+          use ChurchCMS\Modules\Social\ChannelAdapterRegistry;
+          use ChurchCMS\Modules\Social\ChannelConnectionTester;
+          use ChurchCMS\Modules\Social\ChannelConnectionTestResult;
+          use ChurchCMS\Modules\Social\ChannelOutboundItem;
+          use ChurchCMS\Modules\Social\ChannelPublishResult;
+          use ChurchCMS\Modules\Social\ChannelPullBatch;
+          use ChurchCMS\Modules\Social\SocialConnection;
+          use ChurchCMS\Modules\Social\SocialConnectionRepository;
+          use ChurchCMS\Modules\Social\SocialConnectionService;
+
+          $adapter = new class implements ChannelAdapter, ChannelConnectionTester {
+              public function providerId(): string
+              {
+                  return 'ci';
+              }
+
+              public function label(): string
+              {
+                  return 'CI adapter';
+              }
+
+              public function capabilities(): array
+              {
+                  return ['publish.text'];
+              }
+
+              public function testConnection(
+                  string $targetRef,
+                  string $credentials,
+                  array $settings = [],
+              ): ChannelConnectionTestResult {
+                  return new ChannelConnectionTestResult(
+                      $targetRef === 'ci-target'
+                      && $credentials === 'ci-secret'
+                  );
+              }
+
+              public function publish(
+                  SocialConnection $connection,
+                  string $credentials,
+                  ChannelOutboundItem $item,
+              ): ChannelPublishResult {
+                  return new ChannelPublishResult(true, 'remote-ci');
+              }
+
+              public function pull(
+                  SocialConnection $connection,
+                  string $credentials,
+                  ?string $cursor,
+                  int $limit = 50,
+              ): ChannelPullBatch {
+                  return new ChannelPullBatch([]);
+              }
+          };
+
+          ChannelAdapterRegistry::register($adapter);
+          $service = SocialConnectionService::fromDatabase();
+          $repository = SocialConnectionRepository::fromDatabase();
+
+          try {
+              $service->create(
+                  provider: 'ci',
+                  name: 'Не должно сохраниться',
+                  targetRef: 'ci-target',
+                  credentials: 'wrong-secret',
+                  outboundEnabled: true,
+                  inboundEnabled: false,
+              );
+              fwrite(STDERR, "Подключение с неверным секретом ошибочно создано.\n");
+              exit(1);
+          } catch (RuntimeException) {
+          }
+
+          if ($repository->all() !== []) {
+              fwrite(STDERR, "Секрет сохранился до успешной проверки адаптера.\n");
+              exit(1);
+          }
+
+          $connection = $service->create(
+              provider: 'ci',
+              name: 'Тестовый канал',
+              targetRef: 'ci-target',
+              credentials: 'ci-secret',
+              outboundEnabled: true,
+              inboundEnabled: false,
+          );
+
+          if ($connection->provider !== 'ci') {
+              fwrite(STDERR, "Провайдер подключения сохранён некорректно.\n");
+              exit(1);
+          }
+
+          $pdo = DatabaseManager::getInstance()->connection();
+          $statement = $pdo->prepare(
+              'SELECT token_encrypted FROM social_connections WHERE id = :id'
+          );
+          $statement->execute(['id' => $connection->id]);
+          $encrypted = (string) $statement->fetchColumn();
+
+          if ($encrypted === '' || $encrypted === 'ci-secret') {
+              fwrite(STDERR, "Секрет сохранён в открытом виде.\n");
+              exit(1);
+          }
+
+          if (SecretVault::decrypt($encrypted) !== 'ci-secret') {
+              fwrite(STDERR, "Зашифрованный секрет не удалось восстановить.\n");
+              exit(1);
+          }
+
+          echo "Мастер внешних каналов и шифрование проверены\n";
+          PHP
