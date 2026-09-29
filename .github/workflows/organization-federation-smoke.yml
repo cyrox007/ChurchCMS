@@ -11,6 +11,7 @@ on:
       - 'install.php'
       - 'modules/organizations/**'
       - 'modules/publications/PublicationRepository.php'
+      - 'modules/events/**'
       - 'modules/publications/PublicationApiResource.php'
       - 'modules/publications/FederatedPublicationFeedService.php'
       - 'modules/organizations/FederationSyncWorker.php'
@@ -29,6 +30,7 @@ on:
       - 'tools/organization-federation-smoke.php'
       - 'tools/federation-remote-projection-smoke.php'
       - 'tools/federation-publication-sync-smoke.php'
+      - 'tools/federation-event-sync-smoke.php'
       - 'tools/federation-sync-coordinator-smoke.php'
       - 'tools/federation-worker-sync-state-smoke.php'
       - 'tools/federated-publication-feed-smoke.php'
@@ -43,6 +45,7 @@ on:
       - 'install.php'
       - 'modules/organizations/**'
       - 'modules/publications/PublicationRepository.php'
+      - 'modules/events/**'
       - 'modules/publications/PublicationApiResource.php'
       - 'modules/publications/FederatedPublicationFeedService.php'
       - 'modules/organizations/FederationSyncWorker.php'
@@ -61,6 +64,7 @@ on:
       - 'tools/organization-federation-smoke.php'
       - 'tools/federation-remote-projection-smoke.php'
       - 'tools/federation-publication-sync-smoke.php'
+      - 'tools/federation-event-sync-smoke.php'
       - 'tools/federation-sync-coordinator-smoke.php'
       - 'tools/federation-worker-sync-state-smoke.php'
       - 'tools/federated-publication-feed-smoke.php'
@@ -110,6 +114,8 @@ jobs:
           php -l tools/organization-federation-smoke.php
           php -l tools/federation-remote-projection-smoke.php
           php -l tools/federation-publication-sync-smoke.php
+          php -l tools/federation-event-sync-smoke.php
+          php -l modules/organizations/FederationEventSyncWorker.php
           php -l tools/federation-sync-coordinator-smoke.php
           php -l tools/federation-worker-sync-state-smoke.php
           php -l modules/organizations/FederationSyncWorker.php
@@ -175,6 +181,9 @@ jobs:
 
       - name: Проверить federation sync публикаций и курсоры
         run: php tools/federation-publication-sync-smoke.php
+
+      - name: Проверить federation sync событий
+        run: php tools/federation-event-sync-smoke.php
 
       - name: Проверить общий координатор federation sync
         run: php tools/federation-sync-coordinator-smoke.php
