@@ -256,6 +256,33 @@ Tombstone хранится отдельно от основной публика
 Внутренний числовой ID БД в курсор не попадает. Полноценный общий cursor-based
 sync для всех типов федеративных объектов остаётся следующим этапом.
 
+## Partner sync событий
+
+Events использует тот же составной incremental-курсор `updated_at + public_id`.
+
+Доступны endpoints:
+
+```
+GET /api/v1/partner/events
+GET /api/v1/partner/events/tombstones
+```
+
+Оба требуют Bearer token со scope `content.read`.
+
+В обычную event projection входят только безопасные поля списка: stable public
+ID, тип, заголовок, excerpt, `organization_owner_id`, начало/окончание,
+`all_day`, место и `updated_at`. Сырой `description_html` в partner API
+не выдаётся, пока Events не получил отдельный sanitizer/public rendering
+contract.
+
+Снятие или отмена ранее опубликованного события создаёт tombstone с
+`action=delete`. Отмена черновика tombstone не создаёт. Повторная публикация
+удаляет устаревший tombstone, чтобы полный sync нового агрегатора не применил
+старое удаление поверх актуального события.
+
+Если `has_more=true`, следующий запрос обязан передать одновременно
+`next_updated_since` и `next_after`.
+
 ## Response envelope
 
 Successful response:

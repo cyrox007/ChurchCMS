@@ -95,7 +95,7 @@ Status: in progress.
 - [x] Federation pairing wizard и отзыв доверия.
 - [x] Organization-scoped RBAC enforcement.
 - [x] Organization ownership/references для Publications/Pages/People/Worship/Events/Media/Documents (organization owner/reference foundation реализован для всех перечисленных типов).
-- [ ] Parent/child aggregation и remote projections/tombstones (для Publications реализованы tombstone, remote projections, фоновая синхронизация, безопасная агрегированная API-лента, RSS и публичный блок; единый coordinator/CLI для sync worker готов, сами worker остальных типов остаются).
+- [ ] Parent/child aggregation и remote projections/tombstones (Publications полностью проходит source → worker → projection → aggregation; общий coordinator/CLI готов; для Events готов source-side partner/tombstone contract, принимающий worker и остальные типы остаются).
 - [ ] Federation health/sync dashboard (health/retry/conflict UI и последние sync/error состояния реализованы; подробный прогресс и метрики синхронизации остаются).
 
 ## Cross-cutting — External channels
