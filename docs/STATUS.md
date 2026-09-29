@@ -57,7 +57,9 @@ Implemented:
 - после успешно применённой страницы публикаций её курсор сохраняется до запроса tombstone: сбой второго потока не заставляет повторно сканировать уже подтверждённую страницу, а неприменённый поток остаётся на прежнем курсоре;
 - `last_sync_at` и `last_sync_error` отделены от discovery-health состояния: сетевой сбой синхронизации не переводит доверенную связь из `active`;
 - `php bin/federation-sync.php` выполняет ограниченный проход по активным связям и подходит для cron; один сбой не останавливает обработку остальных связей;
-- Admin Shell показывает время последней успешной синхронизации и безопасное сообщение последней sync-ошибки;
+- Admin Shell показывает отдельное состояние каждого применимого sync worker, время последнего успеха и безопасную ошибку;
+- `FederationSyncDashboardService` считает активные связи и worker в состояниях successful/failed/partial/not-started, учитывает scopes и не передаёт содержимое sync cursor в шаблон;
+- экран «Связи» показывает сводные метрики и подробный прогресс Publications/Events/Worship; PostgreSQL/MySQL smoke проверяет расчёт, scope-фильтрацию и отсутствие cursor в read-model;
 - PostgreSQL/MySQL smoke проверяет частичный сетевой сбой, сохранение безопасного курсора, повторный запуск и tie-breaker публикаций с одинаковым `updated_at`;
 - `FederatedPublicationFeedService` объединяет локальные опубликованные материалы с active remote projections только от доверенных `child`-связей, у которых разрешён входящий `content.read` или `publications.read`;
 - публичный `GET /api/v1/publications/aggregated` отдаёт ограниченную общую ленту, где каждый элемент содержит явный блок `source` с видом источника, исходным `instance_id`, organization owner, названием и canonical URL;
