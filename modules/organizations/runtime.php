@@ -30,6 +30,7 @@ foreach ([
     'FederationEventSyncWorker.php',
     'FederationWorshipSyncWorker.php',
     'FederationSyncCoordinator.php',
+    'FederationSyncDashboardService.php',
     'OrganizationRepository.php',
     'OrganizationAccessService.php',
     'FederationRepository.php',

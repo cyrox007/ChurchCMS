@@ -16,6 +16,15 @@ $form = is_array($federationForm ?? null)
 $status = is_array($federationStatus ?? null)
     ? $federationStatus
     : null;
+$syncDashboard = is_array($syncDashboard ?? null)
+    ? $syncDashboard
+    : [];
+$syncMetrics = is_array($syncDashboard['metrics'] ?? null)
+    ? $syncDashboard['metrics']
+    : [];
+$syncLinks = is_array($syncDashboard['links'] ?? null)
+    ? $syncDashboard['links']
+    : [];
 
 $organizationNames = [];
 foreach ($organizations as $organization) {
@@ -40,6 +49,19 @@ $statusLabels = [
     'error' => 'Ошибка связи',
     'conflict' => 'Конфликт identity',
     'revoked' => 'Доверие отозвано',
+];
+
+$workerLabels = [
+    'publications' => 'Публикации',
+    'events' => 'События',
+    'worship' => 'Богослужения',
+];
+
+$syncStatusLabels = [
+    'successful' => 'Синхронизировано',
+    'failed' => 'Ошибка',
+    'partial' => 'Прогресс сохранён',
+    'not_started' => 'Ещё не запускалось',
 ];
 ?>
 <section class="admin-shell">
@@ -280,6 +302,49 @@ $statusLabels = [
         </section>
     <?php endif; ?>
 
+    <?php if ($links !== []): ?>
+        <section class="editor-card">
+            <div class="admin-heading">
+                <div>
+                    <p class="eyebrow">Синхронизация</p>
+                    <h2>Состояние обмена данными</h2>
+                    <p>
+                        Метрики считаются по активным связям и
+                        зарегистрированным worker. Содержимое курсоров
+                        в интерфейс не выводится.
+                    </p>
+                </div>
+            </div>
+
+            <dl class="admin-summary">
+                <div>
+                    <dt>Активные связи</dt>
+                    <dd><?= (int) ($syncMetrics['active_links'] ?? 0) ?></dd>
+                </div>
+                <div>
+                    <dt>Потоки данных</dt>
+                    <dd><?= (int) ($syncMetrics['workers'] ?? 0) ?></dd>
+                </div>
+                <div>
+                    <dt>Успешно</dt>
+                    <dd><?= (int) ($syncMetrics['successful'] ?? 0) ?></dd>
+                </div>
+                <div>
+                    <dt>С ошибкой</dt>
+                    <dd><?= (int) ($syncMetrics['failed'] ?? 0) ?></dd>
+                </div>
+                <div>
+                    <dt>Частичный прогресс</dt>
+                    <dd><?= (int) ($syncMetrics['partial'] ?? 0) ?></dd>
+                </div>
+                <div>
+                    <dt>Ещё не запускались</dt>
+                    <dd><?= (int) ($syncMetrics['not_started'] ?? 0) ?></dd>
+                </div>
+            </dl>
+        </section>
+    <?php endif; ?>
+
     <section class="editor-card">
         <div class="admin-heading">
             <div>
@@ -297,6 +362,18 @@ $statusLabels = [
         <?php else: ?>
             <div class="admin-list">
                 <?php foreach ($links as $link): ?>
+                    <?php
+                    $linkSync = is_array(
+                        $syncLinks[$link->id] ?? null
+                    )
+                        ? $syncLinks[$link->id]
+                        : [];
+                    $workerStates = is_array(
+                        $linkSync['workers'] ?? null
+                    )
+                        ? $linkSync['workers']
+                        : [];
+                    ?>
                     <article class="admin-list__item">
                         <div>
                             <div class="organization-tree__meta">
@@ -371,24 +448,81 @@ $statusLabels = [
                                 </p>
                             <?php endif; ?>
 
-                            <p>
-                                Последняя синхронизация:
-                                <?= $theme->e(
-                                    $link->lastSyncAt
-                                    ?? 'ещё не выполнялась'
-                                ) ?>
-                            </p>
+                            <div>
+                                <strong>Синхронизация данных</strong>
 
-                            <?php if ($link->lastSyncError !== null): ?>
-                                <p>
-                                    <strong>Ошибка синхронизации:</strong>
-                                    <?= $theme->e($link->lastSyncError) ?>
-                                </p>
-                            <?php elseif ($link->syncCursor !== null): ?>
-                                <small>
-                                    Курсор синхронизации сохранён.
-                                </small>
-                            <?php endif; ?>
+                                <?php if ($workerStates === []): ?>
+                                    <p>
+                                        Для текущего состояния связи нет
+                                        активных потоков синхронизации.
+                                    </p>
+                                <?php else: ?>
+                                    <?php foreach (
+                                        $workerStates as $workerState
+                                    ): ?>
+                                        <?php
+                                        $workerId = (string) (
+                                            $workerState['id'] ?? ''
+                                        );
+                                        $workerStatus = (string) (
+                                            $workerState['status']
+                                            ?? 'not_started'
+                                        );
+                                        ?>
+                                        <p>
+                                            <strong><?= $theme->e(
+                                                $workerLabels[$workerId]
+                                                ?? $workerId
+                                            ) ?>:</strong>
+                                            <span class="status-pill<?= $workerStatus === 'failed'
+                                                ? ' status-pill--withdrawn'
+                                                : '' ?>">
+                                                <?= $theme->e(
+                                                    $syncStatusLabels[
+                                                        $workerStatus
+                                                    ] ?? $workerStatus
+                                                ) ?>
+                                            </span>
+
+                                            <?php if (
+                                                is_string(
+                                                    $workerState[
+                                                        'last_sync_at'
+                                                    ] ?? null
+                                                )
+                                            ): ?>
+                                                · последний успех
+                                                <?= $theme->e(
+                                                    $workerState[
+                                                        'last_sync_at'
+                                                    ]
+                                                ) ?>
+                                            <?php endif; ?>
+                                        </p>
+
+                                        <?php if (
+                                            is_string(
+                                                $workerState['error']
+                                                ?? null
+                                            )
+                                        ): ?>
+                                            <small>
+                                                <?= $theme->e(
+                                                    $workerState['error']
+                                                ) ?>
+                                            </small>
+                                        <?php elseif (
+                                            ($workerState[
+                                                'has_cursor'
+                                            ] ?? false) === true
+                                        ): ?>
+                                            <small>
+                                                Прогресс сохранён.
+                                            </small>
+                                        <?php endif; ?>
+                                    <?php endforeach; ?>
+                                <?php endif; ?>
+                            </div>
                         </div>
 
                         <?php if ($link->status !== 'revoked'): ?>
