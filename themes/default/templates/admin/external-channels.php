@@ -5,6 +5,8 @@ declare(strict_types=1);
 $connections = is_array($connections ?? null) ? $connections : [];
 $adapters = is_array($adapters ?? null) ? $adapters : [];
 $inboxItems = is_array($inboxItems ?? null) ? $inboxItems : [];
+$importOwners = is_array($importOwners ?? null) ? $importOwners : [];
+$canImportExternal = ($canImportExternal ?? false) === true;
 $status = is_array($channelStatus ?? null) ? $channelStatus : null;
 ?>
 <section class="admin-shell">
@@ -107,6 +109,44 @@ $status = is_array($channelStatus ?? null) ? $channelStatus : null;
                                     Игнорировать
                                 </button>
                             </form>
+
+                            <?php if ($canImportExternal && $importOwners !== []): ?>
+                                <form
+                                    class="admin-update-apply"
+                                    method="post"
+                                    action="<?= $theme->e($theme->route(
+                                        'admin_external_channels_inbox_import',
+                                        ['publicId' => $item->publicId],
+                                    )) ?>"
+                                >
+                                    <?= $theme->csrfInput() ?>
+                                    <label>
+                                        <span>Организация-владелец нового черновика</span>
+                                        <select
+                                            name="owner_organization_public_id"
+                                            required
+                                        >
+                                            <option value="">Выберите организацию</option>
+                                            <?php foreach ($importOwners as $owner): ?>
+                                                <option
+                                                    value="<?= $theme->e((string) ($owner['public_id'] ?? '')) ?>"
+                                                >
+                                                    <?= $theme->e((string) ($owner['name'] ?? '')) ?>
+                                                    <?php if (!empty($owner['path'])): ?>
+                                                        · <?= $theme->e((string) $owner['path']) ?>
+                                                    <?php endif; ?>
+                                                </option>
+                                            <?php endforeach; ?>
+                                        </select>
+                                    </label>
+                                    <button
+                                        class="button button--primary"
+                                        type="submit"
+                                    >
+                                        Импортировать как черновик
+                                    </button>
+                                </form>
+                            <?php endif; ?>
 
                             <form
                                 class="admin-update-apply"
