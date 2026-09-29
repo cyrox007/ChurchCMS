@@ -30,6 +30,7 @@ foreach ([
     'SocialConnectionRepository.php',
     'SocialConnectionService.php',
     'SocialPostRepository.php',
+    'SocialPublicationChannelService.php',
     'ExternalChannelItem.php',
     'ExternalChannelItemRepository.php',
     'ChannelSyncStateRepository.php',
