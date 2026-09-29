@@ -48,5 +48,11 @@
 - проверка cross-site границы на уровне сервиса и БД;
 - smoke-проверка.
 
-Admin Shell, публичный календарь, API, повторяющиеся правила, праздничные
-шаблоны и federation sync остаются следующими инкрементами.
+Federation source-side реализован отдельным partner API: `scheduled` и
+`cancelled` записи передаются безопасной projection без `description_html`,
+а `withdraw` создаёт tombstone. Потоки используют составной курсор
+`updated_at + public_id`, повторное `schedule` удаляет устаревший tombstone.
+
+Admin Shell, публичный календарь/API, повторяющиеся правила, праздничные
+шаблоны, принимающий federation worker и агрегация остаются следующими
+инкрементами.
