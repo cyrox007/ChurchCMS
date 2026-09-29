@@ -88,6 +88,7 @@ final class MediaService
                 site_key,
                 owner_organization_public_id,
                 status,
+                visibility,
                 media_type,
                 original_name,
                 mime_type,
@@ -102,6 +103,7 @@ final class MediaService
                 :site_key,
                 :owner_organization_public_id,
                 :status,
+                :visibility,
                 :media_type,
                 :original_name,
                 :mime_type,
@@ -118,6 +120,7 @@ final class MediaService
             'site_key' => $siteKey,
             'owner_organization_public_id' => $owner->publicId,
             'status' => 'registered',
+            'visibility' => 'private',
             'media_type' => $mediaType,
             'original_name' => $originalName,
             'mime_type' => $mimeType,
@@ -169,6 +172,45 @@ final class MediaService
         ]);
     }
 
+    public function setVisibility(
+        string $mediaPublicId,
+        string $visibility,
+        string $siteKey = 'default',
+    ): void {
+        $siteKey = self::siteKey($siteKey);
+        $visibility = self::visibility($visibility);
+        $asset = $this->media->findByPublicId(
+            $mediaPublicId,
+            $siteKey,
+        );
+
+        if ($asset === null) {
+            throw new InvalidArgumentException(
+                'Медиаматериал не найден.'
+            );
+        }
+
+        if ($asset->status === 'archived') {
+            throw new InvalidArgumentException(
+                'Архивный медиаматериал нельзя публиковать.'
+            );
+        }
+
+        $statement = $this->pdo->prepare(
+            'UPDATE media_assets
+             SET visibility = :visibility,
+                 updated_at = :updated_at
+             WHERE public_id = :public_id
+               AND site_key = :site_key'
+        );
+        $statement->execute([
+            'visibility' => $visibility,
+            'updated_at' => gmdate('Y-m-d H:i:s'),
+            'public_id' => $asset->publicId,
+            'site_key' => $siteKey,
+        ]);
+    }
+
     public function archive(
         string $mediaPublicId,
         string $siteKey = 'default',
@@ -188,12 +230,14 @@ final class MediaService
         $statement = $this->pdo->prepare(
             'UPDATE media_assets
              SET status = :status,
+                 visibility = :visibility,
                  updated_at = :updated_at
              WHERE public_id = :public_id
                AND site_key = :site_key'
         );
         $statement->execute([
             'status' => 'archived',
+            'visibility' => 'private',
             'updated_at' => gmdate('Y-m-d H:i:s'),
             'public_id' => $asset->publicId,
             'site_key' => $siteKey,
@@ -237,6 +281,19 @@ final class MediaService
         ) {
             throw new InvalidArgumentException(
                 'Некорректный site key медиатеки.'
+            );
+        }
+
+        return $value;
+    }
+
+    private static function visibility(string $value): string
+    {
+        $value = trim($value);
+
+        if (!in_array($value, ['private', 'public', 'federated'], true)) {
+            throw new InvalidArgumentException(
+                'Некорректная видимость медиаматериала.'
             );
         }
 
