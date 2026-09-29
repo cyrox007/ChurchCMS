@@ -1,0 +1,109 @@
+name: Проверка selector внешних каналов публикации
+
+on:
+  push:
+    branches:
+      - develop
+      - main
+    paths:
+      - 'modules/social/SocialPostRepository.php'
+      - 'modules/social/SocialPublicationChannelService.php'
+      - 'modules/social/ExternalChannelsCapability.php'
+      - 'modules/social/runtime.php'
+      - 'modules/publications/PublicationsAdminController.php'
+      - 'modules/publications/PublicationScheduleWorker.php'
+      - 'themes/default/templates/admin/publications/editor.php'
+      - 'tools/publication-external-channel-selector-smoke.php'
+      - '.github/workflows/publication-external-channel-selector-smoke.yml'
+  pull_request:
+    branches:
+      - develop
+      - main
+    paths:
+      - 'modules/social/SocialPostRepository.php'
+      - 'modules/social/SocialPublicationChannelService.php'
+      - 'modules/social/ExternalChannelsCapability.php'
+      - 'modules/social/runtime.php'
+      - 'modules/publications/PublicationsAdminController.php'
+      - 'modules/publications/PublicationScheduleWorker.php'
+      - 'themes/default/templates/admin/publications/editor.php'
+      - 'tools/publication-external-channel-selector-smoke.php'
+      - '.github/workflows/publication-external-channel-selector-smoke.yml'
+
+permissions:
+  contents: read
+
+jobs:
+  publication-external-channel-selector:
+    runs-on: ubuntu-latest
+
+    services:
+      postgres:
+        image: postgres:16
+        env:
+          POSTGRES_DB: churchcms
+          POSTGRES_USER: churchcms
+          POSTGRES_PASSWORD: churchcms
+        ports:
+          - 5432:5432
+        options: >-
+          --health-cmd pg_isready
+          --health-interval 10s
+          --health-timeout 5s
+          --health-retries 5
+
+    steps:
+      - name: Получить исходный код
+        uses: actions/checkout@v4
+
+      - name: Подготовить PHP 8.3
+        uses: shivammathur/setup-php@v2
+        with:
+          php-version: '8.3'
+          extensions: pdo, pdo_pgsql, openssl
+          coverage: none
+
+      - name: Проверить PHP
+        run: |
+          set -euo pipefail
+          php -l modules/social/SocialPostRepository.php
+          php -l modules/social/SocialPublicationChannelService.php
+          php -l modules/social/ExternalChannelsCapability.php
+          php -l modules/social/runtime.php
+          php -l modules/publications/PublicationsAdminController.php
+          php -l modules/publications/PublicationScheduleWorker.php
+          php -l themes/default/templates/admin/publications/editor.php
+          php -l tools/publication-external-channel-selector-smoke.php
+          php bin/migrate.php validate
+          php bin/theme-check.php
+
+      - name: Подготовить тестовую установку
+        run: |
+          set -euo pipefail
+          mkdir -p storage/cache storage/logs storage/sessions storage/rate-limits storage/uploads
+
+          cat > config/local.php <<'PHP'
+          <?php
+
+          declare(strict_types=1);
+
+          return [
+              'installation' => ['completed' => true],
+              'security' => [
+                  'secret_key' => base64_encode(str_repeat('s', 32)),
+              ],
+              'database' => [
+                  'driver' => 'pgsql',
+                  'host' => '127.0.0.1',
+                  'port' => 5432,
+                  'database' => 'churchcms',
+                  'username' => 'churchcms',
+                  'password' => 'churchcms',
+              ],
+          ];
+          PHP
+
+          php bin/migrate.php
+
+      - name: Проверить selector и постановку в очередь
+        run: php tools/publication-external-channel-selector-smoke.php

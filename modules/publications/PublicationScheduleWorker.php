@@ -5,6 +5,7 @@ declare(strict_types=1);
 namespace ChurchCMS\Modules\Publications;
 
 use ChurchCMS\Core\AuditLog;
+use ChurchCMS\Core\ModuleRuntimeLoader;
 use ChurchCMS\Core\PageCache;
 use DateTimeImmutable;
 
@@ -39,7 +40,29 @@ final class PublicationScheduleWorker
         if ($publicIds !== []) {
             PageCache::bumpVersion();
 
+            $channels = ModuleRuntimeLoader::capability(
+                'social',
+                'social.publication',
+            );
+
             foreach ($publicIds as $publicId) {
+                $publication = $this->repository->findByPublicId(
+                    $publicId,
+                    $siteKey,
+                );
+                if (
+                    $publication !== null
+                    && $channels !== null
+                    && method_exists(
+                        $channels,
+                        'queuePublication',
+                    )
+                ) {
+                    $channels->queuePublication(
+                        $publication->id,
+                    );
+                }
+
                 AuditLog::emit(
                     eventType: 'publication.scheduled_published',
                     subjectType: 'publication',

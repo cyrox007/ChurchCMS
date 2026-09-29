@@ -9,6 +9,17 @@ $typeLabels = [
     'document' => 'Документ',
 ];
 $currentTargets = $isEdit ? $publication->syndicationTargets : [];
+$externalChannels = is_array($externalChannels ?? null)
+    ? $externalChannels
+    : [];
+$canExternalPublish = ($canExternalPublish ?? false) === true;
+$externalStatusLabels = [
+    'idle' => 'ожидает публикации',
+    'pending' => 'в очереди',
+    'processing' => 'отправляется',
+    'sent' => 'отправлено',
+    'failed' => 'ошибка отправки',
+];
 $formAction = $isEdit
     ? $theme->route('admin_publication_update', ['publicId' => $publication->publicId])
     : $theme->route('admin_publication_create');
@@ -148,6 +159,53 @@ $formAction = $isEdit
                         </label>
                     <?php endforeach; ?>
                 </div>
+            </section>
+        <?php endif; ?>
+
+        <?php if ($isEdit && $canExternalPublish): ?>
+            <section class="editor-card">
+                <h2>Внешние каналы</h2>
+                <p class="editor-card__hint">
+                    Отметьте площадки для этой публикации и сохраните изменения.
+                    Отправка выполняется фоновым обработчиком только после публикации материала.
+                </p>
+
+                <?php if ($externalChannels === []): ?>
+                    <?= $theme->component('admin.state', [
+                        'kind' => 'empty',
+                        'title' => 'Нет каналов для отправки',
+                        'message' => 'Сначала настройте хотя бы одно включённое исходящее подключение в разделе «Внешние каналы».',
+                    ]) ?>
+                <?php else: ?>
+                    <div class="choice-list">
+                        <?php foreach ($externalChannels as $channel): ?>
+                            <?php
+                            $status = (string) ($channel['status'] ?? '');
+                            $statusLabel = $externalStatusLabels[$status] ?? '';
+                            ?>
+                            <label class="choice">
+                                <input
+                                    type="checkbox"
+                                    name="external_channel_ids[]"
+                                    value="<?= $theme->e((string) ($channel['public_id'] ?? '')) ?>"
+                                    <?= !empty($channel['selected']) ? 'checked' : '' ?>
+                                >
+                                <span>
+                                    <strong><?= $theme->e((string) ($channel['name'] ?? 'Внешний канал')) ?></strong>
+                                    <small>
+                                        <?= $theme->e((string) ($channel['provider'] ?? '')) ?>
+                                        <?php if (!empty($channel['target_ref'])): ?>
+                                            · <?= $theme->e((string) $channel['target_ref']) ?>
+                                        <?php endif; ?>
+                                        <?php if ($statusLabel !== ''): ?>
+                                            · <?= $theme->e($statusLabel) ?>
+                                        <?php endif; ?>
+                                    </small>
+                                </span>
+                            </label>
+                        <?php endforeach; ?>
+                    </div>
+                <?php endif; ?>
             </section>
         <?php endif; ?>
 
