@@ -38,7 +38,24 @@ final class HtmlSanitizer
             return self::sanitize($input);
         }
 
-        $paragraphs = preg_split('/\n{2,}/u', str_replace(["\r\n", "\r"], "\n", $input)) ?: [];
+        return self::fromPlainText($input);
+    }
+
+    /**
+     * Преобразует недоверенный обычный текст в безопасный HTML, не распознавая
+     * содержащиеся в нём теги как разметку.
+     */
+    public static function fromPlainText(string $input): string
+    {
+        $input = trim($input);
+        if ($input === '') {
+            return '';
+        }
+
+        $paragraphs = preg_split(
+            '/\n{2,}/u',
+            str_replace(["\r\n", "\r"], "\n", $input),
+        ) ?: [];
         $html = [];
 
         foreach ($paragraphs as $paragraph) {
@@ -47,7 +64,11 @@ final class HtmlSanitizer
                 continue;
             }
 
-            $escaped = htmlspecialchars($paragraph, ENT_QUOTES | ENT_SUBSTITUTE, 'UTF-8');
+            $escaped = htmlspecialchars(
+                $paragraph,
+                ENT_QUOTES | ENT_SUBSTITUTE,
+                'UTF-8',
+            );
             $html[] = '<p>' . nl2br($escaped, false) . '</p>';
         }
 
