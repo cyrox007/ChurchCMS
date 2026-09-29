@@ -43,6 +43,7 @@ on:
       - 'tools/federation-worship-sync-smoke.php'
       - 'tools/federated-worship-feed-smoke.php'
       - 'tools/federation-worker-sync-state-smoke.php'
+      - 'tools/federation-sync-dashboard-smoke.php'
       - 'tools/federated-publication-feed-smoke.php'
       - 'tools/page-organization-owner-smoke.php'
       - '.github/workflows/mysql-runtime-smoke.yml'
@@ -264,6 +265,9 @@ jobs:
 
       - name: Проверить независимое состояние federation worker в MySQL
         run: php tools/federation-worker-sync-state-smoke.php
+
+      - name: Проверить метрики federation sync dashboard в MySQL
+        run: php tools/federation-sync-dashboard-smoke.php
 
       - name: Проверить агрегированную ленту публикаций в MySQL
         run: php tools/federated-publication-feed-smoke.php

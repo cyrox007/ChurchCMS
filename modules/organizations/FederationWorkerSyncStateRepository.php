@@ -76,7 +76,85 @@ final class FederationWorkerSyncStateRepository
         ];
     }
 
-    public function saveCursor(
+
+    /**
+     * Возвращает состояния worker сразу для нескольких federation link.
+     *
+     * @param list<int> $linkIds
+     * @return array<int,array<string,array{
+     *     cursor:?string,
+     *     last_sync_at:?string,
+     *     last_sync_error:?string
+     * }>>
+     */
+    public function statesForLinks(array $linkIds): array
+    {
+        $linkIds = array_values(array_unique(array_filter(
+            $linkIds,
+            static fn(mixed $id): bool =>
+                is_int($id) && $id > 0,
+        )));
+
+        if ($linkIds === []) {
+            return [];
+        }
+
+        $placeholders = [];
+        foreach ($linkIds as $index => $linkId) {
+            $placeholders[] = ':link_' . $index;
+        }
+
+        $statement = $this->pdo->prepare(
+            'SELECT federation_link_id,
+                    worker_id,
+                    sync_cursor,
+                    last_sync_at,
+                    last_sync_error
+             FROM federation_worker_sync_states
+             WHERE federation_link_id IN ('
+             . implode(', ', $placeholders)
+             . ')
+             ORDER BY federation_link_id ASC, worker_id ASC'
+        );
+
+        foreach ($linkIds as $index => $linkId) {
+            $statement->bindValue(
+                ':link_' . $index,
+                $linkId,
+                PDO::PARAM_INT,
+            );
+        }
+
+        $statement->execute();
+
+        $result = [];
+        foreach ($statement->fetchAll() as $row) {
+            $linkId = (int) ($row['federation_link_id'] ?? 0);
+            $workerId = self::workerId(
+                (string) ($row['worker_id'] ?? ''),
+            );
+
+            if ($linkId <= 0) {
+                continue;
+            }
+
+            $result[$linkId][$workerId] = [
+                'cursor' => self::nullable(
+                    $row['sync_cursor'] ?? null,
+                ),
+                'last_sync_at' => self::nullable(
+                    $row['last_sync_at'] ?? null,
+                ),
+                'last_sync_error' => self::nullable(
+                    $row['last_sync_error'] ?? null,
+                ),
+            ];
+        }
+
+        return $result;
+    }
+
+public function saveCursor(
         int $linkId,
         string $workerId,
         ?string $expectedCursor,

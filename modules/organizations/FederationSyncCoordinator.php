@@ -47,7 +47,20 @@ final class FederationSyncCoordinator
         ]);
     }
 
+
     /**
+     * @return list<string>
+     */
+    public function workerIds(): array
+    {
+        return array_map(
+            static fn(FederationSyncWorker $worker): string =>
+                $worker->id(),
+            $this->workers,
+        );
+    }
+
+/**
      * Один проход вызывает каждый зарегистрированный worker один раз.
      *
      * @return array{
