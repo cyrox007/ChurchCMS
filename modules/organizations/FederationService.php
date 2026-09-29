@@ -200,6 +200,10 @@ final class FederationService
                 'id' => $existing->id,
             ]);
 
+            (new FederationWorkerSyncStateRepository(
+                $this->pdo,
+            ))->clearForLink($existing->id);
+
             return $existing->publicId;
         }
 
@@ -289,6 +293,10 @@ final class FederationService
             'updated_at' => gmdate('Y-m-d H:i:s'),
             'id' => $link->id,
         ]);
+
+        (new FederationWorkerSyncStateRepository(
+            $this->pdo,
+        ))->clearForLink($link->id);
     }
 
     /**

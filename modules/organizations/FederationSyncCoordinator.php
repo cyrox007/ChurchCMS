@@ -42,6 +42,7 @@ final class FederationSyncCoordinator
     {
         return new self([
             FederationPublicationSyncWorker::fromDatabase(),
+            FederationEventSyncWorker::fromDatabase(),
         ]);
     }
 

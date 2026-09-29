@@ -8,6 +8,7 @@ use ChurchCMS\Modules\Organizations\FederationRemoteProjectionRepository;
 use ChurchCMS\Modules\Organizations\FederationRepository;
 use ChurchCMS\Modules\Organizations\FederationService;
 use ChurchCMS\Modules\Organizations\FederationSyncTransport;
+use ChurchCMS\Modules\Organizations\FederationWorkerSyncStateRepository;
 use ChurchCMS\Modules\Organizations\OrganizationService;
 use ChurchCMS\Modules\Publications\PublicationRepository;
 use ChurchCMS\Modules\Publications\PublicationService;
@@ -259,15 +260,18 @@ if ($cursorAfterRetry === null) {
     exit(1);
 }
 
+$syncStates = FederationWorkerSyncStateRepository::fromDatabase();
+
 try {
-    $linkRepository->saveSyncCursor(
+    $syncStates->saveCursor(
         $linkAfterRetry->id,
+        'publications',
         '{"version":1,"stale":true}',
         $cursorAfterRetry,
     );
     fwrite(
         STDERR,
-        "Устаревший параллельный процесс смог перезаписать sync-курсор.\n",
+        "Устаревший параллельный процесс смог перезаписать sync-курсор worker.\n",
     );
     exit(1);
 } catch (RuntimeException) {
@@ -277,10 +281,18 @@ $linkAfterConflict = $linkRepository->findByPublicId(
     $linkPublicId,
     $siteKey,
 );
+$stateAfterConflict = $syncStates->state(
+    $linkAfterRetry->id,
+    'publications',
+);
 if (
     $linkAfterConflict === null
     || $linkAfterConflict->syncCursor !== $cursorAfterRetry
     || $linkAfterConflict->lastSyncError !== null
+    || ($stateAfterConflict['cursor'] ?? null)
+        !== $cursorAfterRetry
+    || ($stateAfterConflict['last_sync_error'] ?? null)
+        !== null
 ) {
     fwrite(
         STDERR,

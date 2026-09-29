@@ -12,7 +12,7 @@ use PDO;
 use RuntimeException;
 use Throwable;
 
-final class FederationPublicationSyncWorker implements FederationSyncWorker
+final class FederationEventSyncWorker implements FederationSyncWorker
 {
     private const EPOCH = '1970-01-01T00:00:00+00:00';
 
@@ -36,7 +36,7 @@ final class FederationPublicationSyncWorker implements FederationSyncWorker
 
     public function id(): string
     {
-        return 'publications';
+        return 'events';
     }
 
     public static function fromDatabase(): self
@@ -47,7 +47,7 @@ final class FederationPublicationSyncWorker implements FederationSyncWorker
     }
 
     /**
-     * Один запуск обрабатывает не более одной страницы публикаций
+     * Один запуск обрабатывает не более одной страницы событий
      * и одной страницы tombstone для каждой подходящей связи.
      *
      * @return array{
@@ -71,7 +71,7 @@ final class FederationPublicationSyncWorker implements FederationSyncWorker
             $this->links->links($siteKey),
             static fn(FederationLink $link): bool =>
                 $link->status === 'active'
-                && self::acceptsPublications($link),
+                && self::acceptsEvents($link),
         ));
         $links = array_slice($links, 0, $linkLimit);
 
@@ -100,7 +100,7 @@ final class FederationPublicationSyncWorker implements FederationSyncWorker
                 }
             } catch (Throwable $error) {
                 error_log(
-                    'ChurchCMS federation sync публикаций: '
+                    'ChurchCMS federation sync событий: '
                     . $error->getMessage()
                 );
                 $result['failed']++;
@@ -137,7 +137,7 @@ final class FederationPublicationSyncWorker implements FederationSyncWorker
                 $this->syncStates->recordFailure(
                     $link->id,
                     $this->id(),
-                    'Синхронизация публикаций не выполнена. '
+                    'Синхронизация событий не выполнена. '
                     . 'Повторите попытку после проверки связи.',
                     $storedCursor,
                 );
@@ -177,18 +177,18 @@ final class FederationPublicationSyncWorker implements FederationSyncWorker
         $projectionCount = 0;
         $tombstoneCount = 0;
 
-        $publicationPage = $this->page(
+        $eventPage = $this->page(
             $link,
-            '/api/v1/partner/publications',
-            $cursor['publications'],
+            '/api/v1/partner/events',
+            $cursor['events'],
             $token,
             $pageSize,
         );
 
-        foreach ($publicationPage['items'] as $item) {
+        foreach ($eventPage['items'] as $item) {
             $applied = $this->projections->applyUpsert(
                 $link->publicId,
-                'publication',
+                'event',
                 $item,
                 $link->siteKey,
             );
@@ -197,22 +197,22 @@ final class FederationPublicationSyncWorker implements FederationSyncWorker
             }
         }
 
-        $cursor['publications'] =
-            $publicationPage['cursor'];
-        $publicationCursor = self::encodeCursor($cursor);
-        if ($publicationCursor !== $storedCursor) {
+        $cursor['events'] =
+            $eventPage['cursor'];
+        $eventCursor = self::encodeCursor($cursor);
+        if ($eventCursor !== $storedCursor) {
             $this->syncStates->saveCursor(
                 $link->id,
                 $this->id(),
                 $storedCursor,
-                $publicationCursor,
+                $eventCursor,
             );
-            $storedCursor = $publicationCursor;
+            $storedCursor = $eventCursor;
         }
 
         $tombstonePage = $this->page(
             $link,
-            '/api/v1/partner/publications/tombstones',
+            '/api/v1/partner/events/tombstones',
             $cursor['tombstones'],
             $token,
             $pageSize,
@@ -221,7 +221,7 @@ final class FederationPublicationSyncWorker implements FederationSyncWorker
         foreach ($tombstonePage['items'] as $item) {
             $applied = $this->projections->applyTombstone(
                 $link->publicId,
-                'publication',
+                'event',
                 $item,
                 $link->siteKey,
             );
@@ -244,7 +244,7 @@ final class FederationPublicationSyncWorker implements FederationSyncWorker
         return [
             'projections' => $projectionCount,
             'tombstones' => $tombstoneCount,
-            'pending' => $publicationPage['has_more']
+            'pending' => $eventPage['has_more']
                 || $tombstonePage['has_more'],
         ];
     }
@@ -407,7 +407,7 @@ final class FederationPublicationSyncWorker implements FederationSyncWorker
 
     /**
      * @return array{
-     *     publications:array{updated_since:string,after:?string},
+     *     events:array{updated_since:string,after:?string},
      *     tombstones:array{updated_since:string,after:?string}
      * }
      */
@@ -423,7 +423,7 @@ final class FederationPublicationSyncWorker implements FederationSyncWorker
             $legacy = self::timestamp($raw);
 
             return [
-                'publications' => [
+                'events' => [
                     'updated_since' => $legacy,
                     'after' => null,
                 ],
@@ -459,8 +459,8 @@ final class FederationPublicationSyncWorker implements FederationSyncWorker
         }
 
         return [
-            'publications' => self::streamCursor(
-                $decoded['publications'] ?? null,
+            'events' => self::streamCursor(
+                $decoded['events'] ?? null,
             ),
             'tombstones' => self::streamCursor(
                 $decoded['tombstones'] ?? null,
@@ -470,7 +470,7 @@ final class FederationPublicationSyncWorker implements FederationSyncWorker
 
     /**
      * @param array{
-     *     publications:array{updated_since:string,after:?string},
+     *     events:array{updated_since:string,after:?string},
      *     tombstones:array{updated_since:string,after:?string}
      * } $cursor
      */
@@ -480,7 +480,7 @@ final class FederationPublicationSyncWorker implements FederationSyncWorker
         return json_encode(
             [
                 'version' => 1,
-                'publications' => $cursor['publications'],
+                'events' => $cursor['events'],
                 'tombstones' => $cursor['tombstones'],
             ],
             JSON_THROW_ON_ERROR
@@ -491,14 +491,14 @@ final class FederationPublicationSyncWorker implements FederationSyncWorker
 
     /**
      * @return array{
-     *     publications:array{updated_since:string,after:?string},
+     *     events:array{updated_since:string,after:?string},
      *     tombstones:array{updated_since:string,after:?string}
      * }
      */
     private static function emptyCursor(): array
     {
         return [
-            'publications' => [
+            'events' => [
                 'updated_since' => self::EPOCH,
                 'after' => null,
             ],
@@ -579,15 +579,11 @@ final class FederationPublicationSyncWorker implements FederationSyncWorker
         return $value;
     }
 
-    private static function acceptsPublications(
+    private static function acceptsEvents(
         FederationLink $link,
     ): bool {
         return in_array(
             'content.read',
-            $link->inboundScopes,
-            true,
-        ) || in_array(
-            'publications.read',
             $link->inboundScopes,
             true,
         );
