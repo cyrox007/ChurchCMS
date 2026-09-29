@@ -18,6 +18,7 @@ final class FederationPublicationSyncWorker implements FederationSyncWorker
 
     private FederationRepository $links;
     private FederationProjectionService $projections;
+    private FederationWorkerSyncStateRepository $syncStates;
     private FederationSyncTransport $transport;
 
     public function __construct(
@@ -26,6 +27,9 @@ final class FederationPublicationSyncWorker implements FederationSyncWorker
     ) {
         $this->links = new FederationRepository($pdo);
         $this->projections = new FederationProjectionService($pdo);
+        $this->syncStates = new FederationWorkerSyncStateRepository(
+            $pdo,
+        );
         $this->transport = $transport
             ?? new FederationHttpSyncTransport();
     }
@@ -117,7 +121,10 @@ final class FederationPublicationSyncWorker implements FederationSyncWorker
         FederationLink $link,
         int $pageSize,
     ): array {
-        $storedCursor = $link->syncCursor;
+        $storedCursor = $this->syncStates->cursor(
+            $link->id,
+            $this->id(),
+        );
 
         try {
             return $this->syncLinkPages(
@@ -127,8 +134,9 @@ final class FederationPublicationSyncWorker implements FederationSyncWorker
             );
         } catch (Throwable $error) {
             try {
-                $this->links->recordSyncFailure(
+                $this->syncStates->recordFailure(
                     $link->id,
+                    $this->id(),
                     'Синхронизация публикаций не выполнена. '
                     . 'Повторите попытку после проверки связи.',
                     $storedCursor,
@@ -193,8 +201,9 @@ final class FederationPublicationSyncWorker implements FederationSyncWorker
             $publicationPage['cursor'];
         $publicationCursor = self::encodeCursor($cursor);
         if ($publicationCursor !== $storedCursor) {
-            $this->links->saveSyncCursor(
+            $this->syncStates->saveCursor(
                 $link->id,
+                $this->id(),
                 $storedCursor,
                 $publicationCursor,
             );
@@ -225,8 +234,9 @@ final class FederationPublicationSyncWorker implements FederationSyncWorker
             $tombstonePage['cursor'];
         $encoded = self::encodeCursor($cursor);
 
-        $this->links->recordSyncSuccess(
+        $this->syncStates->recordSuccess(
             $link->id,
+            $this->id(),
             $storedCursor,
             $encoded,
         );
