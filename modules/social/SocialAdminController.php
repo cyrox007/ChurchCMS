@@ -28,6 +28,16 @@ final class SocialAdminController
             'publications.external-import',
         );
         $userId = self::actorId($request) ?? 0;
+        $canLinkExternal = $userId > 0
+            && AdminAuthorization::can(
+                $request,
+                'publications.read',
+            )
+            && $publicationCapability !== null
+            && method_exists(
+                $publicationCapability,
+                'findLinkablePublication',
+            );
         $canImportExternal = $userId > 0
             && AdminAuthorization::can(
                 $request,
@@ -52,6 +62,7 @@ final class SocialAdminController
                 'connections' => SocialConnectionRepository::fromDatabase()->all(),
                 'adapters' => $service->availableAdapters(),
                 'inboxItems' => ExternalChannelItemRepository::fromDatabase()->pending(),
+                'canLinkExternal' => $canLinkExternal,
                 'canImportExternal' => $canImportExternal,
                 'importOwners' => $importOwners,
                 'channelStatus' => self::status($request),
