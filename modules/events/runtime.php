@@ -5,6 +5,7 @@ declare(strict_types=1);
 use ChurchCMS\App\Middlewares\ApiCorsMiddleware;
 use ChurchCMS\App\Middlewares\ApiEnabledMiddleware;
 use ChurchCMS\App\Middlewares\ApiPartnerRateLimitMiddleware;
+use ChurchCMS\App\Middlewares\ApiPublicRateLimitMiddleware;
 use ChurchCMS\App\Middlewares\PartnerApiMiddleware;
 use ChurchCMS\Core\ModuleRuntimeProvider;
 use ChurchCMS\Core\Router;
@@ -14,6 +15,7 @@ foreach ([
     'Event.php',
     'EventRepository.php',
     'EventApiResource.php',
+    'FederatedEventFeedService.php',
     'EventPartnerTombstoneRepository.php',
     'EventPartnerTombstoneApiResource.php',
     'EventService.php',
@@ -36,6 +38,18 @@ return new class implements ModuleRuntimeProvider {
     public function boot(): void
     {
         $router = Router::getInstance();
+
+        $router->add(
+            'GET',
+            '/api/v1/events/aggregated',
+            [EventsApiController::class, 'aggregated'],
+            [
+                ApiEnabledMiddleware::class,
+                ApiCorsMiddleware::class,
+                ApiPublicRateLimitMiddleware::class,
+            ],
+            'api_v1_events_aggregated',
+        );
 
         $router->add(
             'GET',

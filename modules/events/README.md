@@ -54,8 +54,9 @@ tombstone. Повторная публикация очищает устарев
 - отдельный tombstone endpoint;
 - принимающий `FederationEventSyncWorker` и регистрация в общем coordinator;
 - отдельный cursor/error state для Events, не пересекающийся с Publications;
-- PostgreSQL/MySQL smoke source-side и receiving federation lifecycle.
+- PostgreSQL/MySQL smoke source-side и receiving federation lifecycle;
+- агрегированная лента ближайших локальных и дочерних событий с явным `source`, фильтрацией по `child + content.read` и без передачи сырого `description_html`;
+- публичный `GET /api/v1/events/aggregated` с ограниченным безопасным контрактом списка.
 
-Admin Shell, публичный Events API/страницы, категории, повторяющиеся правила,
-календарные представления и агрегированная federation-лента Events остаются
-следующими инкрементами.
+Admin Shell, обычный публичный Events API/страницы, категории, повторяющиеся правила
+и календарные представления остаются следующими инкрементами.

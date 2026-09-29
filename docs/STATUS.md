@@ -106,6 +106,9 @@ Implemented:
 - снятие/отмена только ранее опубликованного события создаёт tombstone, а повторная публикация очищает устаревший tombstone; PostgreSQL/MySQL smoke проверяет весь этот lifecycle;
 - `FederationEventSyncWorker` получает Events и tombstones отдельными bounded-потоками, применяет их как `event` remote projections и подключён к общему coordinator;
 - состояние Events хранится отдельно от Publications в `federation_worker_sync_states`; smoke проверяет частичный сетевой сбой, безопасный повторный запуск и отсутствие перетирания publication cursor;
+- `FederatedEventFeedService` объединяет ближайшие локальные опубликованные события и active `event` projections только от доверенных дочерних связей с входящим `content.read`;
+- публичный `GET /api/v1/events/aggregated` возвращает безопасный список с явным `source`, не копирует сырой `description_html`, исключает tombstone/peer/parent/no-scope источники и сортирует события по времени начала;
+- PostgreSQL/MySQL smoke проверяет локальный + дочерний Events feed, сохранность исходного узла и исключение запрещённых источников;
 - Worship получил source-side federation contract: `scheduled` и `cancelled` остаются partner-visible, `withdraw` создаёт tombstone, а повторное `schedule` очищает его;
 - partner projection Worship отдаёт stable owner, тип службы, статус, время и место, но не экспортирует сырой `description_html`;
 - partner endpoints Worship используют bounded page size и составной курсор `updated_at + public_id`; PostgreSQL/MySQL smoke проверяет lifecycle и отсутствие HTML в projection;
@@ -121,7 +124,7 @@ Implemented:
 - Admin/public/API, публикация и календарные представления Events;
 - безопасный upload/storage pipeline Media, MIME sniffing, derivatives и usage references;
 - связь Documents → проверенный Media asset, Admin/public/API и версии файла;
-- расширить source-preserving federation-контракт с Publications на Events/Worship/Media/Documents.
+- расширить source-preserving federation-контракт с Publications/Events на Worship/Media/Documents.
 
 ## Installation
 
