@@ -6,6 +6,8 @@ $connections = is_array($connections ?? null) ? $connections : [];
 $adapters = is_array($adapters ?? null) ? $adapters : [];
 $inboxItems = is_array($inboxItems ?? null) ? $inboxItems : [];
 $importOwners = is_array($importOwners ?? null) ? $importOwners : [];
+$outboundFailures = is_array($outboundFailures ?? null) ? $outboundFailures : [];
+$canRetryOutbound = ($canRetryOutbound ?? false) === true;
 $canLinkExternal = ($canLinkExternal ?? false) === true;
 $canImportExternal = ($canImportExternal ?? false) === true;
 $status = is_array($channelStatus ?? null) ? $channelStatus : null;
@@ -58,6 +60,59 @@ $status = is_array($channelStatus ?? null) ? $channelStatus : null;
                                 · входящие: <?= $connection->inboundEnabled ? 'да' : 'нет' ?>
                             </small>
                         </div>
+                    </article>
+                <?php endforeach; ?>
+            </div>
+        <?php endif; ?>
+    </section>
+
+    <section class="admin-operations-section" aria-labelledby="external-errors-title">
+        <div class="admin-operations-heading">
+            <div>
+                <p class="card__eyebrow">Исходящая очередь</p>
+                <h2 id="external-errors-title">Ошибки отправки</h2>
+                <p>Здесь остаются записи, исчерпавшие автоматические попытки. Повторная отправка снова выполняется только фоновым обработчиком.</p>
+            </div>
+        </div>
+
+        <?php if ($outboundFailures === []): ?>
+            <?= $theme->component('admin.state', [
+                'kind' => 'empty',
+                'title' => 'Ошибок отправки нет',
+                'message' => 'Dead-letter очередь внешних публикаций пуста.',
+            ]) ?>
+        <?php else: ?>
+            <div class="admin-operations-list" role="list">
+                <?php foreach ($outboundFailures as $failure): ?>
+                    <article class="admin-operations-row" role="listitem">
+                        <div class="admin-operations-row__body">
+                            <strong><?= $theme->e((string) ($failure['publication_title'] ?? 'Публикация')) ?></strong>
+                            <span>
+                                <?= $theme->e((string) ($failure['connection_name'] ?? 'Внешний канал')) ?>
+                                <?php if (!empty($failure['provider'])): ?>
+                                    · <?= $theme->e((string) $failure['provider']) ?>
+                                <?php endif; ?>
+                                · попыток: <?= $theme->e((int) ($failure['attempts'] ?? 0)) ?>
+                            </span>
+                            <?php if (!empty($failure['last_error'])): ?>
+                                <small><?= $theme->e((string) $failure['last_error']) ?></small>
+                            <?php endif; ?>
+                        </div>
+
+                        <?php if ($canRetryOutbound): ?>
+                            <form
+                                method="post"
+                                action="<?= $theme->e($theme->route(
+                                    'admin_external_channels_outbox_retry',
+                                    ['publicId' => (string) ($failure['post_public_id'] ?? '')],
+                                )) ?>"
+                            >
+                                <?= $theme->csrfInput() ?>
+                                <button class="button button--quiet" type="submit">
+                                    Повторить отправку
+                                </button>
+                            </form>
+                        <?php endif; ?>
                     </article>
                 <?php endforeach; ?>
             </div>
