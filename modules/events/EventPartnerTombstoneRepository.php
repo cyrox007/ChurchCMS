@@ -107,6 +107,19 @@ final class EventPartnerTombstoneRepository
         ]);
     }
 
+    public function clear(Event $event): void
+    {
+        $statement = $this->pdo->prepare(
+            'DELETE FROM event_partner_tombstones
+             WHERE site_key = :site_key
+               AND event_public_id = :event_public_id'
+        );
+        $statement->execute([
+            'site_key' => $event->siteKey,
+            'event_public_id' => $event->publicId,
+        ]);
+    }
+
     /**
      * @return list<array{
      *     id:int,
