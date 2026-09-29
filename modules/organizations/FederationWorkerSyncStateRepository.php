@@ -47,7 +47,7 @@ final class FederationWorkerSyncStateRepository
         }
 
         $statement = $this->pdo->prepare(
-            'SELECT cursor, last_sync_at, last_sync_error
+            'SELECT sync_cursor, last_sync_at, last_sync_error
              FROM federation_worker_sync_states
              WHERE federation_link_id = :link_id
                AND worker_id = :worker_id
@@ -65,7 +65,7 @@ final class FederationWorkerSyncStateRepository
 
         return [
             'cursor' => self::nullable(
-                $row['cursor'] ?? null,
+                $row['sync_cursor'] ?? null,
             ),
             'last_sync_at' => self::nullable(
                 $row['last_sync_at'] ?? null,
@@ -199,7 +199,7 @@ final class FederationWorkerSyncStateRepository
 
         $statement = $this->pdo->prepare(
             'UPDATE federation_worker_sync_states
-             SET cursor = :cursor'
+             SET sync_cursor = :cursor'
             . $syncFields
             . ',
                  updated_at = :updated_at
@@ -224,11 +224,16 @@ final class FederationWorkerSyncStateRepository
                 $this->cursor($linkId, $workerId) ?? ''
             ));
 
-            if ($current !== $cursor) {
-                throw new RuntimeException(
-                    'Курсор federation sync worker уже изменён другим процессом.'
-                );
+            if (
+                $cursor === $expected
+                && $current === $expected
+            ) {
+                return;
             }
+
+            throw new RuntimeException(
+                'Курсор federation sync worker уже изменён другим процессом.'
+            );
         }
 
         $this->mirrorLegacyCursor(
@@ -260,7 +265,7 @@ final class FederationWorkerSyncStateRepository
                 'INSERT INTO federation_worker_sync_states (
                     federation_link_id,
                     worker_id,
-                    cursor,
+                    sync_cursor,
                     last_sync_at,
                     last_sync_error,
                     created_at,
@@ -282,7 +287,7 @@ final class FederationWorkerSyncStateRepository
                 'INSERT IGNORE INTO federation_worker_sync_states (
                     federation_link_id,
                     worker_id,
-                    cursor,
+                    sync_cursor,
                     last_sync_at,
                     last_sync_error,
                     created_at,
