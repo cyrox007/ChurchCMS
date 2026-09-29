@@ -4,6 +4,7 @@ declare(strict_types=1);
 
 use ChurchCMS\Core\ModuleRuntimeLoader;
 use ChurchCMS\Core\SecretVault;
+use ChurchCMS\Core\ThemeContext;
 use ChurchCMS\Core\ThemeRenderer;
 use ChurchCMS\Modules\Organizations\OrganizationService;
 use ChurchCMS\Modules\Publications\PublicationRepository;
@@ -136,7 +137,11 @@ if (
     exit(1);
 }
 
-$theme = ThemeRenderer::fromConfig();
+$renderer = ThemeRenderer::fromConfig();
+$theme = new ThemeContext(
+    $renderer,
+    'default',
+);
 $connections = [];
 $adapters = [];
 $inboxItems = [];
