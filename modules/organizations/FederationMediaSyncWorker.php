@@ -177,7 +177,7 @@ final class FederationMediaSyncWorker implements FederationSyncWorker
         $projectionCount = 0;
         $tombstoneCount = 0;
 
-        $documentPage = $this->page(
+        $mediaPage = $this->page(
             $link,
             '/api/v1/partner/media',
             $cursor['media'],
@@ -185,7 +185,7 @@ final class FederationMediaSyncWorker implements FederationSyncWorker
             $pageSize,
         );
 
-        foreach ($documentPage['items'] as $item) {
+        foreach ($mediaPage['items'] as $item) {
             $applied = $this->projections->applyUpsert(
                 $link->publicId,
                 'media',
@@ -198,16 +198,16 @@ final class FederationMediaSyncWorker implements FederationSyncWorker
         }
 
         $cursor['media'] =
-            $documentPage['cursor'];
-        $documentCursor = self::encodeCursor($cursor);
-        if ($documentCursor !== $storedCursor) {
+            $mediaPage['cursor'];
+        $mediaCursor = self::encodeCursor($cursor);
+        if ($mediaCursor !== $storedCursor) {
             $this->syncStates->saveCursor(
                 $link->id,
                 $this->id(),
                 $storedCursor,
-                $documentCursor,
+                $mediaCursor,
             );
-            $storedCursor = $documentCursor;
+            $storedCursor = $mediaCursor;
         }
 
         $tombstonePage = $this->page(
@@ -244,7 +244,7 @@ final class FederationMediaSyncWorker implements FederationSyncWorker
         return [
             'projections' => $projectionCount,
             'tombstones' => $tombstoneCount,
-            'pending' => $documentPage['has_more']
+            'pending' => $mediaPage['has_more']
                 || $tombstonePage['has_more'],
         ];
     }
