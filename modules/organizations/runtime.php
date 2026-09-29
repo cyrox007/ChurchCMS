@@ -28,6 +28,7 @@ foreach ([
     'FederationWorkerSyncStateRepository.php',
     'FederationPublicationSyncWorker.php',
     'FederationEventSyncWorker.php',
+    'FederationWorshipSyncWorker.php',
     'FederationSyncCoordinator.php',
     'OrganizationRepository.php',
     'OrganizationAccessService.php',

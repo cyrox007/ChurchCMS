@@ -48,11 +48,16 @@
 - проверка cross-site границы на уровне сервиса и БД;
 - smoke-проверка.
 
-Federation source-side реализован отдельным partner API: `scheduled` и
+Federation transport реализован в обе стороны. Source-side доступен отдельным partner API: `scheduled` и
 `cancelled` записи передаются безопасной projection без `description_html`,
 а `withdraw` создаёт tombstone. Потоки используют составной курсор
 `updated_at + public_id`, повторное `schedule` удаляет устаревший tombstone.
 
+`FederationWorshipSyncWorker` принимает оба потока в собственное состояние
+worker `worship` и сохраняет их как remote projections типа `worship`, не
+создавая локальные канонические записи расписания. Частичный сбой одного потока
+не перетирает подтверждённый курсор другого.
+
 Admin Shell, публичный календарь/API, повторяющиеся правила, праздничные
-шаблоны, принимающий federation worker и агрегация остаются следующими
+шаблоны и агрегированное публичное представление federation остаются следующими
 инкрементами.

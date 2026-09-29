@@ -558,3 +558,17 @@ Partner projection передаёт stable public ID, тип `worship`, стат
 
 Активный поток и tombstone-поток используют составной курсор `updated_at + public_id`, bounded page size и scope `content.read`. Этот инкремент реализует только source-side контракт; принимающий worker, агрегация и публичный календарь Worship остаются отдельными задачами.
 
+## D-053 — Worship принимается как отдельная remote projection
+
+Принято.
+
+`FederationWorshipSyncWorker` имеет стабильный ID `worship` и использует собственное состояние в `federation_worker_sync_states`. Его cursor, время последнего успеха и ошибка не разделяются с Publications или Events.
+
+Worker получает два bounded-потока: активные состояния `scheduled/cancelled` и tombstones после `withdraw`. Каждый поток имеет составной курсор `updated_at + public_id`; подтверждённый курсор активного потока сохраняется до запроса tombstones, поэтому частичный сетевой сбой не заставляет повторно сканировать уже применённую страницу.
+
+Полученные элементы применяются через общий `FederationProjectionService` как тип `worship`. Они сохраняют идентичность federation link и исходный stable public ID и не создают локальные канонические записи `worship_services`.
+
+Worker выбирает только активные доверенные связи с входящим scope `content.read`, соответствующим source-side Worship endpoints. Общий coordinator запускает Publications, Events и Worship независимо, поэтому отказ одного типа не останавливает остальные.
+
+Это решение завершает транспортный путь Worship source → worker → remote projection/tombstone, но не реализует публичную агрегацию, календарные представления, Admin Shell, повторяющиеся правила или праздничные шаблоны.
+

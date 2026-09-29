@@ -109,6 +109,8 @@ Implemented:
 - Worship получил source-side federation contract: `scheduled` и `cancelled` остаются partner-visible, `withdraw` создаёт tombstone, а повторное `schedule` очищает его;
 - partner projection Worship отдаёт stable owner, тип службы, статус, время и место, но не экспортирует сырой `description_html`;
 - partner endpoints Worship используют bounded page size и составной курсор `updated_at + public_id`; PostgreSQL/MySQL smoke проверяет lifecycle и отсутствие HTML в projection;
+- `FederationWorshipSyncWorker` принимает активный Worship-поток и tombstones как отдельные bounded-потоки, применяет их через remote projections типа `worship` и подключён к общему coordinator;
+- состояние Worship хранится под worker ID `worship` отдельно от Publications/Events; smoke проверяет частичный сбой tombstone-потока, безопасное продолжение и сохранность состояния другого worker;
 - `docs/ORGANIZATIONS_AND_FEDERATION.md` фиксирует результаты анализа епархиальных/митрополичьих сайтов и общий domain contract.
 
 Дальше:
