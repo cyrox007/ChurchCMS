@@ -6,6 +6,7 @@ namespace ChurchCMS\Modules\Publications;
 
 use ChurchCMS\Core\Config;
 use ChurchCMS\Core\DatabaseManager;
+use ChurchCMS\Core\SeoRenderer;
 use ChurchCMS\Modules\Organizations\FederationLink;
 use ChurchCMS\Modules\Organizations\FederationRemoteProjection;
 use ChurchCMS\Modules\Organizations\FederationRemoteProjectionRepository;
@@ -157,9 +158,6 @@ final class FederatedPublicationFeedService
      */
     private function localItem(Publication $publication): array
     {
-        $resource = (new PublicationApiResource(
-            $publication,
-        ))->toApiArray();
         $publishedAt = $publication->publishedAt
             ?->setTimezone(new DateTimeZone('UTC'))
             ->format(DATE_ATOM);
@@ -167,7 +165,10 @@ final class FederatedPublicationFeedService
             ->setTimezone(new DateTimeZone('UTC'))
             ->format(DATE_ATOM);
         $url = self::optionalString(
-            $resource['url'] ?? null,
+            SeoRenderer::absoluteUrl(
+                '/publications/'
+                . rawurlencode($publication->slug),
+            ),
             1000,
         );
 
