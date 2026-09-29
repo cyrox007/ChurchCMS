@@ -7,6 +7,7 @@ namespace ChurchCMS\Modules\Social;
 use ChurchCMS\App\Services\AdminAuthorization;
 use ChurchCMS\App\Services\AdminShell;
 use ChurchCMS\Core\AuditLog;
+use ChurchCMS\Core\ModuleRuntimeLoader;
 use ChurchCMS\Core\Request;
 use ChurchCMS\Core\Response;
 use InvalidArgumentException;
@@ -30,6 +31,7 @@ final class SocialAdminController
                 'title' => 'Внешние каналы',
                 'connections' => SocialConnectionRepository::fromDatabase()->all(),
                 'adapters' => $service->availableAdapters(),
+                'inboxItems' => ExternalChannelItemRepository::fromDatabase()->pending(),
                 'channelStatus' => self::status($request),
             ],
             'external-channels',
@@ -105,6 +107,117 @@ final class SocialAdminController
         }
     }
 
+    public function ignoreInboxItem(
+        Request $request,
+        string $publicId,
+    ): never {
+        AdminAuthorization::requirePermission(
+            $request,
+            'social.manage',
+        );
+
+        $repository = ExternalChannelItemRepository::fromDatabase();
+        $item = $repository->findByPublicId($publicId);
+        if ($item === null || $item->status !== 'pending') {
+            Response::text('404 Not Found', 404);
+        }
+
+        $repository->markIgnored($publicId);
+
+        AuditLog::emit(
+            eventType: 'external_channel.inbox.ignored',
+            actorUserId: self::actorId($request),
+            subjectType: 'external_channel_item',
+            subjectId: $publicId,
+            metadata: [
+                'connection_id' => $item->connectionId,
+                'remote_id' => $item->remoteId,
+            ],
+            request: $request,
+        );
+
+        Response::redirectLocal(
+            '/admin/external-channels?status=inbox-ignored',
+        );
+    }
+
+    public function linkInboxItem(
+        Request $request,
+        string $publicId,
+    ): never {
+        AdminAuthorization::requirePermission(
+            $request,
+            'social.manage',
+        );
+
+        $repository = ExternalChannelItemRepository::fromDatabase();
+        $item = $repository->findByPublicId($publicId);
+        if ($item === null || $item->status !== 'pending') {
+            Response::text('404 Not Found', 404);
+        }
+
+        $publicationPublicId = trim(
+            (string) $request->post('publication_public_id', '')
+        );
+        if ($publicationPublicId === '') {
+            Response::redirectLocal(
+                '/admin/external-channels?status=link-invalid',
+            );
+        }
+
+        $capability = ModuleRuntimeLoader::capability(
+            'publications',
+            'publications.repository',
+        );
+
+        if (
+            $capability === null
+            || !method_exists($capability, 'repository')
+        ) {
+            Response::redirectLocal(
+                '/admin/external-channels?status=link-unavailable',
+            );
+        }
+
+        $publicationRepository = $capability->repository();
+        if (!method_exists($publicationRepository, 'findByPublicId')) {
+            Response::redirectLocal(
+                '/admin/external-channels?status=link-unavailable',
+            );
+        }
+
+        $publication = $publicationRepository->findByPublicId(
+            $publicationPublicId
+        );
+        if ($publication === null) {
+            Response::redirectLocal(
+                '/admin/external-channels?status=link-invalid',
+            );
+        }
+
+        $repository->linkToPublication(
+            $publicId,
+            $publication->id,
+        );
+
+        AuditLog::emit(
+            eventType: 'external_channel.inbox.linked',
+            actorUserId: self::actorId($request),
+            subjectType: 'external_channel_item',
+            subjectId: $publicId,
+            metadata: [
+                'connection_id' => $item->connectionId,
+                'remote_id' => $item->remoteId,
+                'publication_public_id' => $publicationPublicId,
+            ],
+            request: $request,
+        );
+
+        Response::redirectLocal(
+            '/admin/external-channels?status=inbox-linked',
+        );
+    }
+
     private static function actorId(Request $request): ?int
     {
         $user = $request->attribute('admin.user');
@@ -135,6 +248,26 @@ final class SocialAdminController
                 'kind' => 'error',
                 'title' => 'Подключение не создано',
                 'message' => 'Проверка канала не пройдена или адаптер временно недоступен. Секрет не сохранён.',
+            ],
+            'inbox-ignored' => [
+                'kind' => 'success',
+                'title' => 'Входящий материал скрыт',
+                'message' => 'Объект исключён из очереди проверки и не был импортирован.',
+            ],
+            'inbox-linked' => [
+                'kind' => 'success',
+                'title' => 'Материал связан',
+                'message' => 'Внешний объект связан с существующей публикацией ChurchCMS.',
+            ],
+            'link-invalid' => [
+                'kind' => 'error',
+                'title' => 'Публикация не найдена',
+                'message' => 'Укажите корректный публичный ID существующей публикации.',
+            ],
+            'link-unavailable' => [
+                'kind' => 'error',
+                'title' => 'Связь временно недоступна',
+                'message' => 'Модуль публикаций сейчас не предоставляет нужную возможность.',
             ],
             default => null,
         };
