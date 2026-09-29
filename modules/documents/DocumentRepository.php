@@ -75,6 +75,36 @@ final class DocumentRepository
         );
     }
 
+    /**
+     * @return list<DocumentRecord>
+     */
+    public function forFederation(
+        string $siteKey = 'default',
+        int $limit = 100,
+    ): array {
+        $limit = max(1, min(500, $limit));
+
+        $statement = $this->pdo->prepare(
+            'SELECT *
+             FROM documents
+             WHERE site_key = :site_key
+               AND visibility = :visibility
+               AND status = :status
+             ORDER BY updated_at ASC, public_id ASC
+             LIMIT ' . $limit
+        );
+        $statement->execute([
+            'site_key' => $siteKey,
+            'visibility' => 'federated',
+            'status' => 'published',
+        ]);
+
+        return array_map(
+            self::hydrate(...),
+            $statement->fetchAll(),
+        );
+    }
+
     private static function hydrate(array $row): DocumentRecord
     {
         return new DocumentRecord(
@@ -84,6 +114,7 @@ final class DocumentRepository
             ownerOrganizationPublicId:
                 (string) $row['owner_organization_public_id'],
             status: (string) $row['status'],
+            visibility: (string) ($row['visibility'] ?? 'private'),
             title: (string) $row['title'],
             documentType: (string) $row['document_type'],
             documentNumber: self::nullable(
