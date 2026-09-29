@@ -180,6 +180,33 @@ $projections->applyUpsert(
     $siteKey,
 );
 
+$parentLink = documentAggregationLink(
+    $federation,
+    $siteKey,
+    $root->publicId,
+    'parent',
+    'de000000-0000-4000-8000-00000000000e',
+    'df000000-0000-4000-8000-00000000000f',
+    'https://parent-documents.example',
+    ['content.read'],
+    'Вышестоящий узел документов',
+);
+$projections->applyUpsert(
+    $parentLink,
+    'document',
+    [
+        'id' => 'e0000000-0000-4000-8000-000000000010',
+        'type' => 'document',
+        'title' => 'Документ вышестоящего узла',
+        'document_type' => 'notice',
+        'organization_owner_id' =>
+            'e1000000-0000-4000-8000-000000000011',
+        'updated_at' => '2099-04-07T11:00:00Z',
+        'url' => null,
+    ],
+    $siteKey,
+);
+
 $noScopeLink = documentAggregationLink(
     $federation,
     $siteKey,
@@ -268,6 +295,7 @@ foreach ([
     $federatedLocalId,
     $deletedDocument,
     'Документ peer-узла',
+    'Документ вышестоящего узла',
     'Документ без разрешения',
 ] as $forbidden) {
     if (str_contains($json, $forbidden)) {
