@@ -85,6 +85,97 @@ final class MigrationRunner
     }
 
     /**
+     * Откатывает только явно перечисленные применённые обратимые миграции.
+     *
+     * Перед первым изменением БД весь набор проверяется целиком: миграции должны
+     * существовать, быть применены и реализовывать ReversibleMigration.
+     *
+     * @param list<string> $migrationIds
+     * @return list<string> идентификаторы в фактическом порядке отката
+     */
+    public function rollback(array $migrationIds): array
+    {
+        if ($migrationIds === []) {
+            return [];
+        }
+
+        $pdo = $this->database->connection();
+        $driver = (string) $pdo->getAttribute(PDO::ATTR_DRIVER_NAME);
+        $this->ensureTable($pdo, $driver);
+
+        $available = [];
+        foreach ($this->discover() as $migration) {
+            $available[$migration->id()] = $migration;
+        }
+
+        $applied = $this->applied($pdo);
+        $selected = [];
+
+        foreach ($migrationIds as $id) {
+            if (!is_string($id) || $id === '') {
+                throw new RuntimeException('Список отката содержит некорректный идентификатор миграции.');
+            }
+
+            if (isset($selected[$id])) {
+                continue;
+            }
+
+            $migration = $available[$id] ?? null;
+            if (!$migration instanceof Migration) {
+                throw new RuntimeException("Миграция для отката не найдена: {$id}");
+            }
+
+            if (!isset($applied[$id])) {
+                throw new RuntimeException("Нельзя откатить неприменённую миграцию: {$id}");
+            }
+
+            if (!$migration instanceof ReversibleMigration) {
+                throw new RuntimeException("Миграция не поддерживает безопасный откат: {$id}");
+            }
+
+            $selected[$id] = $migration;
+        }
+
+        uksort(
+            $selected,
+            static fn(string $left, string $right): int => strcmp($right, $left),
+        );
+
+        $rolledBack = [];
+
+        foreach ($selected as $id => $migration) {
+            $transactional = $driver !== 'mysql';
+
+            try {
+                if ($transactional) {
+                    $pdo->beginTransaction();
+                }
+
+                $migration->down($pdo, $driver);
+
+                $statement = $pdo->prepare(
+                    'DELETE FROM churchcms_migrations WHERE migration_id = :id'
+                );
+                $statement->execute(['id' => $id]);
+
+                if ($transactional) {
+                    $pdo->commit();
+                }
+
+                $rolledBack[] = $id;
+            } catch (Throwable $e) {
+                if ($pdo->inTransaction()) {
+                    $pdo->rollBack();
+                }
+
+                throw new RuntimeException("Не удалось откатить миграцию: {$id}", 0, $e);
+            }
+        }
+
+        return $rolledBack;
+    }
+
+    /**
      * @return list<Migration>
      */
     private function discover(): array
