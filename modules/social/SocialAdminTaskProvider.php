@@ -44,7 +44,7 @@ final class SocialAdminTaskProvider implements AdminTaskProvider
             'description' => implode('; ', $parts) . '.',
             'count' => $count,
             'severity' => 'error',
-            'route' => '',
+            'route' => 'admin_external_channels',
             'route_params' => [],
         ]];
     }
