@@ -34,7 +34,7 @@ Status: in progress.
 - [ ] Media library.
 - [ ] People/clergy (основа схемы, доменного слоя и организационных связей назначений реализована; Admin Shell, публичная часть и API остаются).
 - [ ] Worship schedule (schema/domain foundation с обязательным organization owner реализован; Admin Shell, public/API, повторяющиеся правила и праздничные шаблоны остаются).
-- [ ] Events.
+- [ ] Events (schema/domain foundation с обязательным organization owner реализован; Admin Shell, публикация, public/API, календарные представления и повторяющиеся правила остаются).
 - [ ] Galleries.
 - [ ] Documents.
 - [ ] Search.
@@ -94,7 +94,7 @@ Status: in progress.
 - [x] Admin UI дерева организаций/подразделений.
 - [x] Federation pairing wizard и отзыв доверия.
 - [x] Organization-scoped RBAC enforcement.
-- [ ] Organization ownership/references для Publications/Pages/People/Worship/Events/Media/Documents (Publications Admin/RBAC, Pages Admin/API RBAC, foundation People/назначений и Worship реализованы; Events/Media/Documents остаются).
+- [ ] Organization ownership/references для Publications/Pages/People/Worship/Events/Media/Documents (Publications Admin/RBAC, Pages Admin/API RBAC, foundation People/назначений, Worship и Events реализованы; Media/Documents остаются).
 - [ ] Parent/child aggregation и remote projections/tombstones (source-side tombstone Publications, принимающее хранилище remote projections, фоновая синхронизация, безопасная агрегированная API-лента, RSS и публичный блок главной для Publications реализованы; обработчики остальных типов остаются).
 - [ ] Federation health/sync dashboard (health/retry/conflict UI и последние sync/error состояния реализованы; подробный прогресс и метрики синхронизации остаются).
 

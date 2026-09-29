@@ -1,0 +1,7 @@
+{
+  "id": "events",
+  "name": "События",
+  "version": "0.1.0",
+  "runtime": "runtime.php",
+  "capabilities": []
+}

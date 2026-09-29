@@ -86,14 +86,18 @@ Implemented:
 - модуль `worship` хранит расписание с обязательным `owner_organization_public_id`, временем начала/окончания, типом, местом и статусом;
 - `WorshipScheduleService` назначает site root владельцем по умолчанию, нормализует время в UTC, запрещает окончание раньше начала и cross-site/архивного владельца;
 - PostgreSQL/MySQL проверяют составной внешний ключ `(site_key, owner_organization_public_id)` и smoke подтверждает создание, смену владельца, отмену и запрет чужого `site_key`;
+- модуль `events` хранит события с обязательным `owner_organization_public_id`, временем начала/окончания, all-day признаком, местом, кратким описанием и статусом;
+- `EventService` назначает site root владельцем по умолчанию, нормализует время в UTC, запрещает обратный временной интервал и cross-site/архивного владельца;
+- PostgreSQL/MySQL smoke проверяет Events foundation, включая составной FK, смену владельца, отмену и запрет чужого `site_key`;
 - `docs/ORGANIZATIONS_AND_FEDERATION.md` фиксирует результаты анализа епархиальных/митрополичьих сайтов и общий domain contract.
 
 Дальше:
 
-- organization ownership для Events/Media/Documents;
+- organization ownership для Media/Documents;
 - Admin/public/API слой People и расширенные сведения о духовенстве;
 - обобщить синхронизацию на остальные типы remote projections и общий планировщик;
 - Admin/public/API и повторяющиеся правила Worship;
+- Admin/public/API, публикация и календарные представления Events;
 - расширить source-preserving federation-контракт с Publications на Events/Worship/Media/Documents.
 
 ## Installation
