@@ -58,7 +58,8 @@ Priority is ordered within each section.
   - [x] Events: объединять ближайшие локальные события и active remote projections только от `child`-связей с `content.read`, сохраняя `instance_id`, organization owner, имя и canonical URL источника;
   - [x] Events: публичный `GET /api/v1/events/aggregated` не отдаёт сырой `description_html`, исключает tombstone/peer/parent/no-scope и сортирует по времени начала;
   - [ ] расширить тот же контракт агрегации на Worship/Media/Documents;
-- [x] federation health/retry/conflict UI.
+- [x] federation health/retry/conflict UI;
+  - [x] сводные метрики активных связей и worker, отдельные success/error/partial/not-started состояния без раскрытия содержимого sync cursor.
 
 ## P0 — Installation and operator UX
 
