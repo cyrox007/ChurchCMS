@@ -52,8 +52,10 @@ tombstone. Повторная публикация очищает устарев
 - безопасная partner projection без сырого `description_html`;
 - incremental partner endpoint с составным курсором;
 - отдельный tombstone endpoint;
-- PostgreSQL/MySQL smoke source-side federation lifecycle.
+- принимающий `FederationEventSyncWorker` и регистрация в общем coordinator;
+- отдельный cursor/error state для Events, не пересекающийся с Publications;
+- PostgreSQL/MySQL smoke source-side и receiving federation lifecycle.
 
 Admin Shell, публичный Events API/страницы, категории, повторяющиеся правила,
-календарные представления и принимающий federation sync worker остаются
+календарные представления и агрегированная federation-лента Events остаются
 следующими инкрементами.
