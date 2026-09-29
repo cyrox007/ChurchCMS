@@ -46,11 +46,43 @@ if (
     || $rootDocument->documentNumber !== '12/2026'
     || $rootDocument->issuedOn !== '2026-10-15'
     || $rootDocument->status !== 'draft'
+    || $rootDocument->visibility !== 'private'
 ) {
     fwrite(
         STDERR,
         "Документ не получил корректную карточку/root-владельца.\n",
     );
+    exit(1);
+}
+
+try {
+    $documents->setVisibility(
+        $rootDocumentId,
+        'federated',
+        $siteKey,
+    );
+    fwrite(STDERR, "Черновик документа получил federation visibility.\n");
+    exit(1);
+} catch (InvalidArgumentException) {
+}
+
+$documents->publish($rootDocumentId, $siteKey);
+$documents->setVisibility($rootDocumentId, 'federated', $siteKey);
+$federatedDocuments = $repository->forFederation($siteKey);
+if (
+    count($federatedDocuments) !== 1
+    || $federatedDocuments[0]->publicId !== $rootDocumentId
+) {
+    fwrite(STDERR, "Documents federation visibility не отфильтрована.\n");
+    exit(1);
+}
+$documents->withdraw($rootDocumentId, $siteKey);
+$withdrawn = $repository->findByPublicId($rootDocumentId, $siteKey);
+if (
+    $withdrawn?->status !== 'draft'
+    || $withdrawn?->visibility !== 'private'
+) {
+    fwrite(STDERR, "Снятие документа не вернуло private visibility.\n");
     exit(1);
 }
 
