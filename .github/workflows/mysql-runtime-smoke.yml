@@ -23,9 +23,11 @@ on:
       - 'modules/pages/PageRepository.php'
       - 'modules/organizations/**'
       - 'modules/people/**'
+      - 'modules/worship/**'
       - 'tools/publication-organization-owner-smoke.php'
       - 'tools/publication-partner-tombstone-smoke.php'
       - 'tools/people-organization-smoke.php'
+      - 'tools/worship-organization-smoke.php'
       - 'tools/federation-remote-projection-smoke.php'
       - 'tools/federation-publication-sync-smoke.php'
       - 'tools/federated-publication-feed-smoke.php'
@@ -53,7 +55,9 @@ on:
       - 'modules/pages/PageRepository.php'
       - 'modules/organizations/**'
       - 'modules/people/**'
+      - 'modules/worship/**'
       - 'tools/people-organization-smoke.php'
+      - 'tools/worship-organization-smoke.php'
       - 'tools/federation-remote-projection-smoke.php'
       - 'tools/publication-organization-owner-smoke.php'
       - 'tools/publication-partner-tombstone-smoke.php'
@@ -236,3 +240,6 @@ jobs:
 
       - name: Проверить людей и назначения в MySQL
         run: php tools/people-organization-smoke.php
+
+      - name: Проверить расписание богослужений в MySQL
+        run: php tools/worship-organization-smoke.php

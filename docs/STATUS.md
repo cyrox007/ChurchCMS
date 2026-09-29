@@ -83,13 +83,17 @@ Implemented:
 - модуль `people` хранит карточку человека с обязательным каноническим organization owner и отдельные назначения в конкретные organization units;
 - `PeopleService` по умолчанию назначает владельцем site root, запрещает cross-site владельцев/назначения и валидирует период назначения;
 - составные внешние ключи `(site_key, public_id)` дополнительно запрещают cross-site связи на уровне PostgreSQL/MySQL;
+- модуль `worship` хранит расписание с обязательным `owner_organization_public_id`, временем начала/окончания, типом, местом и статусом;
+- `WorshipScheduleService` назначает site root владельцем по умолчанию, нормализует время в UTC, запрещает окончание раньше начала и cross-site/архивного владельца;
+- PostgreSQL/MySQL проверяют составной внешний ключ `(site_key, owner_organization_public_id)` и smoke подтверждает создание, смену владельца, отмену и запрет чужого `site_key`;
 - `docs/ORGANIZATIONS_AND_FEDERATION.md` фиксирует результаты анализа епархиальных/митрополичьих сайтов и общий domain contract.
 
 Дальше:
 
-- organization ownership для Worship/Events/Media/Documents;
+- organization ownership для Events/Media/Documents;
 - Admin/public/API слой People и расширенные сведения о духовенстве;
 - обобщить синхронизацию на остальные типы remote projections и общий планировщик;
+- Admin/public/API и повторяющиеся правила Worship;
 - расширить source-preserving federation-контракт с Publications на Events/Worship/Media/Documents.
 
 ## Installation
