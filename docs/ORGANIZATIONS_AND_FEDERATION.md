@@ -201,13 +201,28 @@ Events/Worship/Media/Documents должны подключаться отдел�
 разрастания единого условного обработчика. CLI `bin/federation-sync.php`
 запускает coordinator и поэтому остаётся одной точкой для cron/systemd timer.
 
-Для Events уже реализована source-side часть этого контракта. Опубликованные
-события доступны через bounded partner feed с составным курсором
-`updated_at + public_id`. Снятие или отмена ранее опубликованного события
-создаёт отдельный tombstone; повторная публикация очищает устаревший tombstone.
-Partner projection Events сохраняет stable owner и временные поля, но не
-экспортирует сырой `description_html`. Принимающий Events worker остаётся
-отдельным следующим инкрементом.
+Состояние синхронизации не делится между типами данных. Таблица
+`federation_worker_sync_states` хранит отдельные cursor, `last_sync_at` и
+`last_sync_error` для пары federation link + worker ID. Это необходимо до
+подключения второго worker: общий `sync_cursor` на link привёл бы к взаимному
+перетиранию прогресса Publications и Events.
+
+При обновлении существующей установки legacy-состояние link переносится в
+worker `publications`. Пока Admin Shell читает старые поля link, Publications
+worker зеркалит в них своё состояние как совместимый переходный слой. Новые
+worker этого не делают. Отзыв доверия и повторное pairing очищают все
+worker-состояния соответствующей связи.
+
+Для Events реализован полный транспортный путь source → worker → remote
+projection/tombstone. Опубликованные события доступны через bounded partner feed
+с составным курсором `updated_at + public_id`; снятие или отмена ранее
+опубликованного события создаёт отдельный tombstone, а повторная публикация
+очищает устаревший tombstone. `FederationEventSyncWorker` использует собственное
+состояние `events`, поэтому его cursor/ошибка не перетирают Publications.
+Полученные данные сохраняются как remote projection типа `event` и не становятся
+локальными каноническими Events. Сырой `description_html` через federation не
+передаётся. Агрегированный публичный календарь Events остаётся отдельным
+инкрементом.
 
 Вышестоящий узел может читать нормализованную общую ленту через
 `GET /api/v1/publications/aggregated`. В неё входят собственные опубликованные

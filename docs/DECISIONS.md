@@ -516,3 +516,33 @@ Tombstone создаётся только когда из partner-visible сос
 Повторная публикация очищает старый tombstone. Это обязательно для полного sync нового принимающего узла: старое удаление не должно применяться после более нового активного состояния.
 
 Endpoints `/api/v1/partner/events` и `/api/v1/partner/events/tombstones` требуют `content.read`. Принимающий Events worker, remote projection/aggregation и публичный календарь остаются отдельными следующими инкрементами.
+
+
+## D-050 — Каждый federation sync worker имеет собственное состояние
+
+Принято.
+
+Несколько `FederationSyncWorker` одной federation-связи не могут использовать общий `sync_cursor`. Publications, Events и последующие типы продвигаются независимо; общий cursor позволил бы одному worker перезаписать прогресс другого и привести к пропуску или повторной обработке данных.
+
+Состояние хранится по ключу `(federation_link_id, worker_id)` и содержит cursor, время последнего успешного прохода и последнюю безопасную ошибку. Изменение cursor использует optimistic locking по ожидаемому предыдущему значению, поэтому устаревший параллельный процесс не может молча перезаписать более новое состояние.
+
+Миграция переносит существующие link-level `sync_cursor`, `last_sync_at` и `last_sync_error` в worker `publications`. На переходный период Publications worker зеркалит своё состояние обратно в legacy-поля link, чтобы существующий Admin Shell не потерял текущий статус. Новые worker не используют legacy cursor.
+
+При revoke federation-связи и при повторном pairing ранее отозванной связи все worker-состояния удаляются. Старый cursor не должен переживать отзыв доверия и применяться к новому сеансу обмена.
+
+Это решение является обязательной инфраструктурой перед подключением принимающего Events worker и следующих Worship/Media/Documents worker.
+
+## D-051 — Events принимается как remote projection через отдельный worker
+
+Принято.
+
+`FederationEventSyncWorker` использует тот же bounded incremental contract, что и источник Events: отдельный поток активных событий и отдельный поток tombstone, оба с составным курсором `updated_at + public_id`. Курсор продвигается только после успешного применения соответствующей страницы.
+
+Worker хранит cursor, `last_sync_at` и безопасную ошибку под ID `events` в `federation_worker_sync_states`. Состояние Publications не используется и не изменяется; частичный сбой tombstone-потока сохраняет уже подтверждённый Events cursor и позволяет продолжить именно незавершённую часть при следующем запуске.
+
+Полученные объекты применяются через общий `FederationProjectionService` как тип `event`. Они остаются remote projections исходного federation link и не создают локальные канонические записи Events. Tombstone сохраняет ту же идентичность источника и может пометить projection удалённой, не выполняя hard-delete.
+
+Worker выбирает только активные доверенные связи с входящим scope `content.read`, соответствующим partner endpoints Events. Общий `FederationSyncCoordinator` запускает Publications и Events как независимые worker; сбой одного типа не прекращает проход другого.
+
+Этот инкремент не объявляет Events завершённым: Admin Shell, публичные страницы/API, повторяющиеся правила, календарные представления и агрегированная federation-лента Events остаются отдельными задачами.
+
