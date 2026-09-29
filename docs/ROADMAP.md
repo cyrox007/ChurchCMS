@@ -96,7 +96,7 @@ Status: in progress.
 - [x] Organization-scoped RBAC enforcement.
 - [x] Organization ownership/references для Publications/Pages/People/Worship/Events/Media/Documents (organization owner/reference foundation реализован для всех перечисленных типов).
 - [ ] Parent/child aggregation и remote projections/tombstones (Publications полностью проходит source → worker → projection → aggregation; Events проходит source → worker → remote projection/tombstone → безопасную агрегированную API-ленту; Worship проходит source → worker → remote projection/tombstone, его агрегация остаётся; federation sync Media/Documents ещё не подключён).
-- [ ] Federation health/sync dashboard (health/retry/conflict UI и последние sync/error состояния реализованы; подробный прогресс и метрики синхронизации остаются).
+- [x] Federation health/sync dashboard (health/retry/conflict UI, отдельные состояния Publications/Events/Worship, безопасный прогресс и сводные метрики реализованы).
 
 ## Cross-cutting — External channels
 
