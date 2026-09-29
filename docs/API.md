@@ -310,6 +310,28 @@ canonical URL. Filesystem path, blob и непроверенный файл не
 Если `has_more=true`, следующий запрос должен передать одновременно
 `next_updated_since` и `next_after`.
 
+## Агрегированная лента документов
+
+Публичный endpoint:
+
+```
+GET /api/v1/documents/aggregated?limit=20
+```
+
+Локальная часть содержит только документы со статусом `published` и
+видимостью `public`. Локальная видимость `federated` разрешает межсайтовый
+экспорт, но не делает карточку публичной на собственном узле.
+
+Удалённая часть содержит только active remote projections типа `document` от
+активных `child`-связей с `content.read`. Tombstone, `parent`, `peer` и
+связи без нужного scope исключаются.
+
+Каждый элемент содержит безопасные поля карточки и блок `source` с
+`kind`, `instance_id`, `organization_id`, именем и canonical URL
+источника. Произвольные поля remote payload в ответ не копируются. В
+`meta.aggregation` возвращаются `limit`, число локальных и удалённых
+элементов.
+
 ## Partner sync Media
 
 Media использует составной incremental-курсор `updated_at + public_id`.

@@ -426,8 +426,16 @@ projection типа `document`, tombstone помечает только эту p
 активного потока сохраняется до tombstone-запроса, поэтому частичный сбой
 продолжается без повторного чтения уже применённой страницы. Worker доступен
 только для активных связей с входящим `content.read` и отображается отдельной
-строкой состояния в Admin Shell. Для Documents пока остаётся aggregation с
-сохранением исходного узла.
+строкой состояния в Admin Shell.
+
+Публичная агрегация Documents завершает этот federation-путь:
+`GET /api/v1/documents/aggregated` объединяет локальные `published/public`
+карточки и active remote projections только от дочерних связей с
+`content.read`. Локальная видимость `federated` не считается локальной
+публикацией. В каждой удалённой карточке сохраняются instance ID,
+organization owner, имя и canonical URL источника; tombstone, parent, peer и
+связи без нужного scope исключаются. Произвольный remote payload наружу не
+передаётся.
 
 Для Media source-side federation также реализован, но намеренно ограничен
 метаданными. Partner API пропускает только неархивные записи с явной

@@ -10,6 +10,7 @@ on:
       - 'modules/organizations/**'
       - 'tools/document-organization-smoke.php'
       - 'tools/document-partner-sync-smoke.php'
+      - 'tools/federated-document-feed-smoke.php'
       - '.github/workflows/documents-organization-smoke.yml'
   pull_request:
     branches:
@@ -19,6 +20,8 @@ on:
       - 'modules/documents/**'
       - 'modules/organizations/**'
       - 'tools/document-organization-smoke.php'
+      - 'tools/document-partner-sync-smoke.php'
+      - 'tools/federated-document-feed-smoke.php'
       - '.github/workflows/documents-organization-smoke.yml'
 
 permissions:
@@ -61,6 +64,7 @@ jobs:
           find modules/documents -type f -name '*.php' -print0 | xargs -0 -n1 php -l
           php -l tools/document-organization-smoke.php
           php -l tools/document-partner-sync-smoke.php
+          php -l tools/federated-document-feed-smoke.php
           php bin/migrate.php validate
 
       - name: Подготовить тестовую установку
@@ -97,3 +101,6 @@ jobs:
 
       - name: Проверить source-side federation Documents
         run: php tools/document-partner-sync-smoke.php
+
+      - name: Проверить агрегированную Documents-ленту
+        run: php tools/federated-document-feed-smoke.php

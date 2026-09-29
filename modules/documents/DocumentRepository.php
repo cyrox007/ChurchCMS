@@ -78,6 +78,43 @@ final class DocumentRepository
         );
     }
 
+
+    /**
+     * Возвращает только локально опубликованные публичные документы.
+     *
+     * @return list<DocumentRecord>
+     */
+    public function publishedPublic(
+        string $siteKey = 'default',
+        int $limit = 50,
+    ): array {
+        $limit = max(1, min(50, $limit));
+
+        $statement = $this->pdo->prepare(
+            'SELECT *
+             FROM documents
+             WHERE site_key = :site_key
+               AND status = :status
+               AND visibility = :visibility
+             ORDER BY
+                 CASE WHEN issued_on IS NULL THEN 1 ELSE 0 END ASC,
+                 issued_on DESC,
+                 updated_at DESC,
+                 public_id DESC
+             LIMIT ' . $limit
+        );
+        $statement->execute([
+            'site_key' => $siteKey,
+            'status' => 'published',
+            'visibility' => 'public',
+        ]);
+
+        return array_map(
+            self::hydrate(...),
+            $statement->fetchAll(),
+        );
+    }
+
     /**
      * @return list<DocumentRecord>
      */
