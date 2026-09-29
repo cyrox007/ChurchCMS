@@ -9,6 +9,7 @@ on:
       - 'modules/documents/**'
       - 'modules/organizations/**'
       - 'tools/document-organization-smoke.php'
+      - 'tools/document-partner-sync-smoke.php'
       - '.github/workflows/documents-organization-smoke.yml'
   pull_request:
     branches:
@@ -59,6 +60,7 @@ jobs:
           set -euo pipefail
           find modules/documents -type f -name '*.php' -print0 | xargs -0 -n1 php -l
           php -l tools/document-organization-smoke.php
+          php -l tools/document-partner-sync-smoke.php
           php bin/migrate.php validate
 
       - name: Подготовить тестовую установку
@@ -92,3 +94,6 @@ jobs:
 
       - name: Проверить Documents и organization owner
         run: php tools/document-organization-smoke.php
+
+      - name: Проверить source-side federation Documents
+        run: php tools/document-partner-sync-smoke.php

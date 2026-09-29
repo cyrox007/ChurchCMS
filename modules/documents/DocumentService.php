@@ -9,8 +9,10 @@ use ChurchCMS\Core\Uuid;
 use ChurchCMS\Modules\Organizations\OrganizationRepository;
 use ChurchCMS\Modules\Organizations\OrganizationUnit;
 use DateTimeImmutable;
+use DateTimeZone;
 use InvalidArgumentException;
 use PDO;
+use Throwable;
 
 final class DocumentService
 {
@@ -168,9 +170,8 @@ final class DocumentService
             );
         }
 
-        $this->updatePublicationState(
-            $document->publicId,
-            $siteKey,
+        $this->transitionExternalState(
+            $document,
             'published',
             $document->visibility,
         );
@@ -192,11 +193,11 @@ final class DocumentService
             );
         }
 
-        $this->updatePublicationState(
-            $document->publicId,
-            $siteKey,
+        $this->transitionExternalState(
+            $document,
             'draft',
             'private',
+            'withdrawn',
         );
     }
 
@@ -224,11 +225,11 @@ final class DocumentService
             );
         }
 
-        $this->updatePublicationState(
-            $document->publicId,
-            $siteKey,
+        $this->transitionExternalState(
+            $document,
             $document->status,
             $visibility,
+            'visibility_changed',
         );
     }
 
@@ -248,44 +249,89 @@ final class DocumentService
             );
         }
 
-        $statement = $this->pdo->prepare(
-            'UPDATE documents
-             SET status = :status,
-                 visibility = :visibility,
-                 updated_at = :updated_at
-             WHERE public_id = :public_id
-               AND site_key = :site_key'
+        $this->transitionExternalState(
+            $document,
+            'archived',
+            'private',
+            'archived',
         );
-        $statement->execute([
-            'status' => 'archived',
-            'visibility' => 'private',
-            'updated_at' => gmdate('Y-m-d H:i:s'),
-            'public_id' => $document->publicId,
-            'site_key' => $siteKey,
-        ]);
     }
 
-    private function updatePublicationState(
-        string $publicId,
-        string $siteKey,
+    private function transitionExternalState(
+        DocumentRecord $document,
         string $status,
         string $visibility,
+        ?string $leaveReason = null,
     ): void {
-        $statement = $this->pdo->prepare(
-            'UPDATE documents
-             SET status = :status,
-                 visibility = :visibility,
-                 updated_at = :updated_at
-             WHERE public_id = :public_id
-               AND site_key = :site_key'
-        );
-        $statement->execute([
-            'status' => $status,
-            'visibility' => $visibility,
-            'updated_at' => gmdate('Y-m-d H:i:s'),
-            'public_id' => $publicId,
-            'site_key' => $siteKey,
-        ]);
+        $wasFederated = self::isFederated($document);
+        $willBeFederated =
+            $status === 'published'
+            && $visibility === 'federated';
+        $ownsTransaction = !$this->pdo->inTransaction();
+
+        if ($ownsTransaction) {
+            $this->pdo->beginTransaction();
+        }
+
+        try {
+            $updatedAt = new DateTimeImmutable(
+                'now',
+                new DateTimeZone('UTC'),
+            );
+            $tombstones = new DocumentPartnerTombstoneRepository(
+                $this->pdo,
+            );
+
+            if ($wasFederated && !$willBeFederated) {
+                $tombstones->record(
+                    $document,
+                    $leaveReason ?? 'withdrawn',
+                    $updatedAt,
+                );
+            }
+
+            if (!$wasFederated && $willBeFederated) {
+                $tombstones->clear($document);
+            }
+
+            $statement = $this->pdo->prepare(
+                'UPDATE documents
+                 SET status = :status,
+                     visibility = :visibility,
+                     updated_at = :updated_at
+                 WHERE public_id = :public_id
+                   AND site_key = :site_key'
+            );
+            $statement->execute([
+                'status' => $status,
+                'visibility' => $visibility,
+                'updated_at' => $updatedAt->format(
+                    'Y-m-d H:i:s',
+                ),
+                'public_id' => $document->publicId,
+                'site_key' => $document->siteKey,
+            ]);
+
+            if ($ownsTransaction) {
+                $this->pdo->commit();
+            }
+        } catch (Throwable $error) {
+            if (
+                $ownsTransaction
+                && $this->pdo->inTransaction()
+            ) {
+                $this->pdo->rollBack();
+            }
+
+            throw $error;
+        }
+    }
+
+    private static function isFederated(
+        DocumentRecord $document,
+    ): bool {
+        return $document->status === 'published'
+            && $document->visibility === 'federated';
     }
 
     private function resolveOrganization(

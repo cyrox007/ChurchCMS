@@ -36,6 +36,7 @@ on:
       - 'tools/event-partner-sync-smoke.php'
       - 'tools/media-organization-smoke.php'
       - 'tools/document-organization-smoke.php'
+      - 'tools/document-partner-sync-smoke.php'
       - 'tools/federation-remote-projection-smoke.php'
       - 'tools/federation-publication-sync-smoke.php'
       - 'tools/federation-event-sync-smoke.php'
@@ -298,3 +299,6 @@ jobs:
 
       - name: Проверить Documents foundation в MySQL
         run: php tools/document-organization-smoke.php
+
+      - name: Проверить source-side federation Documents в MySQL
+        run: php tools/document-partner-sync-smoke.php

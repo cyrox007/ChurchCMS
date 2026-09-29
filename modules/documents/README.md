@@ -41,6 +41,16 @@ PostgreSQL/MySQL.
 Снятие с публикации переводит карточку обратно в `draft/private`.
 Federation-репозиторий возвращает только `published/federated` записи.
 
+Source-side обмен использует два bounded incremental-потока с составным
+курcором `updated_at + public_id`: активные документы и tombstone.
+`GET /api/v1/partner/documents` отдаёт только безопасную карточку без пути,
+blob и файлового содержимого. `GET /api/v1/partner/documents/tombstones`
+сообщает об уходе ранее federated-документа из внешнего представления.
+
+Tombstone создаётся атомарно при `withdraw`, архивировании и переключении
+видимости с `federated` на локальную. Возврат в `federated` очищает старый
+tombstone, чтобы новый принимающий узел не применил устаревшее удаление.
+
 ## Файл документа
 
 Этот foundation намеренно **не хранит filesystem path и не считает файл
@@ -61,4 +71,4 @@ upload/storage pipeline. Это позволяет не смешивать ка�
 - public/API;
 - категории/рубрики документов;
 - версии/замены файла;
-- federation sync.
+- принимающий federation worker, remote projection и агрегация Documents.

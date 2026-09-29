@@ -36,7 +36,7 @@ Status: in progress.
 - [ ] Worship schedule (schema/domain foundation с обязательным organization owner реализован; Admin Shell, public/API, повторяющиеся правила и праздничные шаблоны остаются).
 - [ ] Events (schema/domain foundation с обязательным organization owner реализован; Admin Shell, публикация, public/API, календарные представления и повторяющиеся правила остаются).
 - [ ] Galleries.
-- [ ] Documents (foundation карточки и organization owner реализован; связь с Media, Admin Shell, публикация, public/API, версии файла и federation sync остаются).
+- [ ] Documents (foundation карточки и organization owner, явная visibility и source-side federation/tombstones реализованы; связь с Media, Admin Shell, public/API, версии файла, принимающий worker и агрегация остаются).
 - [ ] Search.
 - [x] SEO foundation: metadata, canonical, OG/social cards, robots, sitemap, sharing.
 - [ ] Redirect manager.
@@ -95,7 +95,7 @@ Status: in progress.
 - [x] Federation pairing wizard и отзыв доверия.
 - [x] Organization-scoped RBAC enforcement.
 - [x] Organization ownership/references для Publications/Pages/People/Worship/Events/Media/Documents (organization owner/reference foundation реализован для всех перечисленных типов).
-- [ ] Parent/child aggregation и remote projections/tombstones (Publications полностью проходит source → worker → projection → aggregation; Events и Worship проходят source → worker → remote projection/tombstone → безопасную агрегированную API-ленту; для Media/Documents явная граница public/federation visibility реализована; остаются source/worker и aggregation).
+- [ ] Parent/child aggregation и remote projections/tombstones (Publications полностью проходит source → worker → projection → aggregation; Events и Worship проходят source → worker → remote projection/tombstone → безопасную агрегированную API-ленту; Documents имеет явную visibility и source-side поток/tombstones; для него остаются worker/projection/aggregation, для Media — source/worker и aggregation).
 - [x] Federation health/sync dashboard (health/retry/conflict UI, отдельные состояния Publications/Events/Worship, безопасный прогресс и сводные метрики реализованы).
 
 ## Cross-cutting — External channels
