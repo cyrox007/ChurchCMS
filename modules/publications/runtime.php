@@ -65,6 +65,7 @@ return new class implements ModuleRuntimeProvider {
 
         return [
             'publications.read' => $capability,
+            'publications.external-import' => $capability,
             'syndication.publications' => $capability,
         ];
     }
