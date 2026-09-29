@@ -283,6 +283,33 @@ contract.
 Если `has_more=true`, следующий запрос обязан передать одновременно
 `next_updated_since` и `next_after`.
 
+## Partner sync документов
+
+Documents использует составной incremental-курсор `updated_at + public_id`.
+
+Доступны endpoints:
+
+```
+GET /api/v1/partner/documents
+GET /api/v1/partner/documents/tombstones
+```
+
+Оба требуют Bearer token со scope `content.read`. В активный поток входят
+только карточки одновременно со статусом `published` и видимостью
+`federated`.
+
+Projection содержит stable public ID, название, тип/номер/дату документа,
+краткое описание, `organization_owner_id`, `updated_at` и пока пустой
+canonical URL. Filesystem path, blob и непроверенный файл не выдаются.
+
+Если ранее federated-документ переводится в локальную видимость, снимается с
+публикации или архивируется, source-side атомарно создаёт tombstone с
+`action=delete`. Повторное включение опубликованной карточки в federation
+очищает устаревший tombstone.
+
+Если `has_more=true`, следующий запрос должен передать одновременно
+`next_updated_since` и `next_after`.
+
 ## Response envelope
 
 Successful response:
