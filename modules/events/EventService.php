@@ -184,12 +184,36 @@ final class EventService
             $eventPublicId,
             $siteKey,
         );
+        $ownsTransaction = !$this->pdo->inTransaction();
 
-        $this->updateStatus(
-            $event,
-            'published',
-            gmdate('Y-m-d H:i:s'),
-        );
+        if ($ownsTransaction) {
+            $this->pdo->beginTransaction();
+        }
+
+        try {
+            (new EventPartnerTombstoneRepository(
+                $this->pdo,
+            ))->clear($event);
+
+            $this->updateStatus(
+                $event,
+                'published',
+                gmdate('Y-m-d H:i:s'),
+            );
+
+            if ($ownsTransaction) {
+                $this->pdo->commit();
+            }
+        } catch (Throwable $error) {
+            if (
+                $ownsTransaction
+                && $this->pdo->inTransaction()
+            ) {
+                $this->pdo->rollBack();
+            }
+
+            throw $error;
+        }
     }
 
     public function withdraw(
