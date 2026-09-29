@@ -35,7 +35,8 @@ Priority is ordered within each section.
     - [x] публичный HTML по canonical path;
 - [ ] привязка People/назначений, Worship, Events, Media и Documents к organization unit;
   - [x] People/назначения: основа схемы и доменного слоя, обязательный владелец-организация карточки и отдельная ссылка на организацию каждого назначения;
-  - [ ] Worship, Events, Media и Documents: organization binding;
+  - [x] Worship: схема и доменный слой с обязательным organization owner, site-root по умолчанию и cross-site защитой;
+  - [ ] Events, Media и Documents: organization binding;
 - [ ] incremental federation sync с canonical owner и tombstones;
   - [x] Publications: устойчивый tombstone при снятии ранее опубликованного материала с target `diocese` и отдельный partner endpoint;
   - [x] remote projections и применение tombstone на принимающем узле;
@@ -45,7 +46,8 @@ Priority is ordered within each section.
   - [x] Publications: публичный API `/api/v1/publications/aggregated` объединяет локальные материалы и active remote projections только от `child`-связей с разрешённым входящим scope;
   - [x] агрегированный элемент сохраняет source `instance_id`, organization owner, имя и canonical URL и не выдаёт сырой remote `body_html`;
   - [x] подключить remote Publications к общему RSS с сохранением исходного узла через стандартный RSS `source`;
-  - [ ] подключить агрегированную ленту к публичным блокам темы и расширить тот же контракт на Events/Worship/Media/Documents;
+  - [x] подключить агрегированную Publications-ленту к публичному блоку главной страницы с явным источником;
+  - [ ] расширить тот же контракт агрегации на Events/Worship/Media/Documents;
 - [x] federation health/retry/conflict UI.
 
 ## P0 — Installation and operator UX
