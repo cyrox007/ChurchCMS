@@ -194,7 +194,10 @@ final class EventsApiController
         $last = $events[array_key_last($events)];
 
         return [
-            (new DateTimeImmutable($last->updatedAt))
+            (new DateTimeImmutable(
+                $last->updatedAt,
+                new \DateTimeZone('UTC'),
+            ))
                 ->format(DATE_ATOM),
             $last->publicId,
         ];
