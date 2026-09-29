@@ -176,7 +176,7 @@ final class FederationSyncDashboardService
         if (
             in_array(
                 $workerId,
-                ['events', 'worship', 'documents'],
+                ['events', 'worship', 'documents', 'media'],
                 true,
             )
         ) {

@@ -109,11 +109,11 @@ $metrics = $snapshot['metrics'] ?? [];
 if (
     ($metrics['links'] ?? null) !== 2
     || ($metrics['active_links'] ?? null) !== 2
-    || ($metrics['workers'] ?? null) !== 5
+    || ($metrics['workers'] ?? null) !== 6
     || ($metrics['successful'] ?? null) !== 1
     || ($metrics['failed'] ?? null) !== 1
     || ($metrics['partial'] ?? null) !== 1
-    || ($metrics['not_started'] ?? null) !== 2
+    || ($metrics['not_started'] ?? null) !== 3
 ) {
     fwrite(
         STDERR,
@@ -135,6 +135,7 @@ if (
     || ($statuses['events'] ?? null) !== 'failed'
     || ($statuses['worship'] ?? null) !== 'partial'
     || ($statuses['documents'] ?? null) !== 'not_started'
+    || ($statuses['media'] ?? null) !== 'not_started'
 ) {
     fwrite(
         STDERR,
