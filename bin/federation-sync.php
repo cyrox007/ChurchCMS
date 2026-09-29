@@ -3,7 +3,7 @@
 
 declare(strict_types=1);
 
-use ChurchCMS\Modules\Organizations\FederationPublicationSyncWorker;
+use ChurchCMS\Modules\Organizations\FederationSyncCoordinator;
 
 $root = dirname(__DIR__);
 require $root . '/core.php';
@@ -59,16 +59,33 @@ if (
 }
 
 try {
-    $summary = FederationPublicationSyncWorker::fromDatabase()
+    $summary = FederationSyncCoordinator::fromDatabase()
         ->run(
             siteKey: $siteKey,
             linkLimit: max(1, min(100, $linkLimit)),
             pageSize: max(1, min(100, $pageSize)),
         );
 
+    foreach ($summary['details'] as $workerId => $details) {
+        echo sprintf(
+            "Federation worker %s: связей %d, успешно %d, ошибок %d, "
+            . "проекций %d, tombstone %d, требуют продолжения %d.\n",
+            $workerId,
+            $details['links'],
+            $details['succeeded'],
+            $details['failed'],
+            $details['projections'],
+            $details['tombstones'],
+            $details['pending'],
+        );
+    }
+
     echo sprintf(
-        "Federation sync: связей %d, успешно %d, ошибок %d, "
+        "Federation sync: обработчиков %d, аварий обработчиков %d, "
+        . "связей %d, успешно %d, ошибок %d, "
         . "проекций %d, tombstone %d, требуют продолжения %d.\n",
+        $summary['workers'],
+        $summary['worker_failures'],
         $summary['links'],
         $summary['succeeded'],
         $summary['failed'],
@@ -77,11 +94,16 @@ try {
         $summary['pending'],
     );
 
-    exit($summary['failed'] > 0 ? 1 : 0);
+    exit(
+        $summary['failed'] > 0
+        || $summary['worker_failures'] > 0
+            ? 1
+            : 0
+    );
 } catch (Throwable $error) {
     fwrite(
         STDERR,
-        "Синхронизация публикаций завершилась ошибкой: "
+        "Federation sync завершился ошибкой: "
         . $error->getMessage()
         . "\n",
     );
