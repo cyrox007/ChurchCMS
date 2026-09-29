@@ -7,6 +7,7 @@ use ChurchCMS\App\Middlewares\ApiEnabledMiddleware;
 use ChurchCMS\App\Middlewares\ApiPartnerRateLimitMiddleware;
 use ChurchCMS\App\Middlewares\PartnerApiMiddleware;
 use ChurchCMS\Core\ModuleRuntimeProvider;
+use ChurchCMS\Modules\Documents\DocumentsApiController;
 use ChurchCMS\Core\Router;
 
 $moduleRoot = __DIR__;
