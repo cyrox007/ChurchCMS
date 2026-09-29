@@ -13,6 +13,8 @@ on:
       - 'modules/publications/PublicationRepository.php'
       - 'modules/publications/PublicationApiResource.php'
       - 'modules/publications/FederatedPublicationFeedService.php'
+      - 'modules/organizations/FederationSyncWorker.php'
+      - 'modules/organizations/FederationSyncCoordinator.php'
       - 'modules/publications/PublicationsCapability.php'
       - 'app/controllers/HealthController.php'
       - 'themes/default/templates/pages/home.php'
@@ -27,6 +29,7 @@ on:
       - 'tools/organization-federation-smoke.php'
       - 'tools/federation-remote-projection-smoke.php'
       - 'tools/federation-publication-sync-smoke.php'
+      - 'tools/federation-sync-coordinator-smoke.php'
       - 'tools/federated-publication-feed-smoke.php'
       - '.github/workflows/organization-federation-smoke.yml'
   pull_request:
@@ -41,6 +44,8 @@ on:
       - 'modules/publications/PublicationRepository.php'
       - 'modules/publications/PublicationApiResource.php'
       - 'modules/publications/FederatedPublicationFeedService.php'
+      - 'modules/organizations/FederationSyncWorker.php'
+      - 'modules/organizations/FederationSyncCoordinator.php'
       - 'modules/publications/PublicationsCapability.php'
       - 'app/controllers/HealthController.php'
       - 'themes/default/templates/pages/home.php'
@@ -55,6 +60,7 @@ on:
       - 'tools/organization-federation-smoke.php'
       - 'tools/federation-remote-projection-smoke.php'
       - 'tools/federation-publication-sync-smoke.php'
+      - 'tools/federation-sync-coordinator-smoke.php'
       - 'tools/federated-publication-feed-smoke.php'
       - '.github/workflows/organization-federation-smoke.yml'
 
@@ -102,6 +108,9 @@ jobs:
           php -l tools/organization-federation-smoke.php
           php -l tools/federation-remote-projection-smoke.php
           php -l tools/federation-publication-sync-smoke.php
+          php -l tools/federation-sync-coordinator-smoke.php
+          php -l modules/organizations/FederationSyncWorker.php
+          php -l modules/organizations/FederationSyncCoordinator.php
           php -l tools/federated-publication-feed-smoke.php
           php -l modules/publications/PublicationRepository.php
           php -l modules/publications/FederatedPublicationFeedService.php
@@ -163,6 +172,9 @@ jobs:
 
       - name: Проверить federation sync публикаций и курсоры
         run: php tools/federation-publication-sync-smoke.php
+
+      - name: Проверить общий координатор federation sync
+        run: php tools/federation-sync-coordinator-smoke.php
 
       - name: Проверить агрегированную ленту публикаций
         run: php tools/federated-publication-feed-smoke.php
