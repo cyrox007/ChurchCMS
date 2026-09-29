@@ -92,6 +92,7 @@ Implemented:
 - `EventService` назначает site root владельцем по умолчанию, нормализует время в UTC, запрещает обратный временной интервал и cross-site/архивного владельца;
 - PostgreSQL/MySQL smoke проверяет Events foundation, включая составной FK, смену владельца, отмену и запрет чужого `site_key`;
 - модуль `media` хранит только безопасный foundation метаданных: stable public ID, organization owner, тип, исходное имя, MIME, размер, SHA-256, title/alt и статус;
+- `FederatedMediaFeedService` объединяет локальные `public` metadata-карточки и active remote Media только от доверенных дочерних узлов с `content.read`; сырой payload, исходное имя, путь и blob наружу не передаются, `blob_available` всегда остаётся `false`;
 - `MediaService` назначает site root владельцем по умолчанию, валидирует MIME/SHA-256/размер и запрещает cross-site/архивного владельца;
 - Media foundation намеренно не хранит произвольный filesystem path и не объявляет upload реализованным; PostgreSQL/MySQL smoke проверяет metadata lifecycle, owner FK и запрет чужого `site_key`;
 - модуль `documents` хранит карточку документа с обязательным `owner_organization_public_id`, типом, номером, датой и кратким описанием;

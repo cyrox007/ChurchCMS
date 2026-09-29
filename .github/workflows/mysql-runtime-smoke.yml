@@ -45,6 +45,7 @@ on:
       - 'tools/federation-worship-sync-smoke.php'
       - 'tools/federation-document-sync-smoke.php'
       - 'tools/federation-media-sync-smoke.php'
+      - 'tools/federated-media-feed-smoke.php'
       - 'tools/federated-document-feed-smoke.php'
       - 'tools/federated-worship-feed-smoke.php'
       - 'tools/federation-worker-sync-state-smoke.php'
@@ -271,6 +272,9 @@ jobs:
 
       - name: Проверить принимающий federation sync Media в MySQL
         run: php tools/federation-media-sync-smoke.php
+
+      - name: Проверить агрегированную Media-ленту в MySQL
+        run: php tools/federated-media-feed-smoke.php
 
       - name: Проверить агрегированную Documents-ленту в MySQL
         run: php tools/federated-document-feed-smoke.php

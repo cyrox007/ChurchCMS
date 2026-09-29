@@ -12,6 +12,7 @@ on:
       - 'modules/organizations/**'
       - 'modules/publications/PublicationRepository.php'
       - 'modules/events/**'
+      - 'modules/media/**'
       - 'modules/publications/PublicationApiResource.php'
       - 'modules/publications/FederatedPublicationFeedService.php'
       - 'modules/organizations/FederationSyncWorker.php'
@@ -35,6 +36,7 @@ on:
       - 'tools/federation-worship-sync-smoke.php'
       - 'tools/federation-document-sync-smoke.php'
       - 'tools/federation-media-sync-smoke.php'
+      - 'tools/federated-media-feed-smoke.php'
       - 'tools/federated-worship-feed-smoke.php'
       - 'tools/federation-sync-coordinator-smoke.php'
       - 'tools/federation-worker-sync-state-smoke.php'
@@ -52,6 +54,7 @@ on:
       - 'modules/organizations/**'
       - 'modules/publications/PublicationRepository.php'
       - 'modules/events/**'
+      - 'modules/media/**'
       - 'modules/publications/PublicationApiResource.php'
       - 'modules/publications/FederatedPublicationFeedService.php'
       - 'modules/organizations/FederationSyncWorker.php'
@@ -75,6 +78,7 @@ on:
       - 'tools/federation-worship-sync-smoke.php'
       - 'tools/federation-document-sync-smoke.php'
       - 'tools/federation-media-sync-smoke.php'
+      - 'tools/federated-media-feed-smoke.php'
       - 'tools/federated-worship-feed-smoke.php'
       - 'tools/federation-sync-coordinator-smoke.php'
       - 'tools/federation-worker-sync-state-smoke.php'
@@ -214,6 +218,9 @@ jobs:
 
       - name: Проверить принимающий federation sync Media
         run: php tools/federation-media-sync-smoke.php
+
+      - name: Проверить агрегированную Media-ленту
+        run: php tools/federated-media-feed-smoke.php
 
       - name: Проверить общий координатор federation sync
         run: php tools/federation-sync-coordinator-smoke.php
