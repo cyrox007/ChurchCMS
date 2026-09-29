@@ -189,7 +189,7 @@ $transport = new ScriptedWorshipFederationTransport([
                 'id' => $remoteWorshipId,
                 'type' => 'worship',
                 'action' => 'delete',
-                'reason' => 'cancelled',
+                'reason' => 'withdrawn',
                 'organization_owner_id' => $remoteOwnerId,
                 'updated_at' => $deletedAt,
             ]],
