@@ -65,6 +65,8 @@ Priority is ordered within each section.
   - [x] Worship: объединять ближайшие локальные `scheduled/cancelled` записи и active remote projections только от `child`-связей с `content.read`, сохраняя источник и не отдавая `description_html`;
   - [x] Worship: публичный `GET /api/v1/worship/aggregated` исключает tombstone/peer/parent/no-scope и сохраняет `cancelled` как видимое состояние;
   - [ ] расширить тот же контракт агрегации на Media/Documents после определения их публичной видимости;
+    - [x] Documents: `GET /api/v1/documents/aggregated` объединяет локальные `published/public` карточки и active remote projections только от `child`-связей с `content.read`, сохраняя источник и исключая tombstone/peer/parent/no-scope;
+    - [ ] Media: добавить безопасную агрегацию после принимающего worker/projection и определения допустимого metadata-only публичного контракта;
 - [x] federation health/retry/conflict UI;
   - [x] сводные метрики активных связей и worker, отдельные success/error/partial/not-started состояния без раскрытия содержимого sync cursor.
 

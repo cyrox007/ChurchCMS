@@ -217,7 +217,9 @@ Pending:
 - `FederationDocumentSyncWorker` принимает активный поток и tombstone в независимое состояние `documents`, сохраняет удалённые карточки только как remote projection типа `document` и не создаёт из них локальные канонические Documents;
 - подтверждённый курсор активного потока сохраняется до запроса tombstone: частичный сетевой сбой не заставляет повторно читать уже применённую страницу;
 - PostgreSQL/MySQL smoke проверяет частичный сбой, повторный запуск, tombstone и независимость состояния от Publications;
-- для Documents остаётся агрегированное представление с сохранением исходного узла.
+- публичный `GET /api/v1/documents/aggregated` объединяет только локальные `published/public` карточки и active remote projections от `child`-связей с `content.read`; локальные `federated` карточки сами по себе публичными не становятся;
+- агрегатор сохраняет `instance_id`, organization owner, имя и canonical URL источника, исключает tombstone/peer/parent/no-scope и не пробрасывает произвольные поля remote payload;
+- PostgreSQL/MySQL smoke проверяет границу `public`/`federated`, сохранение источника и исключение недоверенных записей.
 
 ## Source-side federation Media
 
