@@ -20,6 +20,8 @@ on:
       - 'modules/documents/**'
       - 'modules/organizations/**'
       - 'tools/document-organization-smoke.php'
+      - 'tools/document-partner-sync-smoke.php'
+      - 'tools/federated-document-feed-smoke.php'
       - '.github/workflows/documents-organization-smoke.yml'
 
 permissions:
