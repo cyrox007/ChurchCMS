@@ -45,6 +45,7 @@ final class FederationSyncCoordinator
             FederationEventSyncWorker::fromDatabase(),
             FederationWorshipSyncWorker::fromDatabase(),
             FederationDocumentSyncWorker::fromDatabase(),
+            FederationMediaSyncWorker::fromDatabase(),
         ]);
     }
 
