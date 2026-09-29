@@ -89,15 +89,22 @@ Implemented:
 - модуль `events` хранит события с обязательным `owner_organization_public_id`, временем начала/окончания, all-day признаком, местом, кратким описанием и статусом;
 - `EventService` назначает site root владельцем по умолчанию, нормализует время в UTC, запрещает обратный временной интервал и cross-site/архивного владельца;
 - PostgreSQL/MySQL smoke проверяет Events foundation, включая составной FK, смену владельца, отмену и запрет чужого `site_key`;
+- модуль `media` хранит только безопасный foundation метаданных: stable public ID, organization owner, тип, исходное имя, MIME, размер, SHA-256, title/alt и статус;
+- `MediaService` назначает site root владельцем по умолчанию, валидирует MIME/SHA-256/размер и запрещает cross-site/архивного владельца;
+- Media foundation намеренно не хранит произвольный filesystem path и не объявляет upload реализованным; PostgreSQL/MySQL smoke проверяет metadata lifecycle, owner FK и запрет чужого `site_key`;
+- federation sync вынесен в общий `FederationSyncWorker` contract и `FederationSyncCoordinator`;
+- существующий Publications worker реализует общий contract, а `bin/federation-sync.php` запускает coordinator вместо жёсткого вызова одного типа данных;
+- coordinator суммирует результаты worker'ов и не останавливает остальные типы, если один worker завершился исключением; отдельный smoke проверяет несколько worker, агрегацию статистики, изоляцию ошибки и запрет повторяющихся worker ID;
 - `docs/ORGANIZATIONS_AND_FEDERATION.md` фиксирует результаты анализа епархиальных/митрополичьих сайтов и общий domain contract.
 
 Дальше:
 
-- organization ownership для Media/Documents;
+- organization ownership для Documents;
 - Admin/public/API слой People и расширенные сведения о духовенстве;
-- обобщить синхронизацию на остальные типы remote projections и общий планировщик;
+- добавить federation sync worker для Events/Worship/Media/Documents поверх готового общего coordinator;
 - Admin/public/API и повторяющиеся правила Worship;
 - Admin/public/API, публикация и календарные представления Events;
+- безопасный upload/storage pipeline Media, MIME sniffing, derivatives и usage references;
 - расширить source-preserving federation-контракт с Publications на Events/Worship/Media/Documents.
 
 ## Installation
