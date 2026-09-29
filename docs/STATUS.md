@@ -65,6 +65,10 @@ Implemented:
 - remote projection без корректного `published_at` или с временем публикации в будущем не показывается;
 - tombstone, revoked/error связь, `parent`/`peer` и child-связь без входящего publication scope не попадают в агрегированную ленту;
 - PostgreSQL/MySQL smoke проверяет локальный + child материал, сохранность canonical source и исключение tombstone/peer/parent/no-scope источников; HTTP smoke отдельно проверяет публичный контракт endpoint;
+- remote Publications подключены к общему RSS только для target `rss`: GUID включает `instance_id + public_id`, а стандартный RSS `source` сохраняет имя и canonical URL исходного узла;
+- главная страница получает последние Publications через capability модуля, поэтому app/core не зависит напрямую от реализации Publications;
+- публичный блок использует тот же безопасный агрегированный projection: remote `body_html` не передаётся шаблону, источник внешнего материала показывается явно, ссылка ведёт на canonical URL исходного ChurchCMS;
+- если Publications недоступен или чтение агрегированной ленты завершилось ошибкой, главная продолжает работать без блока материалов, а подробность остаётся в серверном журнале;
 - Admin Shell содержит раздел «Структура» с отдельным правом `organizations.manage`;
 - администратор может создавать благочиния, приходы, монастыри, отделы, комиссии и другие типы, менять родителя/slug/порядок и описание;
 - при изменении slug или родителя canonical path всего поддерева пересчитывается транзакционно;
@@ -86,7 +90,7 @@ Implemented:
 - organization ownership для Worship/Events/Media/Documents;
 - Admin/public/API слой People и расширенные сведения о духовенстве;
 - обобщить синхронизацию на остальные типы remote projections и общий планировщик;
-- подключить агрегированную Publications-ленту к публичной теме/RSS и расширить тот же source-preserving контракт на Events/Worship/Media/Documents.
+- расширить source-preserving federation-контракт с Publications на Events/Worship/Media/Documents.
 
 ## Installation
 
