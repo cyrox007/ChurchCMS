@@ -1,0 +1,170 @@
+name: Проверка входящей очереди внешних каналов
+
+on:
+  push:
+    branches:
+      - develop
+      - main
+    paths:
+      - 'modules/social/ExternalChannelItemRepository.php'
+      - 'modules/social/SocialAdminController.php'
+      - 'modules/social/runtime.php'
+      - 'themes/default/templates/admin/external-channels.php'
+      - '.github/workflows/external-channels-inbox-smoke.yml'
+  pull_request:
+    branches:
+      - develop
+      - main
+    paths:
+      - 'modules/social/ExternalChannelItemRepository.php'
+      - 'modules/social/SocialAdminController.php'
+      - 'modules/social/runtime.php'
+      - 'themes/default/templates/admin/external-channels.php'
+      - '.github/workflows/external-channels-inbox-smoke.yml'
+
+permissions:
+  contents: read
+
+jobs:
+  external-channels-inbox-smoke:
+    runs-on: ubuntu-latest
+
+    services:
+      postgres:
+        image: postgres:16
+        env:
+          POSTGRES_DB: churchcms
+          POSTGRES_USER: churchcms
+          POSTGRES_PASSWORD: churchcms
+        ports:
+          - 5432:5432
+        options: >-
+          --health-cmd pg_isready
+          --health-interval 10s
+          --health-timeout 5s
+          --health-retries 5
+
+    steps:
+      - name: Получить исходный код
+        uses: actions/checkout@v4
+
+      - name: Подготовить PHP 8.3
+        uses: shivammathur/setup-php@v2
+        with:
+          php-version: '8.3'
+          extensions: pdo, pdo_pgsql, openssl
+          coverage: none
+
+      - name: Проверить синтаксис
+        run: |
+          set -euo pipefail
+          php -l modules/social/SocialAdminController.php
+          php -l modules/social/runtime.php
+          php -l themes/default/templates/admin/external-channels.php
+
+      - name: Настроить тестовую установку
+        run: |
+          set -euo pipefail
+          mkdir -p storage/cache storage/logs storage/sessions storage/rate-limits storage/uploads
+
+          cat > config/local.php <<'PHP'
+          <?php
+
+          declare(strict_types=1);
+
+          return [
+              'installation' => ['completed' => true],
+              'security' => [
+                  'secret_key' => base64_encode(str_repeat('i', 32)),
+              ],
+              'database' => [
+                  'driver' => 'pgsql',
+                  'host' => '127.0.0.1',
+                  'port' => 5432,
+                  'database' => 'churchcms',
+                  'username' => 'churchcms',
+                  'password' => 'churchcms',
+              ],
+          ];
+          PHP
+
+          php bin/migrate.php
+
+      - name: Проверить очередь и действия review
+        run: |
+          set -euo pipefail
+
+          php <<'PHP'
+          <?php
+
+          declare(strict_types=1);
+
+          require 'core.php';
+
+          use ChurchCMS\Core\SecretVault;
+          use ChurchCMS\Modules\Social\ChannelInboundItem;
+          use ChurchCMS\Modules\Social\ExternalChannelItemRepository;
+          use ChurchCMS\Modules\Social\SocialConnectionRepository;
+
+          $connection = SocialConnectionRepository::fromDatabase()->create(
+              provider: 'ci-inbox',
+              name: 'CI inbox',
+              targetRef: 'ci-target',
+              tokenEncrypted: SecretVault::encrypt('ci-secret'),
+              outboundEnabled: false,
+              inboundEnabled: true,
+          );
+
+          $repository = ExternalChannelItemRepository::fromDatabase();
+          $repository->store(
+              $connection->id,
+              new ChannelInboundItem(
+                  remoteId: 'remote-1',
+                  kind: 'post',
+                  title: '<script>не доверять</script>',
+                  text: '<b>сырой внешний HTML</b>',
+                  canonicalUrl: 'https://example.org/post/1',
+                  payload: [
+                      'raw_html' => '<script>alert(1)</script>',
+                      'secret_like' => 'не выводить',
+                  ],
+              ),
+          );
+
+          $pending = $repository->pending();
+          if (count($pending) !== 1) {
+              fwrite(STDERR, "Входящий материал не появился в очереди.\n");
+              exit(1);
+          }
+
+          $item = $pending[0];
+          if ($item->bodyText !== '<b>сырой внешний HTML</b>') {
+              fwrite(STDERR, "Нормализованный текст изменён до review.\n");
+              exit(1);
+          }
+
+          $repository->markIgnored($item->publicId);
+          if ($repository->pending() !== []) {
+              fwrite(STDERR, "Игнорированный материал остался в очереди.\n");
+              exit(1);
+          }
+
+          $template = file_get_contents(
+              'themes/default/templates/admin/external-channels.php'
+          );
+          if (!is_string($template)) {
+              exit(1);
+          }
+
+          if (str_contains($template, 'payload_json')) {
+              fwrite(STDERR, "Шаблон не должен обращаться к сырому payload.\n");
+              exit(1);
+          }
+
+          if (!str_contains($template, '$theme->e($item->bodyText)')) {
+              fwrite(STDERR, "Внешний текст должен экранироваться перед выводом.\n");
+              exit(1);
+          }
+
+          echo "Review UI входящей очереди проверен\n";
+          PHP

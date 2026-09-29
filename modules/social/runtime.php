@@ -98,5 +98,21 @@ return new class implements ModuleRuntimeProvider {
             [RequireAdminMiddleware::class, CsrfMiddleware::class],
             'admin_external_channels_create',
         );
+
+        $router->add(
+            'POST',
+            '/admin/external-channels/inbox/{publicId}/ignore',
+            [SocialAdminController::class, 'ignoreInboxItem'],
+            [RequireAdminMiddleware::class, CsrfMiddleware::class],
+            'admin_external_channels_inbox_ignore',
+        );
+
+        $router->add(
+            'POST',
+            '/admin/external-channels/inbox/{publicId}/link',
+            [SocialAdminController::class, 'linkInboxItem'],
+            [RequireAdminMiddleware::class, CsrfMiddleware::class],
+            'admin_external_channels_inbox_link',
+        );
     }
 };
