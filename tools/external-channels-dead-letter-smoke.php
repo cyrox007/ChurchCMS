@@ -136,20 +136,21 @@ if (
     exit(1);
 }
 
-$rendered = ThemeRenderer::fromConfig()->capture(
-    'admin.external-channels',
-    [
-        'connections' => [],
-        'adapters' => [],
-        'inboxItems' => [],
-        'importOwners' => [],
-        'outboundFailures' => $failures,
-        'canRetryOutbound' => true,
-        'canLinkExternal' => false,
-        'canImportExternal' => false,
-        'channelStatus' => null,
-    ],
-);
+$theme = ThemeRenderer::fromConfig();
+$connections = [];
+$adapters = [];
+$inboxItems = [];
+$importOwners = [];
+$outboundFailures = $failures;
+$canRetryOutbound = true;
+$canLinkExternal = false;
+$canImportExternal = false;
+$channelStatus = null;
+
+ob_start();
+require dirname(__DIR__)
+    . '/themes/default/templates/admin/external-channels.php';
+$rendered = (string) ob_get_clean();
 
 if (
     !str_contains($rendered, 'Ошибки отправки')
