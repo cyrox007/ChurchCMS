@@ -122,10 +122,12 @@ final class SocialPostRepository
 
     /**
      * @param list<int> $connectionIds
+     * @param array<int,?string> $customTexts
      */
     public function replaceSelection(
         int $publicationId,
         array $connectionIds,
+        array $customTexts = [],
     ): void {
         $connectionIds = array_values(array_unique(array_filter(
             $connectionIds,
@@ -155,7 +157,14 @@ final class SocialPostRepository
                     (int) $row['id'];
             }
 
-            $toggle = $this->pdo->prepare(
+            $enable = $this->pdo->prepare(
+                'UPDATE publication_social_posts
+                 SET enabled = :enabled,
+                     custom_text = :custom_text,
+                     updated_at = :updated_at
+                 WHERE id = :id'
+            );
+            $disable = $this->pdo->prepare(
                 'UPDATE publication_social_posts
                  SET enabled = :enabled,
                      updated_at = :updated_at
@@ -164,10 +173,19 @@ final class SocialPostRepository
             $now = gmdate('Y-m-d H:i:s');
 
             foreach ($existing as $connectionId => $postId) {
-                $toggle->execute([
-                    'enabled' => isset($selected[$connectionId])
-                        ? 1
-                        : 0,
+                if (isset($selected[$connectionId])) {
+                    $enable->execute([
+                        'enabled' => 1,
+                        'custom_text' =>
+                            $customTexts[$connectionId] ?? null,
+                        'updated_at' => $now,
+                        'id' => $postId,
+                    ]);
+                    continue;
+                }
+
+                $disable->execute([
+                    'enabled' => 0,
                     'updated_at' => $now,
                     'id' => $postId,
                 ]);
@@ -190,7 +208,7 @@ final class SocialPostRepository
                     :publication_id,
                     :connection_id,
                     :enabled,
-                    NULL,
+                    :custom_text,
                     :status,
                     0,
                     NULL,
@@ -209,6 +227,8 @@ final class SocialPostRepository
                     'publication_id' => $publicationId,
                     'connection_id' => $connectionId,
                     'enabled' => 1,
+                    'custom_text' =>
+                        $customTexts[$connectionId] ?? null,
                     'status' => 'idle',
                     'created_at' => $now,
                     'updated_at' => $now,

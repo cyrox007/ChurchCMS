@@ -253,7 +253,7 @@ Priority is ordered within each section.
   - [x] привязка к существующей публикации также проверяет publication read scope;
 - [x] connection setup/testing UI;
 - [x] per-publication external channel selector;
-- [ ] per-channel custom post text;
+- [x] per-channel custom post text;
 - [ ] Telegram adapter;
 - [ ] VK adapter;
 - [ ] MAX adapter;

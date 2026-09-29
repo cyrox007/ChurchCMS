@@ -193,8 +193,8 @@ final class PublicationsAdminController
         }
 
         try {
-            $externalSelection =
-                $this->validatedExternalSelection($request);
+            $externalSettings =
+                $this->validatedExternalSettings($request);
 
             PublicationService::fromDatabase()->update(
                 publicId: $publicId,
@@ -220,7 +220,7 @@ final class PublicationsAdminController
                 $this->saveSeo($updated, $form);
                 $this->saveExternalSelection(
                     $updated,
-                    $externalSelection,
+                    $externalSettings,
                 );
             }
 
@@ -231,7 +231,7 @@ final class PublicationsAdminController
                 $request,
                 $publication,
                 $form,
-                'Не удалось сохранить. Возможно, такой адрес материала уже используется.',
+                'Не удалось сохранить. Проверьте адрес материала, внешние каналы и дополнительные настройки.',
             );
         }
     }
@@ -471,6 +471,9 @@ final class PublicationsAdminController
             'external_channel_ids' => self::stringList(
                 $request->post('external_channel_ids', []),
             ),
+            'external_channel_text' => self::stringMap(
+                $request->post('external_channel_text', []),
+            ),
             'seo_title' => trim((string) $request->post('seo_title', '')),
             'seo_description' => trim((string) $request->post('seo_description', '')),
             'seo_keywords' => trim((string) $request->post('seo_keywords', '')),
@@ -554,7 +557,13 @@ final class PublicationsAdminController
     /**
      * @return list<string>|null
      */
-    private function validatedExternalSelection(
+    /**
+     * @return array{
+     *     ids:list<string>,
+     *     texts:array<string,?string>
+     * }|null
+     */
+    private function validatedExternalSettings(
         Request $request,
     ): ?array {
         if (!AdminAuthorization::can($request, 'social.publish')) {
@@ -571,11 +580,15 @@ final class PublicationsAdminController
                 $capability,
                 'validatePublicationSelection',
             )
+            || !method_exists(
+                $capability,
+                'validatePublicationCustomTexts',
+            )
         ) {
             return null;
         }
 
-        return $capability->validatePublicationSelection(
+        $ids = $capability->validatePublicationSelection(
             self::stringList(
                 $request->post(
                     'external_channel_ids',
@@ -583,16 +596,33 @@ final class PublicationsAdminController
                 ),
             ),
         );
+        $texts = $capability->validatePublicationCustomTexts(
+            $ids,
+            self::stringMap(
+                $request->post(
+                    'external_channel_text',
+                    [],
+                ),
+            ),
+        );
+
+        return [
+            'ids' => $ids,
+            'texts' => $texts,
+        ];
     }
 
     /**
-     * @param list<string>|null $selection
+     * @param array{
+     *     ids:list<string>,
+     *     texts:array<string,?string>
+     * }|null $settings
      */
     private function saveExternalSelection(
         Publication $publication,
-        ?array $selection,
+        ?array $settings,
     ): void {
-        if ($selection === null) {
+        if ($settings === null) {
             return;
         }
 
@@ -612,8 +642,23 @@ final class PublicationsAdminController
 
         $capability->savePublicationSelection(
             $publication->id,
-            $selection,
+            $settings['ids'],
+            $settings['texts'],
         );
+
+        if (
+            $publication->isPublicNow(
+                new DateTimeImmutable('now'),
+            )
+            && method_exists(
+                $capability,
+                'queuePublication',
+            )
+        ) {
+            $capability->queuePublication(
+                $publication->id,
+            );
+        }
     }
 
     private function queueExternalPublication(
@@ -671,11 +716,22 @@ final class PublicationsAdminController
             self::stringList($requested),
             true,
         );
+        $requestedTexts = self::stringMap(
+            $form['external_channel_text'] ?? [],
+        );
 
         foreach ($connections as &$connection) {
-            $connection['selected'] = isset(
-                $selected[(string) ($connection['public_id'] ?? '')]
+            $publicId = (string) (
+                $connection['public_id'] ?? ''
             );
+            $connection['selected'] = isset(
+                $selected[$publicId]
+            );
+
+            if (array_key_exists($publicId, $requestedTexts)) {
+                $connection['custom_text'] =
+                    $requestedTexts[$publicId];
+            }
         }
         unset($connection);
 
@@ -704,6 +760,32 @@ final class PublicationsAdminController
         }
 
         return array_keys($result);
+    }
+
+    /**
+     * @return array<string,string>
+     */
+    private static function stringMap(mixed $value): array
+    {
+        if (!is_array($value)) {
+            return [];
+        }
+
+        $result = [];
+        foreach ($value as $key => $item) {
+            if (!is_string($key) || !is_string($item)) {
+                continue;
+            }
+
+            $key = trim($key);
+            if ($key === '') {
+                continue;
+            }
+
+            $result[$key] = $item;
+        }
+
+        return $result;
     }
 
     private function applicationTimezone(): DateTimeZone
