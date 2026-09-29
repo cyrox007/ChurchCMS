@@ -9,6 +9,7 @@ on:
       - 'modules/events/**'
       - 'modules/organizations/**'
       - 'tools/event-organization-smoke.php'
+      - 'tools/event-partner-sync-smoke.php'
       - '.github/workflows/events-organization-smoke.yml'
   pull_request:
     branches:
@@ -18,6 +19,7 @@ on:
       - 'modules/events/**'
       - 'modules/organizations/**'
       - 'tools/event-organization-smoke.php'
+      - 'tools/event-partner-sync-smoke.php'
       - '.github/workflows/events-organization-smoke.yml'
 
 permissions:
@@ -59,6 +61,7 @@ jobs:
           set -euo pipefail
           find modules/events -type f -name '*.php' -print0 | xargs -0 -n1 php -l
           php -l tools/event-organization-smoke.php
+          php -l tools/event-partner-sync-smoke.php
           php bin/migrate.php validate
 
       - name: Подготовить тестовую установку
@@ -92,3 +95,6 @@ jobs:
 
       - name: Проверить события и organization owner
         run: php tools/event-organization-smoke.php
+
+      - name: Проверить partner sync источник Events
+        run: php tools/event-partner-sync-smoke.php
