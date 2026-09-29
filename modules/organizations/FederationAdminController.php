@@ -350,6 +350,9 @@ final class FederationAdminController
                 'federationStatus' => self::status(
                     $request,
                 ),
+                'syncDashboard' =>
+                    FederationSyncDashboardService::fromDatabase()
+                        ->snapshot(),
             ],
             'federation',
         );
