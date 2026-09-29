@@ -34,6 +34,7 @@ on:
       - 'tools/federated-event-feed-smoke.php'
       - 'tools/federation-worship-sync-smoke.php'
       - 'tools/federation-document-sync-smoke.php'
+      - 'tools/federation-media-sync-smoke.php'
       - 'tools/federated-worship-feed-smoke.php'
       - 'tools/federation-sync-coordinator-smoke.php'
       - 'tools/federation-worker-sync-state-smoke.php'
@@ -73,6 +74,7 @@ on:
       - 'tools/federated-event-feed-smoke.php'
       - 'tools/federation-worship-sync-smoke.php'
       - 'tools/federation-document-sync-smoke.php'
+      - 'tools/federation-media-sync-smoke.php'
       - 'tools/federated-worship-feed-smoke.php'
       - 'tools/federation-sync-coordinator-smoke.php'
       - 'tools/federation-worker-sync-state-smoke.php'
@@ -132,6 +134,8 @@ jobs:
           php -l modules/organizations/FederationWorshipSyncWorker.php
           php -l tools/federation-document-sync-smoke.php
           php -l modules/organizations/FederationDocumentSyncWorker.php
+          php -l tools/federation-media-sync-smoke.php
+          php -l modules/organizations/FederationMediaSyncWorker.php
           php -l tools/federation-sync-coordinator-smoke.php
           php -l tools/federation-worker-sync-state-smoke.php
           php -l tools/federation-sync-dashboard-smoke.php
@@ -207,6 +211,9 @@ jobs:
 
       - name: Проверить принимающий federation sync документов
         run: php tools/federation-document-sync-smoke.php
+
+      - name: Проверить принимающий federation sync Media
+        run: php tools/federation-media-sync-smoke.php
 
       - name: Проверить общий координатор federation sync
         run: php tools/federation-sync-coordinator-smoke.php
