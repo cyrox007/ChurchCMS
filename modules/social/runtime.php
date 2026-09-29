@@ -2,9 +2,14 @@
 
 declare(strict_types=1);
 
+use ChurchCMS\App\Middlewares\CsrfMiddleware;
+use ChurchCMS\App\Middlewares\RequireAdminMiddleware;
+use ChurchCMS\App\Services\AdminNavigationRegistry;
 use ChurchCMS\App\Services\AdminTaskRegistry;
 use ChurchCMS\Core\ModuleRuntimeProvider;
+use ChurchCMS\Core\Router;
 use ChurchCMS\Modules\Social\ExternalChannelsCapability;
+use ChurchCMS\Modules\Social\SocialAdminController;
 use ChurchCMS\Modules\Social\SocialAdminTaskProvider;
 
 $moduleRoot = __DIR__;
@@ -18,9 +23,12 @@ foreach ([
     'ChannelPullBatch.php',
     'ChannelPublishResult.php',
     'ChannelAdapter.php',
+    'ChannelConnectionTestResult.php',
+    'ChannelConnectionTester.php',
     'ChannelAdapterRegistry.php',
     'NativeHttpClient.php',
     'SocialConnectionRepository.php',
+    'SocialConnectionService.php',
     'SocialPostRepository.php',
     'ExternalChannelItem.php',
     'ExternalChannelItemRepository.php',
@@ -29,6 +37,7 @@ foreach ([
     'ChannelOutboundDispatcher.php',
     'ExternalChannelsCapability.php',
     'SocialAdminTaskProvider.php',
+    'SocialAdminController.php',
 ] as $file) {
     require_once $moduleRoot . '/' . $file;
 }
@@ -60,8 +69,34 @@ return new class implements ModuleRuntimeProvider {
         // Хранилище остаётся независимым от провайдера, поэтому новые сети
         // и видеохостинги не требуют переработки ядра или схемы БД.
 
+        AdminNavigationRegistry::register(
+            id: 'external-channels',
+            label: 'Внешние каналы',
+            route: 'admin_external_channels',
+            permission: 'social.manage',
+            priority: 50,
+        );
+
         AdminTaskRegistry::register(
             new SocialAdminTaskProvider(),
+        );
+
+        $router = Router::getInstance();
+
+        $router->add(
+            'GET',
+            '/admin/external-channels',
+            [SocialAdminController::class, 'index'],
+            [RequireAdminMiddleware::class],
+            'admin_external_channels',
+        );
+
+        $router->add(
+            'POST',
+            '/admin/external-channels',
+            [SocialAdminController::class, 'create'],
+            [RequireAdminMiddleware::class, CsrfMiddleware::class],
+            'admin_external_channels_create',
         );
     }
 };
