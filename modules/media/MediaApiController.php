@@ -13,6 +13,35 @@ use Exception;
 
 final class MediaApiController
 {
+    public function aggregated(Request $request): never
+    {
+        $limit = max(
+            1,
+            min(50, (int) $request->get('limit', 20)),
+        );
+        $items = FederatedMediaFeedService::fromDatabase()
+            ->latest('default', $limit);
+        $remote = count(array_filter(
+            $items,
+            static fn(array $item): bool =>
+                ($item['source']['kind'] ?? null)
+                === 'federation',
+        ));
+
+        ApiResponse::success(
+            $items,
+            [
+                'aggregation' => [
+                    'limit' => $limit,
+                    'local' => count($items) - $remote,
+                    'remote' => $remote,
+                    'blob_available' => false,
+                ],
+            ],
+            cacheSeconds: 60,
+        );
+    }
+
     public function partnerIndex(Request $request): never
     {
         ApiAccess::requireScope($request, 'content.read');
