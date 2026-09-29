@@ -29,7 +29,8 @@ final class SocialPublicationChannelService
      *     name:string,
      *     target_ref:string,
      *     selected:bool,
-     *     status:?string
+     *     status:?string,
+     *     custom_text:?string
      * }>
      */
     public function editorConnections(
@@ -53,6 +54,7 @@ final class SocialPublicationChannelService
                 'target_ref' => $connection->targetRef,
                 'selected' => $post?->enabled === true,
                 'status' => $post?->status,
+                'custom_text' => $post?->customText,
             ];
         }
 
@@ -98,10 +100,61 @@ final class SocialPublicationChannelService
 
     /**
      * @param list<string> $connectionPublicIds
+     * @param array<string,mixed> $customTexts
+     * @return array<string,?string>
+     */
+    public function validateCustomTexts(
+        array $connectionPublicIds,
+        array $customTexts,
+    ): array {
+        $selected = array_fill_keys(
+            $this->validateSelection($connectionPublicIds),
+            true,
+        );
+        $result = [];
+
+        foreach ($selected as $publicId => $_) {
+            $value = $customTexts[$publicId] ?? null;
+            if ($value === null || $value === '') {
+                $result[$publicId] = null;
+                continue;
+            }
+
+            if (!is_string($value)) {
+                throw new InvalidArgumentException(
+                    'Текст внешнего канала заполнен некорректно.'
+                );
+            }
+
+            $value = trim($value);
+            if ($value === '') {
+                $result[$publicId] = null;
+                continue;
+            }
+
+            $length = function_exists('mb_strlen')
+                ? mb_strlen($value, 'UTF-8')
+                : strlen($value);
+
+            if ($length > 5000) {
+                throw new InvalidArgumentException(
+                    'Текст внешнего канала не должен превышать 5000 символов.'
+                );
+            }
+
+            $result[$publicId] = $value;
+        }
+
+        return $result;
+    }
+
+    /**
+     * @param list<string> $connectionPublicIds
      */
     public function saveSelection(
         int $publicationId,
         array $connectionPublicIds,
+        array $customTexts = [],
     ): void {
         if ($publicationId <= 0) {
             throw new InvalidArgumentException(
@@ -117,14 +170,24 @@ final class SocialPublicationChannelService
             $available[$connection->publicId] = $connection->id;
         }
 
+        $validatedTexts = $this->validateCustomTexts(
+            $validated,
+            $customTexts,
+        );
         $connectionIds = [];
+        $textsByConnectionId = [];
+
         foreach ($validated as $publicId) {
-            $connectionIds[] = $available[$publicId];
+            $connectionId = $available[$publicId];
+            $connectionIds[] = $connectionId;
+            $textsByConnectionId[$connectionId] =
+                $validatedTexts[$publicId] ?? null;
         }
 
         $this->posts->replaceSelection(
             $publicationId,
             $connectionIds,
+            $textsByConnectionId,
         );
     }
 
