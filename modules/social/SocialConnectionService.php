@@ -146,7 +146,7 @@ final class SocialConnectionService
         int $max,
         string $label,
     ): void {
-        $length = mb_strlen($value);
+        $length = strlen($value);
 
         if ($length < $min || $length > $max) {
             throw new InvalidArgumentException(
