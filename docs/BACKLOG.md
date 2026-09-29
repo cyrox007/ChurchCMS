@@ -55,7 +55,9 @@ Priority is ordered within each section.
   - [x] агрегированный элемент сохраняет source `instance_id`, organization owner, имя и canonical URL и не выдаёт сырой remote `body_html`;
   - [x] подключить remote Publications к общему RSS с сохранением исходного узла через стандартный RSS `source`;
   - [x] подключить агрегированную Publications-ленту к публичному блоку главной страницы с явным источником;
-  - [ ] расширить тот же контракт агрегации на Events/Worship/Media/Documents;
+  - [x] Events: объединять ближайшие локальные события и active remote projections только от `child`-связей с `content.read`, сохраняя `instance_id`, organization owner, имя и canonical URL источника;
+  - [x] Events: публичный `GET /api/v1/events/aggregated` не отдаёт сырой `description_html`, исключает tombstone/peer/parent/no-scope и сортирует по времени начала;
+  - [ ] расширить тот же контракт агрегации на Worship/Media/Documents;
 - [x] federation health/retry/conflict UI.
 
 ## P0 — Installation and operator UX
