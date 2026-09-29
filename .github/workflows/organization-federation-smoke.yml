@@ -35,6 +35,7 @@ on:
       - 'tools/federation-worship-sync-smoke.php'
       - 'tools/federation-sync-coordinator-smoke.php'
       - 'tools/federation-worker-sync-state-smoke.php'
+      - 'tools/federation-sync-dashboard-smoke.php'
       - 'tools/federated-publication-feed-smoke.php'
       - '.github/workflows/organization-federation-smoke.yml'
   pull_request:
@@ -71,6 +72,7 @@ on:
       - 'tools/federation-worship-sync-smoke.php'
       - 'tools/federation-sync-coordinator-smoke.php'
       - 'tools/federation-worker-sync-state-smoke.php'
+      - 'tools/federation-sync-dashboard-smoke.php'
       - 'tools/federated-publication-feed-smoke.php'
       - '.github/workflows/organization-federation-smoke.yml'
 
@@ -125,6 +127,7 @@ jobs:
           php -l modules/organizations/FederationWorshipSyncWorker.php
           php -l tools/federation-sync-coordinator-smoke.php
           php -l tools/federation-worker-sync-state-smoke.php
+          php -l tools/federation-sync-dashboard-smoke.php
           php -l modules/organizations/FederationSyncWorker.php
           php -l modules/organizations/FederationSyncCoordinator.php
           php -l tools/federated-publication-feed-smoke.php
@@ -200,6 +203,9 @@ jobs:
 
       - name: Проверить независимое состояние federation worker
         run: php tools/federation-worker-sync-state-smoke.php
+
+      - name: Проверить метрики federation sync dashboard
+        run: php tools/federation-sync-dashboard-smoke.php
 
       - name: Проверить агрегированную ленту публикаций
         run: php tools/federated-publication-feed-smoke.php
