@@ -8,8 +8,11 @@ use ChurchCMS\Core\DatabaseManager;
 use ChurchCMS\Core\Uuid;
 use ChurchCMS\Modules\Organizations\OrganizationRepository;
 use ChurchCMS\Modules\Organizations\OrganizationUnit;
+use DateTimeImmutable;
+use DateTimeZone;
 use InvalidArgumentException;
 use PDO;
+use Throwable;
 
 final class MediaService
 {
@@ -196,19 +199,12 @@ final class MediaService
             );
         }
 
-        $statement = $this->pdo->prepare(
-            'UPDATE media_assets
-             SET visibility = :visibility,
-                 updated_at = :updated_at
-             WHERE public_id = :public_id
-               AND site_key = :site_key'
+        $this->transitionExternalState(
+            $asset,
+            $asset->status,
+            $visibility,
+            'visibility_changed',
         );
-        $statement->execute([
-            'visibility' => $visibility,
-            'updated_at' => gmdate('Y-m-d H:i:s'),
-            'public_id' => $asset->publicId,
-            'site_key' => $siteKey,
-        ]);
     }
 
     public function archive(
@@ -227,21 +223,88 @@ final class MediaService
             );
         }
 
-        $statement = $this->pdo->prepare(
-            'UPDATE media_assets
-             SET status = :status,
-                 visibility = :visibility,
-                 updated_at = :updated_at
-             WHERE public_id = :public_id
-               AND site_key = :site_key'
+        $this->transitionExternalState(
+            $asset,
+            'archived',
+            'private',
+            'archived',
         );
-        $statement->execute([
-            'status' => 'archived',
-            'visibility' => 'private',
-            'updated_at' => gmdate('Y-m-d H:i:s'),
-            'public_id' => $asset->publicId,
-            'site_key' => $siteKey,
-        ]);
+    }
+
+    private function transitionExternalState(
+        MediaAsset $asset,
+        string $status,
+        string $visibility,
+        ?string $leaveReason = null,
+    ): void {
+        $wasFederated = self::isFederated($asset);
+        $willBeFederated =
+            $status !== 'archived'
+            && $visibility === 'federated';
+        $ownsTransaction = !$this->pdo->inTransaction();
+
+        if ($ownsTransaction) {
+            $this->pdo->beginTransaction();
+        }
+
+        try {
+            $updatedAt = new DateTimeImmutable(
+                'now',
+                new DateTimeZone('UTC'),
+            );
+            $tombstones = new MediaPartnerTombstoneRepository(
+                $this->pdo,
+            );
+
+            if ($wasFederated && !$willBeFederated) {
+                $tombstones->record(
+                    $asset,
+                    $leaveReason ?? 'visibility_changed',
+                    $updatedAt,
+                );
+            }
+
+            if (!$wasFederated && $willBeFederated) {
+                $tombstones->clear($asset);
+            }
+
+            $statement = $this->pdo->prepare(
+                'UPDATE media_assets
+                 SET status = :status,
+                     visibility = :visibility,
+                     updated_at = :updated_at
+                 WHERE public_id = :public_id
+                   AND site_key = :site_key'
+            );
+            $statement->execute([
+                'status' => $status,
+                'visibility' => $visibility,
+                'updated_at' => $updatedAt->format(
+                    'Y-m-d H:i:s',
+                ),
+                'public_id' => $asset->publicId,
+                'site_key' => $asset->siteKey,
+            ]);
+
+            if ($ownsTransaction) {
+                $this->pdo->commit();
+            }
+        } catch (Throwable $error) {
+            if (
+                $ownsTransaction
+                && $this->pdo->inTransaction()
+            ) {
+                $this->pdo->rollBack();
+            }
+
+            throw $error;
+        }
+    }
+
+    private static function isFederated(MediaAsset $asset): bool
+    {
+        return $asset->status !== 'archived'
+            && $asset->visibility === 'federated';
     }
 
     private function resolveOrganization(

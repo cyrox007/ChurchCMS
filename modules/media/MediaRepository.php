@@ -5,6 +5,9 @@ declare(strict_types=1);
 namespace ChurchCMS\Modules\Media;
 
 use ChurchCMS\Core\DatabaseManager;
+use DateTimeImmutable;
+use DateTimeZone;
+use InvalidArgumentException;
 use PDO;
 
 final class MediaRepository
@@ -95,6 +98,71 @@ final class MediaRepository
             'visibility' => 'federated',
             'archived' => 'archived',
         ]);
+
+        return array_map(
+            self::hydrate(...),
+            $statement->fetchAll(),
+        );
+    }
+
+
+    /**
+     * @return list<MediaAsset>
+     */
+    public function federatedUpdatedSince(
+        DateTimeImmutable $updatedSince,
+        string $siteKey = 'default',
+        int $limit = 100,
+        ?string $afterPublicId = null,
+    ): array {
+        $limit = max(1, min(100, $limit));
+        $timestamp = $updatedSince
+            ->setTimezone(new DateTimeZone('UTC'))
+            ->format('Y-m-d H:i:s');
+
+        if (
+            $afterPublicId !== null
+            && preg_match(
+                '/^[a-f0-9]{8}-[a-f0-9]{4}-4[a-f0-9]{3}-[89ab][a-f0-9]{3}-[a-f0-9]{12}$/Di',
+                $afterPublicId,
+            ) !== 1
+        ) {
+            throw new InvalidArgumentException(
+                'Некорректный public ID курсора медиатеки.'
+            );
+        }
+
+        $cursorSql = $afterPublicId === null
+            ? 'updated_at > :updated_since'
+            : '(updated_at > :updated_since
+                OR (
+                    updated_at = :same_updated_at
+                    AND public_id > :after_public_id
+                ))';
+
+        $statement = $this->pdo->prepare(
+            'SELECT *
+             FROM media_assets
+             WHERE site_key = :site_key
+               AND visibility = :visibility
+               AND status <> :archived
+               AND ' . $cursorSql . '
+             ORDER BY updated_at ASC, public_id ASC
+             LIMIT :limit'
+        );
+        $statement->bindValue(':site_key', $siteKey);
+        $statement->bindValue(':visibility', 'federated');
+        $statement->bindValue(':archived', 'archived');
+        $statement->bindValue(':updated_since', $timestamp);
+        if ($afterPublicId !== null) {
+            $statement->bindValue(':same_updated_at', $timestamp);
+            $statement->bindValue(
+                ':after_public_id',
+                $afterPublicId,
+            );
+        }
+        $statement->bindValue(':limit', $limit, PDO::PARAM_INT);
+        $statement->execute();
 
         return array_map(
             self::hydrate(...),

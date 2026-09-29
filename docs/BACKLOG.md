@@ -53,7 +53,8 @@ Priority is ordered within each section.
   - [ ] добавить source/worker для Media/Documents и их tombstones после определения этой границы;
     - [x] Documents source-side: только `published/federated`, bounded incremental endpoint, безопасная projection без файла/пути и tombstones при уходе из federation;
     - [ ] Documents: принимающий worker, remote projection и tombstones;
-    - [ ] Media: source/worker и tombstones без передачи непроверенного blob;
+    - [x] Media source-side: только явно разрешённые `federated` неархивные метаданные, безопасная projection без исходного имени/пути/blob и tombstones при смене видимости или архивировании;
+    - [ ] Media: принимающий worker, remote projection и tombstones;
 - [ ] агрегированные ленты вышестоящих узлов без потери источника;
   - [x] Publications: публичный API `/api/v1/publications/aggregated` объединяет локальные материалы и active remote projections только от `child`-связей с разрешённым входящим scope;
   - [x] агрегированный элемент сохраняет source `instance_id`, organization owner, имя и canonical URL и не выдаёт сырой remote `body_html`;
