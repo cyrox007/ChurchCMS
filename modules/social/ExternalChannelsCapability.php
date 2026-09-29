@@ -41,15 +41,33 @@ final class ExternalChannelsCapability
 
     /**
      * @param list<string> $connectionPublicIds
+     * @param array<string,mixed> $customTexts
+     * @return array<string,?string>
+     */
+    public function validatePublicationCustomTexts(
+        array $connectionPublicIds,
+        array $customTexts,
+    ): array {
+        return SocialPublicationChannelService::fromDatabase()
+            ->validateCustomTexts(
+                $connectionPublicIds,
+                $customTexts,
+            );
+    }
+
+    /**
+     * @param list<string> $connectionPublicIds
      */
     public function savePublicationSelection(
         int $publicationId,
         array $connectionPublicIds,
+        array $customTexts = [],
     ): void {
         SocialPublicationChannelService::fromDatabase()
             ->saveSelection(
                 $publicationId,
                 $connectionPublicIds,
+                $customTexts,
             );
     }
 
