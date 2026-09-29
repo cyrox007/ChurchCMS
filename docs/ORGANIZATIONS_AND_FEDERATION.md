@@ -221,8 +221,11 @@ projection/tombstone. Опубликованные события доступн
 состояние `events`, поэтому его cursor/ошибка не перетирают Publications.
 Полученные данные сохраняются как remote projection типа `event` и не становятся
 локальными каноническими Events. Сырой `description_html` через federation не
-передаётся. Агрегированный публичный календарь Events остаётся отдельным
-инкрементом.
+передаётся. Безопасная агрегированная API-лента Events объединяет ближайшие
+локальные события и active projections только от `child`-связей с
+`content.read`, сохраняет исходный `instance_id`/organization/canonical URL и
+не принимает tombstone, `peer`, `parent` или no-scope источники. Полноценные
+публичные календарные представления Events остаются отдельным инкрементом.
 
 Для Worship source-side обмен учитывает семантику расписания: `scheduled` и
 `cancelled` остаются активными partner-visible состояниями, чтобы принимающий
