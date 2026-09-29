@@ -129,7 +129,7 @@ final class FederationWorkerSyncStateRepository
                  updated_at = :updated_at
              WHERE federation_link_id = :link_id
                AND worker_id = :worker_id
-               AND COALESCE(cursor, \'\') = :expected_cursor'
+               AND COALESCE(sync_cursor, \'\') = :expected_cursor'
         );
         $statement->execute([
             'error' => $message,
@@ -205,7 +205,7 @@ final class FederationWorkerSyncStateRepository
                  updated_at = :updated_at
              WHERE federation_link_id = :link_id
                AND worker_id = :worker_id
-               AND COALESCE(cursor, \'\') = :expected_cursor'
+               AND COALESCE(sync_cursor, \'\') = :expected_cursor'
         );
         $parameters = [
             'cursor' => $cursor,
