@@ -9,6 +9,7 @@ on:
       - 'modules/media/**'
       - 'modules/organizations/**'
       - 'tools/media-organization-smoke.php'
+      - 'tools/media-partner-sync-smoke.php'
       - '.github/workflows/media-organization-smoke.yml'
   pull_request:
     branches:
@@ -59,6 +60,7 @@ jobs:
           set -euo pipefail
           find modules/media -type f -name '*.php' -print0 | xargs -0 -n1 php -l
           php -l tools/media-organization-smoke.php
+          php -l tools/media-partner-sync-smoke.php
           php bin/migrate.php validate
 
       - name: Подготовить тестовую установку
@@ -92,3 +94,6 @@ jobs:
 
       - name: Проверить Media и organization owner
         run: php tools/media-organization-smoke.php
+
+      - name: Проверить source-side federation Media
+        run: php tools/media-partner-sync-smoke.php
