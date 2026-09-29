@@ -252,7 +252,7 @@ Priority is ordered within each section.
   - [x] безопасный импорт входящего материала в draft с выбором organization owner только в рамках organization-scoped RBAC;
   - [x] привязка к существующей публикации также проверяет publication read scope;
 - [x] connection setup/testing UI;
-- [ ] per-publication external channel selector;
+- [x] per-publication external channel selector;
 - [ ] per-channel custom post text;
 - [ ] Telegram adapter;
 - [ ] VK adapter;
