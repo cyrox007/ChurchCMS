@@ -199,15 +199,15 @@ final class FederationDocumentSyncWorker implements FederationSyncWorker
 
         $cursor['documents'] =
             $documentPage['cursor'];
-        $eventCursor = self::encodeCursor($cursor);
-        if ($eventCursor !== $storedCursor) {
+        $documentCursor = self::encodeCursor($cursor);
+        if ($documentCursor !== $storedCursor) {
             $this->syncStates->saveCursor(
                 $link->id,
                 $this->id(),
                 $storedCursor,
-                $eventCursor,
+                $documentCursor,
             );
-            $storedCursor = $eventCursor;
+            $storedCursor = $documentCursor;
         }
 
         $tombstonePage = $this->page(
@@ -407,7 +407,7 @@ final class FederationDocumentSyncWorker implements FederationSyncWorker
 
     /**
      * @return array{
-     *     events:array{updated_since:string,after:?string},
+     *     documents:array{updated_since:string,after:?string},
      *     tombstones:array{updated_since:string,after:?string}
      * }
      */
@@ -470,7 +470,7 @@ final class FederationDocumentSyncWorker implements FederationSyncWorker
 
     /**
      * @param array{
-     *     events:array{updated_since:string,after:?string},
+     *     documents:array{updated_since:string,after:?string},
      *     tombstones:array{updated_since:string,after:?string}
      * } $cursor
      */
@@ -491,7 +491,7 @@ final class FederationDocumentSyncWorker implements FederationSyncWorker
 
     /**
      * @return array{
-     *     events:array{updated_since:string,after:?string},
+     *     documents:array{updated_since:string,after:?string},
      *     tombstones:array{updated_since:string,after:?string}
      * }
      */
