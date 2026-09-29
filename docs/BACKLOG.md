@@ -37,12 +37,14 @@ Priority is ordered within each section.
   - [x] People/назначения: основа схемы и доменного слоя, обязательный владелец-организация карточки и отдельная ссылка на организацию каждого назначения;
   - [x] Worship: схема и доменный слой с обязательным organization owner, site-root по умолчанию и cross-site защитой;
   - [x] Events: схема и доменный слой с обязательным organization owner, site-root по умолчанию и cross-site защитой;
-  - [ ] Media и Documents: organization binding;
+  - [x] Media: foundation метаданных с обязательным organization owner, site-root по умолчанию и cross-site защитой;
+  - [ ] Documents: organization binding;
 - [ ] incremental federation sync с canonical owner и tombstones;
   - [x] Publications: устойчивый tombstone при снятии ранее опубликованного материала с target `diocese` и отдельный partner endpoint;
   - [x] remote projections и применение tombstone на принимающем узле;
   - [x] Publications: фоновый обработчик синхронизации с раздельными составными курсорами для публикаций/tombstones, безопасным повторным запуском, CLI для cron и отдельным состоянием ошибки sync;
-  - [ ] обобщить обработчик синхронизации на остальные типы remote projections и единый планировщик;
+  - [x] единый coordinator/CLI вызывает зарегистрированные sync worker и изолирует сбой одного типа данных;
+  - [ ] добавить sync worker для Events/Worship/Media/Documents и их tombstones;
 - [ ] агрегированные ленты вышестоящих узлов без потери источника;
   - [x] Publications: публичный API `/api/v1/publications/aggregated` объединяет локальные материалы и active remote projections только от `child`-связей с разрешённым входящим scope;
   - [x] агрегированный элемент сохраняет source `instance_id`, organization owner, имя и canonical URL и не выдаёт сырой remote `body_html`;
