@@ -12,7 +12,7 @@ use PDO;
 use RuntimeException;
 use Throwable;
 
-final class FederationPublicationSyncWorker
+final class FederationPublicationSyncWorker implements FederationSyncWorker
 {
     private const EPOCH = '1970-01-01T00:00:00+00:00';
 
@@ -28,6 +28,11 @@ final class FederationPublicationSyncWorker
         $this->projections = new FederationProjectionService($pdo);
         $this->transport = $transport
             ?? new FederationHttpSyncTransport();
+    }
+
+    public function id(): string
+    {
+        return 'publications';
     }
 
     public static function fromDatabase(): self
