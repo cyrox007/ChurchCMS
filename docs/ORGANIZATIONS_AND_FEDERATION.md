@@ -201,6 +201,18 @@ Events/Worship/Media/Documents должны подключаться отдел�
 разрастания единого условного обработчика. CLI `bin/federation-sync.php`
 запускает coordinator и поэтому остаётся одной точкой для cron/systemd timer.
 
+Состояние синхронизации не делится между типами данных. Таблица
+`federation_worker_sync_states` хранит отдельные cursor, `last_sync_at` и
+`last_sync_error` для пары federation link + worker ID. Это необходимо до
+подключения второго worker: общий `sync_cursor` на link привёл бы к взаимному
+перетиранию прогресса Publications и Events.
+
+При обновлении существующей установки legacy-состояние link переносится в
+worker `publications`. Пока Admin Shell читает старые поля link, Publications
+worker зеркалит в них своё состояние как совместимый переходный слой. Новые
+worker этого не делают. Отзыв доверия и повторное pairing очищают все
+worker-состояния соответствующей связи.
+
 Для Events уже реализована source-side часть этого контракта. Опубликованные
 события доступны через bounded partner feed с составным курсором
 `updated_at + public_id`. Снятие или отмена ранее опубликованного события
