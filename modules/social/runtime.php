@@ -36,6 +36,7 @@ foreach ([
     'ChannelSyncStateRepository.php',
     'ChannelSyncService.php',
     'ChannelOutboundDispatcher.php',
+    'SocialOutboundFailureService.php',
     'ExternalChannelsCapability.php',
     'SocialAdminTaskProvider.php',
     'SocialAdminController.php',
@@ -122,6 +123,14 @@ return new class implements ModuleRuntimeProvider {
             [SocialAdminController::class, 'importInboxItem'],
             [RequireAdminMiddleware::class, CsrfMiddleware::class],
             'admin_external_channels_inbox_import',
+        );
+
+        $router->add(
+            'POST',
+            '/admin/external-channels/outbox/{publicId}/retry',
+            [SocialAdminController::class, 'retryOutbound'],
+            [RequireAdminMiddleware::class, CsrfMiddleware::class],
+            'admin_external_channels_outbox_retry',
         );
     }
 };
