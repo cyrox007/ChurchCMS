@@ -153,18 +153,6 @@ return new class implements ModuleRuntimeProvider {
 
         $router->add(
             'GET',
-            '/api/v1/documents/{publicId}',
-            [DocumentsPublicApiController::class, 'show'],
-            [
-                ApiEnabledMiddleware::class,
-                ApiCorsMiddleware::class,
-                ApiPublicRateLimitMiddleware::class,
-            ],
-            'api_v1_document_show',
-        );
-
-        $router->add(
-            'GET',
             '/api/v1/documents/aggregated',
             [DocumentsApiController::class, 'aggregated'],
             [
@@ -173,6 +161,18 @@ return new class implements ModuleRuntimeProvider {
                 ApiPublicRateLimitMiddleware::class,
             ],
             'api_v1_documents_aggregated',
+        );
+
+        $router->add(
+            'GET',
+            '/api/v1/documents/{publicId}',
+            [DocumentsPublicApiController::class, 'show'],
+            [
+                ApiEnabledMiddleware::class,
+                ApiCorsMiddleware::class,
+                ApiPublicRateLimitMiddleware::class,
+            ],
+            'api_v1_document_show',
         );
 
         $router->add(
