@@ -263,6 +263,8 @@ Priority is ordered within each section.
   - [x] inbound public-channel sync через Data API key + uploads playlist;
   - [ ] outbound video upload после готовности Media binary/resumable upload pipeline;
 - [ ] Rutube adapter;
+  - [x] inbound public-channel sync через `/api/video/person/{id}/`;
+  - [ ] outbound video upload после подтверждённого upload API и готовности Media binary pipeline;
 - [x] webhook receiver contract/signature validation;
 - [x] loop prevention tests;
 - [x] retry/dead-letter UI.
