@@ -8,7 +8,6 @@ use ChurchCMS\Modules\Media\MediaGalleryService;
 use ChurchCMS\Modules\Media\MediaService;
 use ChurchCMS\Modules\Media\MediaUsageService;
 use ChurchCMS\Modules\Organizations\OrganizationService;
-use InvalidArgumentException;
 
 require dirname(__DIR__) . '/core.php';
 
@@ -78,7 +77,7 @@ try {
         "Пустая галерея ошибочно опубликована.\n",
     );
     exit(1);
-} catch (InvalidArgumentException) {
+} catch (\InvalidArgumentException) {
 }
 
 $gallery = $service->createDraft(
@@ -97,7 +96,7 @@ try {
         "Draft-галерея ошибочно стала public.\n",
     );
     exit(1);
-} catch (InvalidArgumentException) {
+} catch (\InvalidArgumentException) {
 }
 
 $service->replaceItems(
@@ -128,7 +127,7 @@ try {
         "Дубликат изображения ошибочно принят.\n",
     );
     exit(1);
-} catch (InvalidArgumentException) {
+} catch (\InvalidArgumentException) {
 }
 
 $items = $service->items($gallery);
@@ -154,7 +153,7 @@ try {
         "Document Media ошибочно принят в галерею.\n",
     );
     exit(1);
-} catch (InvalidArgumentException) {
+} catch (\InvalidArgumentException) {
 }
 
 try {
@@ -164,7 +163,7 @@ try {
         "Используемое галереей изображение ошибочно архивировано.\n",
     );
     exit(1);
-} catch (InvalidArgumentException) {
+} catch (\InvalidArgumentException) {
 }
 
 $references = MediaUsageService::fromDatabase()
