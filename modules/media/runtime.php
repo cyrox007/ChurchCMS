@@ -20,6 +20,8 @@ foreach ([
     'MediaAsset.php',
     'MediaStoredBlob.php',
     'MediaBlobStorage.php',
+    'MediaImageMetadata.php',
+    'MediaImageMetadataReader.php',
     'MediaRepository.php',
     'MediaOrganizationAccessService.php',
     'MediaApiResource.php',
