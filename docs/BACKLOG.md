@@ -169,7 +169,9 @@ Priority is ordered within each section.
   - [x] schema/domain foundation + ordered image slots через Media usage references + draft/publish/public lifecycle;
   - [x] Admin Shell и управление порядком оператором;
   - [x] public/API с фильтрацией только public Media и hash-versioned image URLs;
-- document catalog.
+- [x] document catalog: organization-scoped RBAC, Admin Shell, public HTML/API и безопасная связь с Media-файлом;
+- [ ] document categories/rubrics;
+- [ ] document file versions/replacements.
 
 ## P2 — Parish/Cathedral
 
