@@ -180,8 +180,22 @@ federation projection дают 404 и не раскрывают файловый
 `blob_available=true` только для локального public asset с реально доступным
 blob. Remote federation по-прежнему остаётся metadata-only.
 
-Audio/video намеренно пока не обслуживаются этим маршрутом: для больших
-медиафайлов сначала нужен корректный HTTP Range/resumable слой.
+Audio/video original blob обслуживаются тем же hash-versioned маршрутом с
+HTTP byte ranges. Поддерживается один диапазон за запрос:
+
+- `bytes=start-end`;
+- `bytes=start-`;
+- `bytes=-suffix`.
+
+Корректный диапазон получает `206 Partial Content`, `Content-Range`,
+`Accept-Ranges: bytes` и потоковую отдачу кусками до 1 МиБ. Некорректный,
+множественный или выходящий за размер диапазон получает `416` с
+`Content-Range: bytes */<size>`. `HEAD` возвращает те же метаданные без
+тела. `If-Range` с несовпавшим ETag переводит запрос на полный `200`.
+
+Это закрывает resumable download/streaming локальных public audio/video.
+Resumable binary **upload** во внешние видеоплатформы остаётся отдельной
+задачей outbound pipeline.
 
 ## Usage references
 
@@ -216,13 +230,30 @@ Withdraw возвращает `draft/private`. Archive переводит кар
 `archived/private` и снимает её usage references, поэтому изображения после
 этого снова можно архивировать.
 
-Admin Shell предоставляет отдельный раздел «Галереи» под `media.manage`: создание черновика, редактирование карточки, scoped-выбор доступных изображений, числовой порядок, publish/withdraw/archive. Сервер повторно проверяет organization scope и каждого выбранного Media asset. Публичный gallery API остаётся отдельным следующим инкрементом.
+Admin Shell предоставляет отдельный раздел «Галереи» под `media.manage`: создание черновика, редактирование карточки, scoped-выбор доступных изображений, числовой порядок, publish/withdraw/archive. Сервер повторно проверяет organization scope и каждого выбранного Media asset. Рядом с каждым изображением показывается его текущая Media visibility.
+
+## Публичные галереи
+
+Публичный vertical slice использует:
+
+- `GET /galleries` — HTML-список;
+- `GET /galleries/{public_id}` — HTML-карточка;
+- `GET /api/v1/galleries` — публичный API-список;
+- `GET /api/v1/galleries/{public_id}` — публичный API detail.
+
+В projection попадают только галереи `published/public` и только их
+неархивные Media asset типа `image` с `visibility=public`. Private и
+federated изображения не раскрываются ни в JSON, ни в HTML.
+
+Для отображения используются уже проверенные hash-versioned Media URLs:
+сначала `medium`, затем original, затем `thumbnail` как fallback.
+Derivative и original дополнительно проходят существующую
+`MediaPublicFileService` проверку blob/storage. Галерея без единого public
+изображения не попадает в публичный список и detail.
 
 ## Следующие инкременты
 
 Остаются:
 
-- public/API галерей;
 - подключение derivatives к редакторам и публичным шаблонам;
-- HTTP Range/resumable pipeline для audio/video;
 - binary/resumable outbound YouTube/Rutube.
