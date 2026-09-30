@@ -108,4 +108,4 @@ Status: in progress.
 - [x] Inbound review/import workflow.
 - [x] Built-in Telegram/VK/MAX adapters.
 - [ ] Built-in YouTube/Rutube adapters.
-- [ ] Adapter SDK documentation for other/future platforms.
+- [x] Adapter SDK documentation for other/future platforms.
