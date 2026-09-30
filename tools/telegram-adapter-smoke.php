@@ -8,8 +8,6 @@ use ChurchCMS\Modules\Social\ChannelHttpClient;
 use ChurchCMS\Modules\Social\ChannelOutboundItem;
 use ChurchCMS\Modules\Social\SocialConnection;
 use ChurchCMS\Modules\Social\TelegramChannelAdapter;
-use DateTimeImmutable;
-use RuntimeException;
 
 require dirname(__DIR__) . '/core.php';
 
@@ -39,7 +37,7 @@ final class TelegramSmokeHttpClient implements ChannelHttpClient
 
         if (str_ends_with($url, '/getChat')) {
             if (($query['chat_id'] ?? null) !== '@parish_channel') {
-                throw new RuntimeException(
+                throw new \RuntimeException(
                     'getChat получил неверный chat_id.'
                 );
             }
@@ -54,13 +52,13 @@ final class TelegramSmokeHttpClient implements ChannelHttpClient
 
         if (str_ends_with($url, '/getUpdates')) {
             if (($query['offset'] ?? null) !== 100) {
-                throw new RuntimeException(
+                throw new \RuntimeException(
                     'getUpdates не продолжил сохранённый cursor.'
                 );
             }
 
             if (($query['limit'] ?? null) !== 50) {
-                throw new RuntimeException(
+                throw new \RuntimeException(
                     'getUpdates получил неверный limit.'
                 );
             }
@@ -119,7 +117,7 @@ final class TelegramSmokeHttpClient implements ChannelHttpClient
             ]);
         }
 
-        throw new RuntimeException(
+        throw new \RuntimeException(
             'Неожиданный GET Telegram smoke: ' . $url
         );
     }
@@ -136,13 +134,13 @@ final class TelegramSmokeHttpClient implements ChannelHttpClient
         ];
 
         if (!str_ends_with($url, '/sendMessage')) {
-            throw new RuntimeException(
+            throw new \RuntimeException(
                 'Неожиданный POST Telegram smoke: ' . $url
             );
         }
 
         if (($payload['chat_id'] ?? null) !== '@parish_channel') {
-            throw new RuntimeException(
+            throw new \RuntimeException(
                 'sendMessage получил неверный chat_id.'
             );
         }
@@ -155,7 +153,7 @@ final class TelegramSmokeHttpClient implements ChannelHttpClient
                 'https://church.example/publications/test'
             )
         ) {
-            throw new RuntimeException(
+            throw new \RuntimeException(
                 'sendMessage не получил canonical URL.'
             );
         }
@@ -165,7 +163,7 @@ final class TelegramSmokeHttpClient implements ChannelHttpClient
             : strlen($text);
 
         if ($length > 4096) {
-            throw new RuntimeException(
+            throw new \RuntimeException(
                 'sendMessage превысил лимит Telegram.'
             );
         }
@@ -187,7 +185,7 @@ final class TelegramSmokeHttpClient implements ChannelHttpClient
         array $payload,
         array $headers = [],
     ): array {
-        throw new RuntimeException(
+        throw new \RuntimeException(
             'Telegram adapter не должен использовать postForm.'
         );
     }
@@ -271,7 +269,7 @@ if ($invalid->success) {
     exit(1);
 }
 
-$now = new DateTimeImmutable('2026-09-30 00:00:00 UTC');
+$now = new \DateTimeImmutable('2026-09-30 00:00:00 UTC');
 $connection = new SocialConnection(
     id: 1,
     publicId: 'telegram-smoke-connection',
