@@ -87,6 +87,24 @@ final class SeoCapability
     /**
      * @param array<string,mixed> $input
      * @param list<string>|null $ownerPublicIds
+     * @return array<string,string>
+     */
+    public function validateStructuredMediaSelection(
+        array $input,
+        ?array $ownerPublicIds,
+        string $siteKey = 'default',
+    ): array {
+        return (new PublicationStructuredMediaSeoService())
+            ->validateSelection(
+                $input,
+                $ownerPublicIds,
+                $siteKey,
+            );
+    }
+
+    /**
+     * @param array<string,mixed> $input
+     * @param list<string>|null $ownerPublicIds
      */
     public function savePublication(
         Publication $publication,
