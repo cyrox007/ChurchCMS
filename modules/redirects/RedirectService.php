@@ -298,6 +298,12 @@ final class RedirectService
             );
         }
 
+        if (strlen($path) > 1000) {
+            throw new InvalidArgumentException(
+                'Исходный путь редиректа слишком длинный.'
+            );
+        }
+
         foreach (self::RESERVED_SOURCE_PREFIXES as $prefix) {
             if (
                 $path === $prefix
@@ -324,8 +330,10 @@ final class RedirectService
             $value === ''
             || !str_starts_with($value, '/')
             || str_starts_with($value, '//')
-            || str_contains($value, "\r")
-            || str_contains($value, "\n")
+            || preg_match(
+                '/[\x00-\x1F\x7F]/',
+                $value,
+            ) === 1
             || str_contains($value, '#')
         ) {
             throw new InvalidArgumentException(
@@ -360,7 +368,15 @@ final class RedirectService
                 ? '?' . $parts['query']
                 : '';
 
-        return $path . $query;
+        $result = $path . $query;
+
+        if (strlen($result) > 2000) {
+            throw new InvalidArgumentException(
+                'Целевой путь редиректа слишком длинный.'
+            );
+        }
+
+        return $result;
     }
 
     private static function targetSourcePath(
