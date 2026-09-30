@@ -13,11 +13,32 @@ final class Router
 
     private array $routes = [];
     private array $globalMiddlewares = [];
+    private array $preDispatchHandlers = [];
     private ?string $groupPrefix = null;
 
     public static function getInstance(): self
     {
         return self::$instance ??= new self();
+    }
+
+    public function addPreDispatchHandler(
+        array $handler,
+    ): self {
+        if (count($handler) !== 2) {
+            throw new InvalidArgumentException(
+                'Pre-dispatch handler must be [class, method].'
+            );
+        }
+
+        foreach ($this->preDispatchHandlers as $existing) {
+            if ($existing === $handler) {
+                return $this;
+            }
+        }
+
+        $this->preDispatchHandlers[] = $handler;
+
+        return $this;
     }
 
     public function addGlobalMiddleware(string $middleware): self
@@ -151,6 +172,22 @@ final class Router
         $requestPath = RouteTemplate::normalize($request->path());
         $method = $request->method();
         $allowed = [];
+
+        foreach ($this->preDispatchHandlers as $handler) {
+            [$class, $action] = $handler;
+            $instance = new $class();
+
+            if (!method_exists($instance, $action)) {
+                throw new RuntimeException(
+                    "Pre-dispatch handler not found: {$class}::{$action}"
+                );
+            }
+
+            $instance->$action(
+                $request,
+                $requestPath,
+            );
+        }
 
         foreach ($this->routes as $route) {
             $pattern = RouteTemplate::compile($route['path']);
