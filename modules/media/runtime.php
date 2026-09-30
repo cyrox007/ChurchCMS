@@ -27,6 +27,10 @@ foreach ([
     'MediaDerivativeRepository.php',
     'MediaImageDerivativeService.php',
     'MediaDerivativeCapability.php',
+    'MediaGallery.php',
+    'MediaGalleryRepository.php',
+    'MediaGalleryService.php',
+    'MediaGalleryCapability.php',
     'MediaRepository.php',
     'MediaUsageReference.php',
     'MediaUsageRepository.php',
@@ -61,6 +65,8 @@ return new class implements ModuleRuntimeProvider {
                 new \ChurchCMS\Modules\Media\MediaUsageCapability(),
             'media.derivatives' =>
                 new \ChurchCMS\Modules\Media\MediaDerivativeCapability(),
+            'media.galleries' =>
+                new \ChurchCMS\Modules\Media\MediaGalleryCapability(),
         ];
     }
 

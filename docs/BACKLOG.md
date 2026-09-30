@@ -163,7 +163,9 @@ Priority is ordered within each section.
 - [x] derivatives;
 - [x] публичная выдача локальных image/document blob и detail API с hash-versioned URL;
 - [ ] HTTP Range/resumable слой для audio/video;
-- galleries;
+- [ ] galleries;
+  - [x] schema/domain foundation + ordered image slots через Media usage references + draft/publish/public lifecycle;
+  - [ ] Admin Shell, public/API и управление порядком оператором;
 - document catalog.
 
 ## P2 — Parish/Cathedral
