@@ -148,7 +148,7 @@ Priority is ordered within each section.
 - [x] XML sitemap and robots endpoints;
 - [x] lightweight social share buttons;
 - [x] structured image/video SEO: Article/NewsArticle + ImageObject + gated VideoObject через public Media usage slots;
-- redirect manager.
+- [x] redirect manager.
 
 ## P1 — Media
 
