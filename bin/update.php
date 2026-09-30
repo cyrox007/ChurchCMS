@@ -115,12 +115,13 @@ try {
         ))->apply($stageId);
 
         echo sprintf(
-            "Обновление применено: %s; версия: %s; backup: %s; файлов: %d; удалений: %d; подпись: %s\n",
+            "Обновление применено: %s; версия: %s; backup: %s; файлов: %d; удалений: %d; миграций: %d; подпись: %s\n",
             $result['id'],
             $result['version'],
             $result['backup_id'],
             $result['files'],
             $result['deleted_files'],
+            $result['migrations'],
             $result['signature_key_id'],
         );
         exit(0);

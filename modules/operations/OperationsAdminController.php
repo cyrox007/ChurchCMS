@@ -229,6 +229,7 @@ final class OperationsAdminController
                     'backup_id' => $result['backup_id'],
                     'files' => $result['files'],
                     'deleted_files' => $result['deleted_files'],
+                    'migrations' => $result['migrations'],
                     'signature_key_id' =>
                         $result['signature_key_id'],
                 ],
@@ -324,7 +325,7 @@ final class OperationsAdminController
             'update-applied' => [
                 'kind' => 'success',
                 'title' => 'Обновление применено',
-                'message' => 'Файлы обновлены, резервная копия создана, healthcheck пройден.',
+                'message' => 'Файлы и разрешённые обратимые миграции применены, резервная копия создана, healthcheck пройден.',
             ],
             'update-confirm-required' => [
                 'kind' => 'error',
@@ -354,7 +355,7 @@ final class OperationsAdminController
             'update-apply-failed' => [
                 'kind' => 'error',
                 'title' => 'Обновление не применено',
-                'message' => 'ChurchCMS остановила операцию. Если замена файлов уже началась, выполнен автоматический rollback.',
+                'message' => 'ChurchCMS остановила операцию и попыталась автоматически вернуть файлы, схему и данные к состоянию до обновления.',
             ],
             default => null,
         };

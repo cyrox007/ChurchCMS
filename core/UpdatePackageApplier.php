@@ -20,7 +20,7 @@ final class UpdatePackageApplier
     }
 
     /**
-     * Применяет только code-only пакет без изменений схемы БД.
+     * Применяет code-only пакет или пакет только с новыми обратимыми миграциями.
      *
      * @return array{
      *     id:string,
@@ -28,6 +28,7 @@ final class UpdatePackageApplier
      *     backup_id:string,
      *     files:int,
      *     deleted_files:int,
+     *     migrations:int,
      *     signature_key_id:string
      * }
      */
@@ -38,8 +39,23 @@ final class UpdatePackageApplier
             $this->stagingRoot,
         ))->inspect($stageId);
 
-        $this->assertCodeOnly($stage);
         $this->assertVersionFilePresent($stage['files']);
+        $migrationIds = $this->migrationPlan($stage);
+
+        $runner = new MigrationRunner(
+            $this->database,
+            $this->root,
+        );
+
+        if (
+            $migrationIds !== []
+            && $runner->pendingIds() !== []
+        ) {
+            throw new RuntimeException(
+                'Перед schema-changing обновлением установка должна '
+                . 'не иметь неприменённых локальных миграций.'
+            );
+        }
 
         $backup = new BackupManager(
             $this->database,
@@ -51,19 +67,73 @@ final class UpdatePackageApplier
 
         $token = bin2hex(random_bytes(6));
         $operations = [];
+        $appliedMigrations = [];
+        $migrationAttempted = false;
 
         try {
             $operations = $this->prepareOperations($stage, $token);
             $this->applyOperations($operations);
+
+            if ($migrationIds !== []) {
+                $migrationAttempted = true;
+                $appliedMigrations = $runner->applyReversible(
+                    $migrationIds,
+                );
+
+                if ($appliedMigrations !== $migrationIds) {
+                    throw new RuntimeException(
+                        'Фактически применённый набор миграций '
+                        . 'не совпал с планом пакета.'
+                    );
+                }
+            }
+
             $this->verifyAppliedState($stage);
             $this->cleanupAfterSuccess($operations);
         } catch (Throwable $e) {
-            $rollbackOk = $this->rollbackOperations($operations);
+            $databaseRollbackOk = true;
+
+            if ($appliedMigrations !== []) {
+                try {
+                    $runner->rollback($appliedMigrations);
+                } catch (Throwable $rollbackError) {
+                    $databaseRollbackOk = false;
+                    error_log(
+                        'ChurchCMS updater: откат миграций не завершён: '
+                        . $rollbackError->getMessage()
+                    );
+                }
+            }
+
+            if ($migrationAttempted && $databaseRollbackOk) {
+                try {
+                    (new DatabaseRestoreManager(
+                        $this->database,
+                        $this->root,
+                        $this->backupRoot,
+                    ))->restore($backupResult['id']);
+                } catch (Throwable $restoreError) {
+                    $databaseRollbackOk = false;
+                    error_log(
+                        'ChurchCMS updater: восстановление БД не завершено: '
+                        . $restoreError->getMessage()
+                    );
+                }
+            }
+
+            $fileRollbackOk = $this->rollbackOperations(
+                $operations,
+            );
             $this->reloadConfiguration();
 
-            if (!$rollbackOk) {
+            if (
+                !$databaseRollbackOk
+                || !$fileRollbackOk
+                || !$this->rollbackHealthy()
+            ) {
                 throw new RuntimeException(
-                    'Обновление прервано, а автоматический откат файлов завершился не полностью. '
+                    'Обновление прервано, а автоматический возврат '
+                    . 'предыдущего состояния завершился не полностью. '
                     . 'Требуется ручная проверка установки.',
                     0,
                     $e,
@@ -75,7 +145,8 @@ final class UpdatePackageApplier
             }
 
             throw new RuntimeException(
-                'Не удалось применить пакет обновления. Изменения файлов отменены.',
+                'Не удалось применить пакет обновления. '
+                . 'Файлы и данные возвращены к состоянию до обновления.',
                 0,
                 $e,
             );
@@ -87,6 +158,7 @@ final class UpdatePackageApplier
             'backup_id' => $backupResult['id'],
             'files' => count($stage['files']),
             'deleted_files' => count($stage['deleted_files']),
+            'migrations' => count($migrationIds),
             'signature_key_id' => $stage['signature_key_id'],
         ];
     }
@@ -100,22 +172,88 @@ final class UpdatePackageApplier
      *     deleted_files:list<string>,
      *     signature_key_id:string
      * } $stage
+     * @return list<string>
      */
-    private function assertCodeOnly(array $stage): void
+    private function migrationPlan(array $stage): array
     {
-        $paths = array_merge(
-            array_keys($stage['files']),
-            $stage['deleted_files'],
-        );
-
-        foreach ($paths as $path) {
+        foreach ($stage['deleted_files'] as $path) {
             if ($this->isMigrationPath($path)) {
                 throw new RuntimeException(
-                    'Пакеты с миграциями пока нельзя применять автоматически: '
-                    . 'для schema-changing обновлений требуется отдельный безопасный rollback схемы БД.'
+                    'Автоматическое обновление не может удалять '
+                    . 'файлы уже существующих миграций.'
                 );
             }
         }
+
+        $ids = [];
+
+        foreach ($stage['files'] as $path => $entry) {
+            if (!$this->isMigrationPath($path)) {
+                continue;
+            }
+
+            $target = $this->targetPath($path, false);
+            if (file_exists($target) || is_link($target)) {
+                throw new RuntimeException(
+                    'Автоматическое обновление не может заменять '
+                    . 'уже существующую миграцию: ' . $path
+                );
+            }
+
+            $source = $stage['path']
+                . DIRECTORY_SEPARATOR
+                . 'payload'
+                . DIRECTORY_SEPARATOR
+                . str_replace(
+                    '/',
+                    DIRECTORY_SEPARATOR,
+                    $path,
+                );
+
+            try {
+                $migration = (static function (
+                    string $file,
+                ): mixed {
+                    return require $file;
+                })($source);
+            } catch (Throwable $error) {
+                throw new RuntimeException(
+                    'Не удалось предварительно проверить миграцию '
+                    . 'пакета: ' . $path,
+                    0,
+                    $error,
+                );
+            }
+
+            if (!$migration instanceof ReversibleMigration) {
+                throw new RuntimeException(
+                    'Schema-changing пакет содержит необратимую '
+                    . 'миграцию: ' . $path
+                );
+            }
+
+            $id = $migration->id();
+            if (
+                preg_match(
+                    '/^[0-9]{8}_[0-9]{6}_[a-z0-9_]{1,80}$/D',
+                    $id,
+                ) !== 1
+                || basename($path, '.php') !== $id
+                || isset($ids[$id])
+            ) {
+                throw new RuntimeException(
+                    'Schema-changing пакет содержит некорректную '
+                    . 'или повторяющуюся миграцию: ' . $path
+                );
+            }
+
+            $ids[$id] = true;
+        }
+
+        $result = array_keys($ids);
+        sort($result, SORT_STRING);
+
+        return $result;
     }
 
     /**
@@ -352,6 +490,20 @@ final class UpdatePackageApplier
                     JSON_UNESCAPED_UNICODE | JSON_UNESCAPED_SLASHES,
                 )
             );
+        }
+    }
+
+    private function rollbackHealthy(): bool
+    {
+        try {
+            $health = (new InstallationHealthCheck(
+                $this->database,
+                $this->root,
+            ))->check();
+
+            return ($health['ready'] ?? false) === true;
+        } catch (Throwable) {
+            return false;
         }
     }
 

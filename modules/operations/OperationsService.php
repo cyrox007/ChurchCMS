@@ -158,7 +158,7 @@ final class OperationsService
     /**
      * @return array{
      *     id:string,version:string,backup_id:string,files:int,deleted_files:int,
-     *     signature_key_id:string
+     *     migrations:int,signature_key_id:string
      * }
      */
     public function applyUpdate(string $stageId): array
