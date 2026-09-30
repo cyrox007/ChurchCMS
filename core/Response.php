@@ -65,6 +65,151 @@ final class Response
         exit;
     }
 
+    public static function rangeNotSatisfiable(
+        int $bytes,
+        string $etag,
+        bool $immutable = false,
+    ): never {
+        self::assertEtag($etag);
+
+        if ($bytes < 0) {
+            throw new InvalidArgumentException(
+                'Invalid range response size.'
+            );
+        }
+
+        http_response_code(416);
+        header('Content-Range: bytes */' . $bytes);
+        header('Accept-Ranges: bytes');
+        header('Content-Length: 0');
+        header('ETag: ' . $etag);
+        header(
+            'Cache-Control: public, max-age='
+            . ($immutable ? '31536000, immutable' : '300')
+        );
+        header('X-Content-Type-Options: nosniff');
+        exit;
+    }
+
+    public static function rangedFile(
+        string $path,
+        string $contentType,
+        int $bytes,
+        string $etag,
+        ?HttpByteRange $range = null,
+        bool $sendBody = true,
+        bool $immutable = false,
+    ): never {
+        self::assertEtag($etag);
+
+        if (
+            $bytes < 0
+            || $contentType === ''
+            || str_contains($contentType, "\r")
+            || str_contains($contentType, "\n")
+            || !is_file($path)
+            || is_link($path)
+            || !is_readable($path)
+        ) {
+            throw new InvalidArgumentException(
+                'Invalid ranged file response.'
+            );
+        }
+
+        $actualBytes = filesize($path);
+        if (
+            !is_int($actualBytes)
+            || $actualBytes !== $bytes
+        ) {
+            throw new InvalidArgumentException(
+                'Ranged file response size mismatch.'
+            );
+        }
+
+        $start = $range?->start ?? 0;
+        $end = $range?->end ?? max(0, $bytes - 1);
+        $length = $range?->length() ?? $bytes;
+
+        http_response_code($range === null ? 200 : 206);
+        header('Content-Type: ' . $contentType);
+        header('Content-Length: ' . $length);
+        header('ETag: ' . $etag);
+        header('Accept-Ranges: bytes');
+
+        if ($range !== null) {
+            header(
+                'Content-Range: bytes '
+                . $start
+                . '-'
+                . $end
+                . '/'
+                . $bytes
+            );
+        }
+
+        header(
+            'Cache-Control: public, max-age='
+            . ($immutable ? '31536000, immutable' : '300')
+        );
+        header('X-Content-Type-Options: nosniff');
+        header('Content-Disposition: inline');
+
+        if (!$sendBody || $length === 0) {
+            exit;
+        }
+
+        $handle = fopen($path, 'rb');
+        if ($handle === false) {
+            throw new InvalidArgumentException(
+                'Unable to open ranged file response.'
+            );
+        }
+
+        try {
+            if ($start > 0 && fseek($handle, $start) !== 0) {
+                throw new InvalidArgumentException(
+                    'Unable to seek ranged file response.'
+                );
+            }
+
+            $remaining = $length;
+
+            while (
+                $remaining > 0
+                && !feof($handle)
+            ) {
+                $chunk = fread(
+                    $handle,
+                    min(1048576, $remaining),
+                );
+
+                if ($chunk === false) {
+                    throw new InvalidArgumentException(
+                        'Unable to read ranged file response.'
+                    );
+                }
+
+                if ($chunk === '') {
+                    break;
+                }
+
+                $chunkLength = strlen($chunk);
+                $remaining -= $chunkLength;
+                echo $chunk;
+            }
+
+            if ($remaining !== 0) {
+                throw new InvalidArgumentException(
+                    'Ranged file response ended unexpectedly.'
+                );
+            }
+        } finally {
+            fclose($handle);
+        }
+
+        exit;
+    }
+
     public static function file(
         string $path,
         string $contentType,
