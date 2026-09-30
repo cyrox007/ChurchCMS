@@ -88,12 +88,17 @@ SQL,
 
         $pdo->exec('DROP TABLE redirect_rules');
 
-        $statement = $pdo->prepare(
-            'DELETE FROM permissions
-             WHERE permission_key = :permission_key'
+        $pdo->exec(
+            "DELETE FROM role_permissions
+             WHERE permission_id IN (
+                SELECT id
+                FROM permissions
+                WHERE permission_key = 'redirects.manage'
+             )"
         );
-        $statement->execute([
-            'permission_key' => 'redirects.manage',
-        ]);
+        $pdo->exec(
+            "DELETE FROM permissions
+             WHERE permission_key = 'redirects.manage'"
+        );
     }
 };
