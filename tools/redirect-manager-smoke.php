@@ -4,7 +4,6 @@ declare(strict_types=1);
 
 use ChurchCMS\Core\Request;
 use ChurchCMS\Core\Router;
-use ChurchCMS\Core\ThemeContext;
 use ChurchCMS\Core\ThemeRenderer;
 use ChurchCMS\Modules\Redirects\RedirectRepository;
 use ChurchCMS\Modules\Redirects\RedirectRequestInterceptor;
@@ -235,18 +234,13 @@ foreach ([
     }
 }
 
-$renderer = ThemeRenderer::fromConfig();
-$theme = new ThemeContext(
-    $renderer,
-    'default',
+$html = ThemeRenderer::fromConfig()->capture(
+    'admin.redirects',
+    [
+        'redirectRules' => $repository->all(),
+        'redirectStatus' => null,
+    ],
 );
-$redirectRules = $repository->all();
-$redirectStatus = null;
-
-ob_start();
-require dirname(__DIR__)
-    . '/themes/default/templates/admin/redirects.php';
-$html = (string) ob_get_clean();
 
 foreach ([
     'Редиректы',
