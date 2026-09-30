@@ -260,6 +260,8 @@ Priority is ordered within each section.
   - [x] подключение, outbound и dev/fallback long polling;
   - [x] production webhook subscription с отдельным secret и автоматической регистрацией endpoint;
 - [ ] YouTube adapter;
+  - [x] inbound public-channel sync через Data API key + uploads playlist;
+  - [ ] outbound video upload после готовности Media binary/resumable upload pipeline;
 - [ ] Rutube adapter;
 - [x] webhook receiver contract/signature validation;
 - [x] loop prevention tests;
