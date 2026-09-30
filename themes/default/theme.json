@@ -42,6 +42,8 @@
     "admin.organizations.editor": "admin/organizations/editor",
     "admin.federation.index": "admin/federation/index",
     "admin.media.index": "admin/media/index",
-    "admin.media.galleries": "admin/media/galleries"
+    "admin.media.galleries": "admin/media/galleries",
+    "gallery.index": "galleries/index",
+    "gallery.show": "galleries/show"
   }
 }

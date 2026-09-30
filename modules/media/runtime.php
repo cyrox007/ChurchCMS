@@ -16,6 +16,8 @@ use ChurchCMS\Modules\Media\MediaAdminController;
 use ChurchCMS\Modules\Media\MediaGalleryAdminController;
 use ChurchCMS\Modules\Media\MediaApiController;
 use ChurchCMS\Modules\Media\MediaPublicController;
+use ChurchCMS\Modules\Media\MediaGalleryApiController;
+use ChurchCMS\Modules\Media\MediaGalleryPublicController;
 
 $moduleRoot = __DIR__;
 foreach ([
@@ -32,6 +34,9 @@ foreach ([
     'MediaGalleryRepository.php',
     'MediaGalleryService.php',
     'MediaGalleryCapability.php',
+    'MediaGalleryPublicService.php',
+    'MediaGalleryApiController.php',
+    'MediaGalleryPublicController.php',
     'MediaRepository.php',
     'MediaUsageReference.php',
     'MediaUsageRepository.php',
@@ -182,6 +187,46 @@ return new class implements ModuleRuntimeProvider {
                 CsrfMiddleware::class,
             ],
             'admin_media_galleries_archive',
+        );
+
+        $router->add(
+            'GET',
+            '/galleries',
+            [MediaGalleryPublicController::class, 'index'],
+            [],
+            'gallery_index',
+        );
+
+        $router->add(
+            'GET',
+            '/galleries/{publicId}',
+            [MediaGalleryPublicController::class, 'show'],
+            [],
+            'gallery_show',
+        );
+
+        $router->add(
+            'GET',
+            '/api/v1/galleries',
+            [MediaGalleryApiController::class, 'index'],
+            [
+                ApiEnabledMiddleware::class,
+                ApiCorsMiddleware::class,
+                ApiPublicRateLimitMiddleware::class,
+            ],
+            'api_v1_galleries',
+        );
+
+        $router->add(
+            'GET',
+            '/api/v1/galleries/{publicId}',
+            [MediaGalleryApiController::class, 'show'],
+            [
+                ApiEnabledMiddleware::class,
+                ApiCorsMiddleware::class,
+                ApiPublicRateLimitMiddleware::class,
+            ],
+            'api_v1_gallery_show',
         );
 
         $router->add(

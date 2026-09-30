@@ -183,6 +183,7 @@ $status = is_array($galleryStatus ?? null) ? $galleryStatus : null;
                                                         </strong>
                                                         <small>
                                                             <?= $theme->e($image->mimeType) ?>
+                                                            · видимость: <?= $theme->e($image->visibility) ?>
                                                             <?php if ($image->pixelWidth !== null && $image->pixelHeight !== null): ?>
                                                                 · <?= $theme->e($image->pixelWidth) ?>×<?= $theme->e($image->pixelHeight) ?>
                                                             <?php endif; ?>
