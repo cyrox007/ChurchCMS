@@ -5,7 +5,6 @@ declare(strict_types=1);
 namespace ChurchCMS\Modules\Documents;
 
 use ChurchCMS\App\Services\AdminAuthorization;
-use ChurchCMS\App\Services\AdminNavigationRegistry;
 use ChurchCMS\App\Services\AdminShell;
 use ChurchCMS\Core\AuditLog;
 use ChurchCMS\Core\DatabaseManager;
@@ -29,40 +28,74 @@ final class DocumentsAdminController
             $userId,
             'documents.read',
         );
+        $canCreate = AdminAuthorization::can(
+            $request,
+            'documents.create',
+        );
+        $canEdit = AdminAuthorization::can(
+            $request,
+            'documents.edit',
+        );
+        $canPublish = AdminAuthorization::can(
+            $request,
+            'documents.publish',
+        );
+
+        $media = DocumentMediaService::fromDatabase();
+        $documentRows = [];
+
+        foreach (
+            DocumentRepository::fromDatabase()
+                ->adminList($ownerIds)
+            as $document
+        ) {
+            $documentRows[] = [
+                'document' => $document,
+                'media_public_id' =>
+                    $media->fileMediaPublicId(
+                        $document->publicId,
+                        $document->siteKey,
+                    ),
+            ];
+        }
+
+        $fileOwnerIds = $canEdit
+            ? $access->visibleOwnerPublicIds(
+                $userId,
+                'documents.edit',
+            )
+            : $ownerIds;
 
         AdminShell::page(
             $request,
             'admin.documents',
             [
                 'title' => 'Документы',
-                'documents' =>
-                    DocumentRepository::fromDatabase()
-                        ->adminList($ownerIds),
-                'organizationUnits' =>
-                    $access->availableOwners(
+                'documentRows' => $documentRows,
+                'createOrganizationUnits' => $canCreate
+                    ? $access->availableOwners(
                         $userId,
-                        'documents.read',
-                    ),
+                        'documents.create',
+                    )
+                    : [],
+                'editOrganizationUnits' => $canEdit
+                    ? $access->availableOwners(
+                        $userId,
+                        'documents.edit',
+                    )
+                    : [],
                 'defaultOwnerPublicId' =>
                     $access->defaultOwnerPublicId(
                         $userId,
                         'documents.create',
                     ),
                 'availableFiles' =>
-                    DocumentMediaService::fromDatabase()
-                        ->availableFiles($ownerIds),
-                'canCreate' => AdminAuthorization::can(
-                    $request,
-                    'documents.create',
-                ),
-                'canEdit' => AdminAuthorization::can(
-                    $request,
-                    'documents.edit',
-                ),
-                'canPublish' => AdminAuthorization::can(
-                    $request,
-                    'documents.publish',
-                ),
+                    $media->availableFiles(
+                        $fileOwnerIds,
+                    ),
+                'canCreate' => $canCreate,
+                'canEdit' => $canEdit,
+                'canPublish' => $canPublish,
                 'documentStatus' => self::status($request),
             ],
             'documents',
