@@ -15,7 +15,11 @@
     <?php endif; ?>
 
     <?php if (empty($comments)): ?>
-        <p class="comments__empty">Пока комментариев нет. Можно начать обсуждение.</p>
+        <p class="comments__empty">
+            <?= !empty($commentsOpen)
+                ? 'Пока комментариев нет. Можно начать обсуждение.'
+                : 'Обсуждение закрыто.' ?>
+        </p>
     <?php else: ?>
         <ol class="comment-list">
             <?php foreach ($comments as $comment): ?>
@@ -32,6 +36,7 @@
         </ol>
     <?php endif; ?>
 
+    <?php if (!empty($commentsOpen)): ?>
     <form
         class="comment-form"
         method="post"
@@ -80,4 +85,9 @@
 
         <button class="button button--primary" type="submit">Отправить комментарий</button>
     </form>
+    <?php else: ?>
+        <p class="comments__closed">
+            Обсуждение закрыто. Ранее опубликованные комментарии сохранены.
+        </p>
+    <?php endif; ?>
 </section>
