@@ -64,6 +64,7 @@ final class DocumentFileVersionService
         }
 
         try {
+            $this->lockDocument($document->id);
             $versionNumber = $this->versions->nextVersionNumber(
                 $document->id,
             );
@@ -128,6 +129,26 @@ final class DocumentFileVersionService
             $document->id,
             $limit,
         );
+    }
+
+    private function lockDocument(
+        int $documentId,
+    ): void {
+        $statement = $this->pdo->prepare(
+            'SELECT id
+             FROM documents
+             WHERE id = :id
+             FOR UPDATE'
+        );
+        $statement->execute([
+            'id' => $documentId,
+        ]);
+
+        if ($statement->fetchColumn() === false) {
+            throw new InvalidArgumentException(
+                'Документ не найден.'
+            );
+        }
     }
 
     private function assertDocumentMedia(
