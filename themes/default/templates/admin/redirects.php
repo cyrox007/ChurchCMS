@@ -63,7 +63,7 @@ $statusLabels = [
                 <input
                     type="text"
                     name="source_path"
-                    maxlength="1000"
+                    maxlength="700"
                     placeholder="/old-section/page"
                     required
                     autocomplete="off"
@@ -174,7 +174,7 @@ $statusLabels = [
                                 <input
                                     type="text"
                                     name="source_path"
-                                    maxlength="1000"
+                                    maxlength="700"
                                     required
                                     value="<?= $theme->e($rule->sourcePath) ?>"
                                 >
