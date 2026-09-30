@@ -228,7 +228,7 @@ Priority is ordered within each section.
 - [x] public comment rate limiting;
 - [x] plain-text comments only initially;
 - [x] spam/reject/approve workflow;
-- close discussion without deleting comments;
+- [x] close discussion without deleting comments;
 - [x] audit moderation actions;
 - public API disabled by default for comments.
 

@@ -28,7 +28,7 @@ Status: in progress.
 
 - [x] Unified Admin Shell for non-technical operators.
 - [x] Admin navigation/search/notifications foundation.
-- [ ] Публикации (основной процесс, public/admin/API/синдикация, категории/теги и отложенная публикация реализованы; остаются ревизии и связь с Media).
+- [x] Публикации (основной процесс, public/admin/API/синдикация, категории/теги, отложенная публикация, ревизии и связь с Media через usage references реализованы).
 - [x] Pages/content tree (schema, domain, public API, organization-scoped Admin Shell and public canonical HTML implemented).
 - [x] Navigation/menu (primary menu, ordered Page/system-route/HTTPS items, Admin Shell и автоматическая передача navigation в публичную тему).
 - [x] Media library (foundation, organization owner, visibility, federation, безопасный upload/storage, MIME sniffing, SHA-256, Admin upload, технические размеры, derivatives, usage references, public image/document/audio/video blob, HTTP Range streaming и полный gallery vertical slice реализованы; связь Documents с Media-файлом также реализована).
@@ -39,8 +39,8 @@ Status: in progress.
 - [ ] Documents (foundation, organization owner, visibility, federation, связь с Media-файлом, organization-scoped Admin Shell и обычный public HTML/API реализованы; остаются категории/рубрики и версии/замены файла).
 - [ ] Search.
 - [x] SEO foundation: metadata, canonical, OG/social cards, robots, sitemap, sharing.
-- [ ] Redirect manager.
-- [ ] Revisions/history.
+- [x] Redirect manager.
+- [x] Revisions/history.
 - [x] Optional moderated comments module foundation.
 
 ## Phase 2 — Cathedral profile
