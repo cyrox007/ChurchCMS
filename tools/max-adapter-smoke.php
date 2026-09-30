@@ -284,7 +284,7 @@ foreach ([
     ChannelCapability::PUBLISH_TEXT,
     ChannelCapability::PUBLISH_LINK,
     ChannelCapability::IMPORT_POSTS,
-    ChannelCapability::POLLING,
+    ChannelCapability::WEBHOOK,
 ] as $capability) {
     if (!in_array(
         $capability,
@@ -297,6 +297,18 @@ foreach ([
         );
         exit(1);
     }
+} 
+
+if (in_array(
+    ChannelCapability::POLLING,
+    $registered->capabilities(),
+    true,
+)) {
+    fwrite(
+        STDERR,
+        "Production MAX adapter не должен объявлять polling при активном webhook.\n",
+    );
+    exit(1);
 }
 
 $http = new MaxSmokeHttpClient();
