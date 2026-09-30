@@ -396,7 +396,7 @@ try {
         !is_string($adminTemplate)
         || !str_contains(
             $adminTemplate,
-            'name="csrf_token"',
+            'csrfInput()',
         )
         || !str_contains(
             $adminTemplate,
