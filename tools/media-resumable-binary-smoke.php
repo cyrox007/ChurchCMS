@@ -4,6 +4,17 @@ declare(strict_types=1);
 
 use ChurchCMS\Core\ModuleRuntimeLoader;
 use ChurchCMS\Core\SecretVault;
+use ChurchCMS\Modules\Publications\PublicationRepository;
+use ChurchCMS\Modules\Social\ChannelAdapter;
+use ChurchCMS\Modules\Social\ChannelAdapterRegistry;
+use ChurchCMS\Modules\Social\ChannelCapability;
+use ChurchCMS\Modules\Social\ChannelOutboundDispatcher;
+use ChurchCMS\Modules\Social\ChannelOutboundItem;
+use ChurchCMS\Modules\Social\ChannelPublishResult;
+use ChurchCMS\Modules\Social\ChannelPullBatch;
+use ChurchCMS\Modules\Social\SocialConnection;
+use ChurchCMS\Modules\Social\SocialConnectionRepository;
+use ChurchCMS\Modules\Social\SocialPublicationChannelService;
 use ChurchCMS\Modules\Media\MediaBlobStorage;
 use ChurchCMS\Modules\Media\MediaResumableTransferRepository;
 use ChurchCMS\Modules\Media\MediaService;
@@ -249,6 +260,115 @@ try {
     );
     exit(1);
 } catch (InvalidArgumentException) {
+}
+
+$adapter = new class implements ChannelAdapter {
+    /** @var list<array<string,mixed>> */
+    public array $receivedMedia = [];
+
+    public function providerId(): string
+    {
+        return 'video-smoke';
+    }
+
+    public function label(): string
+    {
+        return 'Video smoke';
+    }
+
+    public function capabilities(): array
+    {
+        return [
+            ChannelCapability::PUBLISH_VIDEO,
+        ];
+    }
+
+    public function publish(
+        SocialConnection $connection,
+        string $credentials,
+        ChannelOutboundItem $item,
+    ): ChannelPublishResult {
+        if ($credentials !== 'video-smoke-token') {
+            return new ChannelPublishResult(
+                false,
+                error: 'Неверный тестовый секрет.',
+            );
+        }
+
+        $this->receivedMedia = $item->media;
+
+        return new ChannelPublishResult(
+            true,
+            remoteId: 'video-smoke-remote',
+        );
+    }
+
+    public function pull(
+        SocialConnection $connection,
+        string $credentials,
+        ?string $cursor,
+        int $limit = 50,
+    ): ChannelPullBatch {
+        return new ChannelPullBatch([]);
+    }
+};
+
+ChannelAdapterRegistry::register($adapter);
+
+$connection = SocialConnectionRepository::fromDatabase()
+    ->create(
+        provider: 'video-smoke',
+        name: 'Video-only smoke',
+        targetRef: 'video-target',
+        tokenEncrypted: SecretVault::encrypt(
+            'video-smoke-token',
+        ),
+        outboundEnabled: true,
+        inboundEnabled: false,
+    );
+
+$publication = PublicationRepository::fromDatabase()
+    ->findByPublicId($publicationPublicId);
+
+if ($publication === null) {
+    fwrite(STDERR, "Публикация для outbound smoke не найдена.\n");
+    exit(1);
+}
+
+SocialPublicationChannelService::fromDatabase()
+    ->saveSelection(
+        $publication->id,
+        [$connection->publicId],
+    );
+
+PublicationService::fromDatabase()->publish(
+    $publicationPublicId,
+);
+
+SocialPublicationChannelService::fromDatabase()
+    ->queuePublication($publication->id);
+
+$summary = ChannelOutboundDispatcher::fromDatabase()
+    ->dispatch(
+        limit: 10,
+        maxAttempts: 2,
+    );
+
+if (
+    $summary['sent'] !== 1
+    || count($adapter->receivedMedia) !== 1
+    || ($adapter->receivedMedia[0]['type'] ?? null) !== 'video'
+    || ($adapter->receivedMedia[0]['public_id'] ?? null)
+        !== $videoPublicId
+    || ($adapter->receivedMedia[0]['sha256'] ?? null)
+        !== $sha256
+    || array_key_exists('path', $adapter->receivedMedia[0])
+) {
+    fwrite(
+        STDERR,
+        "Video-only outbound adapter не получил безопасный Media descriptor.\n",
+    );
+    exit(1);
 }
 
 echo "Media resumable binary pipeline smoke OK\n";
