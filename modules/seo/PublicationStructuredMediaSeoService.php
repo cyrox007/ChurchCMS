@@ -99,15 +99,16 @@ final class PublicationStructuredMediaSeoService
     /**
      * @param array<string,mixed> $input
      * @param list<string>|null $ownerPublicIds
+     * @return array<string,string>
      */
-    public function save(
-        Publication $publication,
+    public function validateSelection(
         array $input,
         ?array $ownerPublicIds,
-    ): void {
+        string $siteKey = 'default',
+    ): array {
         $options = $this->options(
             $ownerPublicIds,
-            $publication->siteKey,
+            $siteKey,
         );
         $allowedImages = self::byPublicId(
             $options['images'],
@@ -182,6 +183,24 @@ final class PublicationStructuredMediaSeoService
             $references[self::SLOT_VIDEO_THUMBNAIL] =
                 $videoThumbnailId;
         }
+
+        return $references;
+    }
+
+    /**
+     * @param array<string,mixed> $input
+     * @param list<string>|null $ownerPublicIds
+     */
+    public function save(
+        Publication $publication,
+        array $input,
+        ?array $ownerPublicIds,
+    ): void {
+        $references = $this->validateSelection(
+            $input,
+            $ownerPublicIds,
+            $publication->siteKey,
+        );
 
         $this->mediaCapability()->replaceConsumerReferences(
             self::CONSUMER_TYPE,
