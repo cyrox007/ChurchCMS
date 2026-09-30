@@ -28,7 +28,7 @@ Status: in progress.
 
 - [x] Unified Admin Shell for non-technical operators.
 - [x] Admin navigation/search/notifications foundation.
-- [ ] Публикации (основной процесс, public/admin/API/синдикация, категории/теги, отложенная публикация и ревизии реализованы; остаётся связь с Media).
+- [x] Публикации (основной процесс, public/admin/API/синдикация, категории/теги, отложенная публикация, ревизии и связь с Media через usage references реализованы).
 - [x] Pages/content tree (schema, domain, public API, organization-scoped Admin Shell and public canonical HTML implemented).
 - [x] Navigation/menu (primary menu, ordered Page/system-route/HTTPS items, Admin Shell и автоматическая передача navigation в публичную тему).
 - [x] Media library (foundation, organization owner, visibility, federation, безопасный upload/storage, MIME sniffing, SHA-256, Admin upload, технические размеры, derivatives, usage references, public image/document/audio/video blob, HTTP Range streaming и полный gallery vertical slice реализованы; связь Documents с Media-файлом также реализована).
