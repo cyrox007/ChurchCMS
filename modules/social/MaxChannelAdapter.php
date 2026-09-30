@@ -10,7 +10,9 @@ use Throwable;
 
 final class MaxChannelAdapter implements
     ChannelAdapter,
-    ChannelConnectionTester
+    ChannelConnectionTester,
+    ChannelConnectionActivator,
+    ChannelWebhookAdapter
 {
     private const API_BASE = 'https://platform-api2.max.ru';
     private const MAX_TEXT_LENGTH = 4000;
@@ -37,7 +39,7 @@ final class MaxChannelAdapter implements
             ChannelCapability::PUBLISH_TEXT,
             ChannelCapability::PUBLISH_LINK,
             ChannelCapability::IMPORT_POSTS,
-            ChannelCapability::POLLING,
+            ChannelCapability::WEBHOOK,
         ];
     }
 
@@ -106,6 +108,103 @@ final class MaxChannelAdapter implements
         return new ChannelConnectionTestResult(
             true,
             'Бот и целевой канал MAX доступны.',
+        );
+    }
+
+    public function activateConnection(
+        SocialConnection $connection,
+        string $credentials,
+        string $webhookUrl,
+    ): void {
+        $secret = self::webhookSecret(
+            $connection,
+            $credentials,
+        );
+
+        $result = $this->post(
+            '/subscriptions',
+            $credentials,
+            [
+                'url' => $webhookUrl,
+                'update_types' => [
+                    'message_created',
+                    'message_edited',
+                ],
+                'secret' => $secret,
+            ],
+        );
+
+        if (
+            !is_array($result)
+            || ($result['success'] ?? false) !== true
+        ) {
+            throw new RuntimeException(
+                'MAX не подтвердил webhook-подписку.'
+            );
+        }
+    }
+
+    public function verifyWebhook(
+        SocialConnection $connection,
+        string $credentials,
+        ChannelWebhookRequest $request,
+    ): bool {
+        return ChannelWebhookSignature::verifySecret(
+            (string) $request->header(
+                'X-Max-Bot-Api-Secret',
+                '',
+            ),
+            self::webhookSecret(
+                $connection,
+                $credentials,
+            ),
+        );
+    }
+
+    public function receiveWebhook(
+        SocialConnection $connection,
+        string $credentials,
+        ChannelWebhookRequest $request,
+    ): ChannelWebhookResult {
+        try {
+            $update = json_decode(
+                $request->rawBody,
+                true,
+                64,
+                JSON_THROW_ON_ERROR,
+            );
+        } catch (\JsonException $error) {
+            throw new \InvalidArgumentException(
+                'MAX webhook содержит некорректный JSON.',
+                0,
+                $error,
+            );
+        }
+
+        if (!is_array($update)) {
+            throw new \InvalidArgumentException(
+                'MAX webhook должен содержать объект Update.'
+            );
+        }
+
+        $chatId = self::chatId(
+            $connection->targetRef,
+        );
+        if ($chatId === null) {
+            throw new \InvalidArgumentException(
+                'Некорректный MAX chat_id.'
+            );
+        }
+
+        $item = self::inboundItem(
+            $update,
+            $chatId,
+        );
+
+        return new ChannelWebhookResult(
+            items: $item !== null ? [$item] : [],
+            status: 200,
+            body: 'OK',
         );
     }
 
@@ -326,6 +425,18 @@ final class MaxChannelAdapter implements
         }
 
         return $json;
+    }
+
+    private static function webhookSecret(
+        SocialConnection $connection,
+        string $credentials,
+    ): string {
+        return hash_hmac(
+            'sha256',
+            'churchcms-max-webhook:'
+                . $connection->publicId,
+            $credentials,
+        );
     }
 
     private static function validToken(string $token): bool
