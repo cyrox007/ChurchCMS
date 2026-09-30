@@ -4,7 +4,6 @@ declare(strict_types=1);
 
 namespace ChurchCMS\Modules\Documents;
 
-use ChurchCMS\Core\PageCache;
 use ChurchCMS\Core\Request;
 use ChurchCMS\Core\Response;
 use ChurchCMS\Core\ThemeRenderer;
