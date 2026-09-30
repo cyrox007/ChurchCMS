@@ -140,6 +140,53 @@ final class MediaUsageService
         );
     }
 
+    /**
+     * @return list<MediaUsageReference>
+     */
+    public function forConsumer(
+        string $consumerType,
+        string $consumerPublicId,
+        string $siteKey = 'default',
+    ): array {
+        return $this->usage->forConsumer(
+            self::machineKey(
+                $consumerType,
+                'Некорректный тип потребителя Media.',
+            ),
+            self::consumerId($consumerPublicId),
+            self::siteKey($siteKey),
+        );
+    }
+
+    /**
+     * @return array{
+     *     public_id:string,
+     *     media_type:string,
+     *     mime_type:string,
+     *     status:string
+     * }|null
+     */
+    public function assetDescriptor(
+        string $mediaPublicId,
+        string $siteKey = 'default',
+    ): ?array {
+        $asset = $this->media->findByPublicId(
+            trim($mediaPublicId),
+            self::siteKey($siteKey),
+        );
+
+        if ($asset === null || $asset->status === 'archived') {
+            return null;
+        }
+
+        return [
+            'public_id' => $asset->publicId,
+            'media_type' => $asset->mediaType,
+            'mime_type' => $asset->mimeType,
+            'status' => $asset->status,
+        ];
+    }
+
     public function countForAsset(
         string $mediaPublicId,
         string $siteKey = 'default',
