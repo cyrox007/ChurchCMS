@@ -168,7 +168,7 @@ hash-versioned URL:
 - asset существует локально;
 - статус не `archived`;
 - видимость строго `public`;
-- тип первой версии — `image` или `document`;
+- тип — `image`, `document`, `audio` или `video`;
 - blob является обычным читаемым файлом внутри настроенного Media storage;
 - фактический размер совпадает с зарегистрированным.
 
@@ -180,8 +180,22 @@ federation projection дают 404 и не раскрывают файловый
 `blob_available=true` только для локального public asset с реально доступным
 blob. Remote federation по-прежнему остаётся metadata-only.
 
-Audio/video намеренно пока не обслуживаются этим маршрутом: для больших
-медиафайлов сначала нужен корректный HTTP Range/resumable слой.
+Audio/video original blob обслуживаются тем же hash-versioned маршрутом с
+HTTP byte ranges. Поддерживается один диапазон за запрос:
+
+- `bytes=start-end`;
+- `bytes=start-`;
+- `bytes=-suffix`.
+
+Корректный диапазон получает `206 Partial Content`, `Content-Range`,
+`Accept-Ranges: bytes` и потоковую отдачу кусками до 1 МиБ. Некорректный,
+множественный или выходящий за размер диапазон получает `416` с
+`Content-Range: bytes */<size>`. `HEAD` возвращает те же метаданные без
+тела. `If-Range` с несовпавшим ETag переводит запрос на полный `200`.
+
+Это закрывает resumable download/streaming локальных public audio/video.
+Resumable binary **upload** во внешние видеоплатформы остаётся отдельной
+задачей outbound pipeline.
 
 ## Usage references
 
@@ -242,5 +256,4 @@ Derivative и original дополнительно проходят сущест�
 Остаются:
 
 - подключение derivatives к редакторам и публичным шаблонам;
-- HTTP Range/resumable pipeline для audio/video;
 - binary/resumable outbound YouTube/Rutube.
