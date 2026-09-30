@@ -10,6 +10,7 @@ use ChurchCMS\Modules\Seo\SeoController;
 $moduleRoot = __DIR__;
 foreach ([
     'PublicationSeoRepository.php',
+    'PublicationStructuredMediaSeoService.php',
     'SeoCapability.php',
     'SeoController.php',
 ] as $file) {
