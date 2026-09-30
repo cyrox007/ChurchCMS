@@ -25,6 +25,8 @@ foreach ([
     'FederatedDocumentFeedService.php',
     'DocumentPartnerTombstoneRepository.php',
     'DocumentPartnerTombstoneApiResource.php',
+    'DocumentCategoryRepository.php',
+    'DocumentCategoryService.php',
     'DocumentService.php',
     'DocumentMediaService.php',
     'DocumentOrganizationAccessService.php',
