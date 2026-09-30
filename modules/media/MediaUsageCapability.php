@@ -40,4 +40,37 @@ final class MediaUsageCapability
             $siteKey,
         );
     }
+
+    /**
+     * @return list<MediaUsageReference>
+     */
+    public function referencesForConsumer(
+        string $consumerType,
+        string $consumerPublicId,
+        string $siteKey = 'default',
+    ): array {
+        return $this->usage()->forConsumer(
+            $consumerType,
+            $consumerPublicId,
+            $siteKey,
+        );
+    }
+
+    /**
+     * @return array{
+     *     public_id:string,
+     *     media_type:string,
+     *     mime_type:string,
+     *     status:string
+     * }|null
+     */
+    public function assetDescriptor(
+        string $mediaPublicId,
+        string $siteKey = 'default',
+    ): ?array {
+        return $this->usage()->assetDescriptor(
+            $mediaPublicId,
+            $siteKey,
+        );
+    }
 }
