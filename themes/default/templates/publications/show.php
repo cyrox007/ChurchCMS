@@ -107,6 +107,7 @@ $shareLinks = \ChurchCMS\Core\Config::get('sharing.enabled', true) === true
     <?= $theme->partial('comments.section', [
         'publication' => $publication,
         'comments' => $comments ?? [],
+        'commentsOpen' => $commentsOpen ?? false,
         'commentFlash' => $commentFlash ?? null,
         'commentsMaxLength' => $commentsMaxLength ?? 4000,
     ]) ?>
