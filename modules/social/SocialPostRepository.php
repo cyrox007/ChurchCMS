@@ -37,6 +37,24 @@ final class SocialPostRepository
         );
     }
 
+    public function findByPublicId(
+        string $publicId,
+    ): ?SocialPost {
+        $statement = $this->pdo->prepare(
+            'SELECT * FROM publication_social_posts
+             WHERE public_id = :public_id
+             LIMIT 1'
+        );
+        $statement->execute([
+            'public_id' => trim($publicId),
+        ]);
+        $row = $statement->fetch();
+
+        return is_array($row)
+            ? $this->hydrate($row)
+            : null;
+    }
+
     /**
      * Атомарно резервирует pending-записи для одного запуска worker.
      *
@@ -271,6 +289,80 @@ final class SocialPostRepository
         ]);
 
         return $statement->rowCount();
+    }
+
+    /**
+     * @return list<array<string,mixed>>
+     */
+    public function failedForAdmin(
+        int $limit = 100,
+    ): array {
+        $limit = max(1, min(200, $limit));
+
+        $statement = $this->pdo->prepare(
+            'SELECT
+                p.public_id AS post_public_id,
+                p.attempts,
+                p.last_error,
+                p.updated_at,
+                pub.public_id AS publication_public_id,
+                pub.title AS publication_title,
+                c.public_id AS connection_public_id,
+                c.name AS connection_name,
+                c.provider,
+                c.target_ref
+             FROM publication_social_posts p
+             INNER JOIN publications pub
+                ON pub.id = p.publication_id
+             INNER JOIN social_connections c
+                ON c.id = p.connection_id
+             WHERE p.status = :status
+             ORDER BY p.updated_at DESC, p.id DESC
+             LIMIT :limit'
+        );
+        $statement->bindValue(
+            ':status',
+            'failed',
+            PDO::PARAM_STR,
+        );
+        $statement->bindValue(
+            ':limit',
+            $limit,
+            PDO::PARAM_INT,
+        );
+        $statement->execute();
+
+        return $statement->fetchAll();
+    }
+
+    public function retryFailed(int $id): bool
+    {
+        if ($id <= 0) {
+            return false;
+        }
+
+        $now = gmdate('Y-m-d H:i:s');
+        $statement = $this->pdo->prepare(
+            'UPDATE publication_social_posts
+             SET status = :pending,
+                 attempts = 0,
+                 queued_at = :queued_at,
+                 last_error = NULL,
+                 updated_at = :updated_at
+             WHERE id = :id
+               AND status = :failed
+               AND enabled = :enabled'
+        );
+        $statement->execute([
+            'pending' => 'pending',
+            'queued_at' => $now,
+            'updated_at' => $now,
+            'id' => $id,
+            'failed' => 'failed',
+            'enabled' => 1,
+        ]);
+
+        return $statement->rowCount() === 1;
     }
 
     public function failedCount(): int

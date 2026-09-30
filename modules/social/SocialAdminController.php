@@ -53,6 +53,13 @@ final class SocialAdminController
                 $userId,
             )
             : [];
+        $canRetryOutbound = AdminAuthorization::can(
+            $request,
+            'social.publish',
+        );
+        $outboundFailures =
+            SocialOutboundFailureService::fromDatabase()
+                ->failures();
 
         AdminShell::page(
             $request,
@@ -65,6 +72,8 @@ final class SocialAdminController
                 'canLinkExternal' => $canLinkExternal,
                 'canImportExternal' => $canImportExternal,
                 'importOwners' => $importOwners,
+                'outboundFailures' => $outboundFailures,
+                'canRetryOutbound' => $canRetryOutbound,
                 'channelStatus' => self::status($request),
             ],
             'external-channels',
@@ -371,6 +380,71 @@ final class SocialAdminController
         }
     }
 
+    public function retryOutbound(
+        Request $request,
+        string $publicId,
+    ): never {
+        AdminAuthorization::requirePermission(
+            $request,
+            'social.manage',
+        );
+        AdminAuthorization::requirePermission(
+            $request,
+            'social.publish',
+        );
+
+        try {
+            $post = SocialOutboundFailureService::fromDatabase()
+                ->retry($publicId);
+
+            AuditLog::emit(
+                eventType: 'external_channel.outbound.retried',
+                actorUserId: self::actorId($request),
+                subjectType: 'publication_social_post',
+                subjectId: $post->publicId,
+                metadata: [
+                    'publication_id' => $post->publicationId,
+                    'connection_id' => $post->connectionId,
+                ],
+                request: $request,
+            );
+
+            Response::redirectLocal(
+                '/admin/external-channels?status=outbound-retried',
+            );
+        } catch (InvalidArgumentException $e) {
+            error_log(
+                'ChurchCMS повторная внешняя отправка: '
+                . $e->getMessage()
+            );
+
+            Response::redirectLocal(
+                '/admin/external-channels?status=outbound-retry-unavailable',
+            );
+        } catch (Throwable $e) {
+            error_log(
+                'ChurchCMS повторная внешняя отправка: '
+                . $e->getMessage()
+            );
+
+            AuditLog::emit(
+                eventType: 'external_channel.outbound.retry_failed',
+                severity: 'error',
+                actorUserId: self::actorId($request),
+                subjectType: 'publication_social_post',
+                subjectId: $publicId,
+                metadata: [
+                    'error_class' => $e::class,
+                ],
+                request: $request,
+            );
+
+            Response::redirectLocal(
+                '/admin/external-channels?status=outbound-retry-failed',
+            );
+        }
+    }
+
     private static function actorId(Request $request): ?int
     {
         $user = $request->attribute('admin.user');
@@ -436,6 +510,21 @@ final class SocialAdminController
                 'kind' => 'error',
                 'title' => 'Импорт не завершён',
                 'message' => 'Внешний материал остался в очереди. Подробность записана в журнал сервера.',
+            ],
+            'outbound-retried' => [
+                'kind' => 'success',
+                'title' => 'Отправка поставлена в очередь',
+                'message' => 'Счётчик попыток сброшен. Фоновый обработчик выполнит повторную отправку.',
+            ],
+            'outbound-retry-unavailable' => [
+                'kind' => 'error',
+                'title' => 'Повторная отправка недоступна',
+                'message' => 'Проверьте публикацию, подключение и текущее состояние ошибки.',
+            ],
+            'outbound-retry-failed' => [
+                'kind' => 'error',
+                'title' => 'Не удалось повторить отправку',
+                'message' => 'Запись не изменена. Подробность ошибки сохранена в журнале сервера.',
             ],
             default => null,
         };
