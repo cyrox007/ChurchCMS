@@ -128,6 +128,8 @@ final class FederatedMediaFeedService
             'mime_type' => $asset->mimeType,
             'bytes' => $asset->bytes,
             'sha256' => $asset->sha256,
+            'pixel_width' => $asset->pixelWidth,
+            'pixel_height' => $asset->pixelHeight,
             'title' => $asset->title,
             'alt_text' => $asset->altText,
             'blob_available' => false,
@@ -174,6 +176,12 @@ final class FederatedMediaFeedService
         $sha256 = self::sha256(
             $payload['sha256'] ?? null,
         );
+        $pixelWidth = self::positiveInt(
+            $payload['pixel_width'] ?? null,
+        );
+        $pixelHeight = self::positiveInt(
+            $payload['pixel_height'] ?? null,
+        );
 
         if (
             $mediaType === null
@@ -192,6 +200,8 @@ final class FederatedMediaFeedService
             'mime_type' => $mimeType,
             'bytes' => $bytes,
             'sha256' => $sha256,
+            'pixel_width' => $pixelWidth,
+            'pixel_height' => $pixelHeight,
             'title' => self::optionalString(
                 $payload['title'] ?? null,
                 255,
@@ -273,6 +283,21 @@ final class FederatedMediaFeedService
         ) === 1
             ? $value
             : null;
+    }
+
+    private static function positiveInt(mixed $value): ?int
+    {
+        if ($value === null || $value === '') {
+            return null;
+        }
+
+        $int = self::nonNegativeInt($value);
+
+        return $int !== null
+            && $int > 0
+            && $int <= 1000000
+                ? $int
+                : null;
     }
 
     private static function nonNegativeInt(mixed $value): ?int
