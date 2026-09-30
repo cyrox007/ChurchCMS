@@ -191,13 +191,24 @@ final class RedirectService
         string $requestPath,
         string $siteKey = 'default',
     ): ?RedirectRule {
-        return $this->repository->enabledBySource(
-            self::sourcePath(
+        try {
+            $sourcePath = self::sourcePath(
                 $requestPath,
                 allowRoot: true,
-            ),
+            );
+        } catch (InvalidArgumentException) {
+            return null;
+        }
+
+        return $this->repository->enabledBySource(
+            $sourcePath,
             self::siteKey($siteKey),
         );
+    }
+
+    public function recordHit(RedirectRule $rule): void
+    {
+        $this->repository->recordHit($rule->id);
     }
 
     private function required(
