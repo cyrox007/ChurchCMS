@@ -69,6 +69,101 @@ final class MediaResumableTransferRepository
     }
 
     /**
+     * @param array<string,mixed> $row
+     */
+    public function insert(array $row): void
+    {
+        $statement = $this->pdo->prepare(
+            'INSERT INTO media_resumable_transfers (
+                public_id,
+                site_key,
+                media_public_id,
+                provider_id,
+                target_key,
+                session_encrypted,
+                uploaded_bytes,
+                total_bytes,
+                status,
+                last_error,
+                expires_at,
+                created_at,
+                updated_at
+             ) VALUES (
+                :public_id,
+                :site_key,
+                :media_public_id,
+                :provider_id,
+                :target_key,
+                :session_encrypted,
+                :uploaded_bytes,
+                :total_bytes,
+                :status,
+                :last_error,
+                :expires_at,
+                :created_at,
+                :updated_at
+             )'
+        );
+        $statement->execute($row);
+    }
+
+    public function advance(
+        int $id,
+        int $expectedOffset,
+        int $nextOffset,
+    ): bool {
+        $statement = $this->pdo->prepare(
+            'UPDATE media_resumable_transfers
+             SET uploaded_bytes = :next_offset,
+                 status = :status,
+                 last_error = NULL,
+                 updated_at = :updated_at
+             WHERE id = :id
+               AND status = :expected_status
+               AND uploaded_bytes = :expected_offset'
+        );
+        $statement->execute([
+            'next_offset' => $nextOffset,
+            'status' => 'active',
+            'updated_at' => gmdate('Y-m-d H:i:s'),
+            'id' => $id,
+            'expected_status' => 'active',
+            'expected_offset' => $expectedOffset,
+        ]);
+
+        return $statement->rowCount() === 1;
+    }
+
+    public function complete(
+        int $id,
+        int $expectedOffset,
+        int $totalBytes,
+    ): bool {
+        $statement = $this->pdo->prepare(
+            'UPDATE media_resumable_transfers
+             SET uploaded_bytes = :total_bytes,
+                 status = :status,
+                 last_error = NULL,
+                 updated_at = :updated_at
+             WHERE id = :id
+               AND status = :expected_status
+               AND uploaded_bytes = :expected_offset
+               AND total_bytes = :total_bytes_guard'
+        );
+        $statement->execute([
+            'total_bytes' => $totalBytes,
+            'status' => 'completed',
+            'updated_at' => gmdate('Y-m-d H:i:s'),
+            'id' => $id,
+            'expected_status' => 'active',
+            'expected_offset' => $expectedOffset,
+            'total_bytes_guard' => $totalBytes,
+        ]);
+
+        return $statement->rowCount() === 1;
+    }
+
+    /**
      * @param array<string,mixed> $fields
      */
     public function update(
