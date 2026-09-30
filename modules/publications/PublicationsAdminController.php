@@ -111,7 +111,12 @@ final class PublicationsAdminController
 
             $publication = $repository->findByPublicId($publicId);
             if ($publication !== null) {
-                $this->saveSeo($publication, $form);
+                $this->saveSeo(
+                    $request,
+                    $publication,
+                    $form,
+                    'publications.create',
+                );
             }
 
             $this->audit($request, 'publication.created', $publicId);
@@ -217,7 +222,12 @@ final class PublicationsAdminController
 
             $updated = $repository->findByPublicId($publicId);
             if ($updated !== null) {
-                $this->saveSeo($updated, $form);
+                $this->saveSeo(
+                    $request,
+                    $updated,
+                    $form,
+                    'publications.edit',
+                );
                 $this->saveExternalSelection(
                     $updated,
                     $externalSettings,
@@ -501,6 +511,33 @@ final class PublicationsAdminController
             );
         }
 
+        $seoMediaOptions = [
+            'images' => [],
+            'videos' => [],
+        ];
+        $seoCapability = ModuleRuntimeLoader::capability(
+            'seo',
+            'seo.publications',
+        );
+
+        if (
+            $seoCapability !== null
+            && method_exists(
+                $seoCapability,
+                'structuredMediaOptions',
+            )
+        ) {
+            $seoMediaOptions =
+                $seoCapability->structuredMediaOptions(
+                    $organizationAccess->visibleOwnerPublicIds(
+                        self::requiredUserId($request),
+                        $permission,
+                        $publication?->siteKey ?? 'default',
+                    ),
+                    $publication?->siteKey ?? 'default',
+                );
+        }
+
         $canExternalPublish = AdminAuthorization::can(
             $request,
             'social.publish',
@@ -522,6 +559,7 @@ final class PublicationsAdminController
             'canSyndicate' => AdminAuthorization::can($request, 'publications.syndicate'),
             'canExternalPublish' => $canExternalPublish,
             'externalChannels' => $externalChannels,
+            'seoMediaOptions' => $seoMediaOptions,
             'revisions' => $publication !== null
                 && AdminAuthorization::can(
                     $request,
@@ -570,6 +608,9 @@ final class PublicationsAdminController
             'social_title' => trim((string) $request->post('social_title', '')),
             'social_description' => trim((string) $request->post('social_description', '')),
             'social_image_url' => trim((string) $request->post('social_image_url', '')),
+            'seo_image_media_id' => trim((string) $request->post('seo_image_media_id', '')),
+            'seo_video_media_id' => trim((string) $request->post('seo_video_media_id', '')),
+            'seo_video_thumbnail_media_id' => trim((string) $request->post('seo_video_thumbnail_media_id', '')),
             'robots_index' => $request->post('robots_index') === '1',
             'robots_follow' => $request->post('robots_follow') === '1',
         ];
@@ -638,6 +679,9 @@ final class PublicationsAdminController
             'social_title' => '',
             'social_description' => '',
             'social_image_url' => '',
+            'seo_image_media_id' => '',
+            'seo_video_media_id' => '',
+            'seo_video_thumbnail_media_id' => '',
             'robots_index' => true,
             'robots_follow' => true,
         ];
@@ -909,24 +953,64 @@ final class PublicationsAdminController
             ->format('Y-m-d\\TH:i');
     }
 
-    private function saveSeo(Publication $publication, array $form): void
-    {
-        $capability = ModuleRuntimeLoader::capability('seo', 'seo.publications');
-        if ($capability === null || !method_exists($capability, 'savePublication')) {
+    private function saveSeo(
+        Request $request,
+        Publication $publication,
+        array $form,
+        string $permission,
+    ): void {
+        $capability = ModuleRuntimeLoader::capability(
+            'seo',
+            'seo.publications',
+        );
+        if (
+            $capability === null
+            || !method_exists(
+                $capability,
+                'savePublication',
+            )
+        ) {
             return;
         }
 
-        $capability->savePublication($publication, [
-            'seo_title' => $form['seo_title'] ?? '',
-            'seo_description' => $form['seo_description'] ?? '',
-            'seo_keywords' => $form['seo_keywords'] ?? '',
-            'canonical_url' => $form['canonical_url'] ?? '',
-            'social_title' => $form['social_title'] ?? '',
-            'social_description' => $form['social_description'] ?? '',
-            'social_image_url' => $form['social_image_url'] ?? '',
-            'robots_index' => ($form['robots_index'] ?? true) === true,
-            'robots_follow' => ($form['robots_follow'] ?? true) === true,
-        ]);
+        $ownerPublicIds =
+            PublicationOrganizationAccessService::fromDatabase()
+                ->visibleOwnerPublicIds(
+                    self::requiredUserId($request),
+                    $permission,
+                    $publication->siteKey,
+                );
+
+        $capability->savePublication(
+            $publication,
+            [
+                'seo_title' => $form['seo_title'] ?? '',
+                'seo_description' =>
+                    $form['seo_description'] ?? '',
+                'seo_keywords' =>
+                    $form['seo_keywords'] ?? '',
+                'canonical_url' =>
+                    $form['canonical_url'] ?? '',
+                'social_title' =>
+                    $form['social_title'] ?? '',
+                'social_description' =>
+                    $form['social_description'] ?? '',
+                'social_image_url' =>
+                    $form['social_image_url'] ?? '',
+                'seo_image_media_id' =>
+                    $form['seo_image_media_id'] ?? '',
+                'seo_video_media_id' =>
+                    $form['seo_video_media_id'] ?? '',
+                'seo_video_thumbnail_media_id' =>
+                    $form['seo_video_thumbnail_media_id']
+                        ?? '',
+                'robots_index' =>
+                    ($form['robots_index'] ?? true) === true,
+                'robots_follow' =>
+                    ($form['robots_follow'] ?? true) === true,
+            ],
+            $ownerPublicIds,
+        );
     }
 
     /**
