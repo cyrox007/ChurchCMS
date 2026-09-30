@@ -9,7 +9,6 @@ use ChurchCMS\Modules\Media\MediaRepository;
 use ChurchCMS\Modules\Media\MediaService;
 use ChurchCMS\Modules\Media\MediaUploadService;
 use ChurchCMS\Modules\Organizations\OrganizationService;
-use InvalidArgumentException;
 
 require dirname(__DIR__) . '/core.php';
 
@@ -111,7 +110,7 @@ try {
         "Размеры изображения ошибочно разрешены для document.\n",
     );
     exit(1);
-} catch (InvalidArgumentException) {
+} catch (\InvalidArgumentException) {
 }
 
 $renderer = ThemeRenderer::fromConfig();
