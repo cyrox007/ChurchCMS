@@ -23,6 +23,14 @@ $file = is_array($document['file'] ?? null)
         </p>
     </header>
 
+    <?php if (!empty($document['categories']) && is_array($document['categories'])): ?>
+        <p>
+            <?php foreach ($document['categories'] as $category): ?>
+                <span class="tag"><?= $theme->e((string) ($category['name'] ?? '')) ?></span>
+            <?php endforeach; ?>
+        </p>
+    <?php endif; ?>
+
     <?php if (!empty($document['summary'])): ?>
         <p><?= $theme->e((string) $document['summary']) ?></p>
     <?php endif; ?>
