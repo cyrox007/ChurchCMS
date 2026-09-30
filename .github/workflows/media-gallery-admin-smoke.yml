@@ -11,6 +11,7 @@ on:
       - 'modules/media/MediaGalleryService.php'
       - 'modules/media/runtime.php'
       - 'themes/default/templates/admin/media/galleries.php'
+      - 'themes/default/theme.json'
       - 'tools/media-gallery-admin-smoke.php'
       - '.github/workflows/media-gallery-admin-smoke.yml'
   pull_request:
@@ -67,6 +68,7 @@ jobs:
           php -l modules/media/MediaGalleryService.php
           php -l modules/media/runtime.php
           php -l themes/default/templates/admin/media/galleries.php
+          php -r "json_decode(file_get_contents('themes/default/theme.json'), true, 512, JSON_THROW_ON_ERROR);"
           php -l tools/media-gallery-admin-smoke.php
           php bin/migrate.php validate
           php bin/theme-check.php
