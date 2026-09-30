@@ -212,10 +212,50 @@ final class MediaBlobStorage
 
     public function exists(string $sha256): bool
     {
-        $path = $this->pathForHash($sha256);
+        return $this->readablePath($sha256) !== null;
+    }
 
-        return is_file($path)
-            && !is_link($path);
+    public function readablePath(
+        string $sha256,
+        ?int $expectedBytes = null,
+    ): ?string {
+        $this->assertResolvedRoot();
+
+        $path = $this->pathForHash($sha256);
+        if (
+            !is_file($path)
+            || is_link($path)
+            || !is_readable($path)
+        ) {
+            return null;
+        }
+
+        $resolvedPath = realpath($path);
+        $resolvedRoot = realpath($this->root);
+
+        if (
+            !is_string($resolvedPath)
+            || !is_string($resolvedRoot)
+            || !self::isInsideRoot(
+                self::normalizePath($resolvedPath),
+                self::normalizePath($resolvedRoot),
+            )
+        ) {
+            return null;
+        }
+
+        if ($expectedBytes !== null) {
+            $size = filesize($resolvedPath);
+
+            if (
+                !is_int($size)
+                || $size !== $expectedBytes
+            ) {
+                return null;
+            }
+        }
+
+        return $resolvedPath;
     }
 
     /**
@@ -480,6 +520,22 @@ final class MediaBlobStorage
         }
 
         return DIRECTORY_SEPARATOR . $body;
+    }
+
+    private static function isInsideRoot(
+        string $path,
+        string $root,
+    ): bool {
+        $pathKey = self::pathKey($path);
+        $rootKey = rtrim(
+            self::pathKey($root),
+            DIRECTORY_SEPARATOR,
+        );
+
+        return str_starts_with(
+            $pathKey,
+            $rootKey . DIRECTORY_SEPARATOR,
+        );
     }
 
     private static function pathKey(string $path): string
