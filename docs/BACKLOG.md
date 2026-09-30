@@ -256,9 +256,9 @@ Priority is ordered within each section.
 - [x] per-channel custom post text;
 - [x] Telegram adapter;
 - [x] VK adapter;
-- [ ] MAX adapter;
+- [x] MAX adapter;
   - [x] подключение, outbound и dev/fallback long polling;
-  - [ ] production webhook subscription с отдельным secret и автоматической регистрацией endpoint;
+  - [x] production webhook subscription с отдельным secret и автоматической регистрацией endpoint;
 - [ ] YouTube adapter;
 - [ ] Rutube adapter;
 - [x] webhook receiver contract/signature validation;
