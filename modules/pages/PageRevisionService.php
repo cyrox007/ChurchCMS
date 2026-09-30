@@ -70,6 +70,29 @@ final class PageRevisionService
         );
     }
 
+    public function revision(
+        string $pagePublicId,
+        string $revisionPublicId,
+        string $siteKey = 'default',
+    ): ContentRevision {
+        $revision = $this->revisions->findByPublicId(
+            trim($revisionPublicId),
+            $siteKey,
+        );
+
+        if (
+            $revision === null
+            || $revision->entityType !== 'page'
+            || $revision->entityPublicId !== trim($pagePublicId)
+        ) {
+            throw new InvalidArgumentException(
+                'Revision страницы не найден.'
+            );
+        }
+
+        return $revision;
+    }
+
     public function restore(
         string $pagePublicId,
         string $revisionPublicId,
@@ -79,21 +102,17 @@ final class PageRevisionService
             trim($pagePublicId),
             $siteKey,
         );
-        $revision = $this->revisions->findByPublicId(
-            trim($revisionPublicId),
-            $siteKey,
-        );
-
-        if (
-            $page === null
-            || $revision === null
-            || $revision->entityType !== 'page'
-            || $revision->entityPublicId !== $page->publicId
-        ) {
+        if ($page === null) {
             throw new InvalidArgumentException(
-                'Revision страницы не найден.'
+                'Страница не найдена.'
             );
         }
+
+        $revision = $this->revision(
+            $page->publicId,
+            $revisionPublicId,
+            $siteKey,
+        );
 
         $snapshot = $revision->snapshot;
         $owner = self::requiredString(
