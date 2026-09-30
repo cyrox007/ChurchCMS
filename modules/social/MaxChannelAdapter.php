@@ -116,6 +116,20 @@ final class MaxChannelAdapter implements
         string $credentials,
         string $webhookUrl,
     ): void {
+        $parts = parse_url($webhookUrl);
+        if (
+            !is_array($parts)
+            || strtolower((string) ($parts['scheme'] ?? '')) !== 'https'
+            || trim((string) ($parts['host'] ?? '')) === ''
+            || isset($parts['port'])
+            || isset($parts['user'])
+            || isset($parts['pass'])
+        ) {
+            throw new RuntimeException(
+                'MAX webhook должен использовать HTTPS на стандартном порту 443.'
+            );
+        }
+
         $secret = self::webhookSecret(
             $connection,
             $credentials,
