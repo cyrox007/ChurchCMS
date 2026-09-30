@@ -120,6 +120,17 @@ $status = is_array($documentStatus ?? null)
                 </label>
 
                 <label>
+                    <span>Рубрики <small>необязательно</small></span>
+                    <input
+                        type="text"
+                        name="categories"
+                        maxlength="1000"
+                        placeholder="Например: Распоряжения, Приказы"
+                    >
+                    <small>До восьми рубрик, разделяйте запятыми.</small>
+                </label>
+
+                <label>
                     <span>Файл из медиатеки <small>необязательно</small></span>
                     <select name="media_public_id">
                         <option value="">Без файла</option>
@@ -161,6 +172,9 @@ $status = is_array($documentStatus ?? null)
                     $fileMediaPublicId = (string) (
                         $row['media_public_id'] ?? ''
                     );
+                    $categoryNames = (string) (
+                        $row['category_names'] ?? ''
+                    );
                     ?>
                     <article class="admin-operations-row" role="listitem">
                         <div class="admin-operations-row__body">
@@ -178,6 +192,9 @@ $status = is_array($documentStatus ?? null)
                             </span>
                             <small>
                                 владелец: <?= $theme->e($document->ownerOrganizationPublicId) ?>
+                                <?php if ($categoryNames !== ''): ?>
+                                    · рубрики: <?= $theme->e($categoryNames) ?>
+                                <?php endif; ?>
                                 · ID: <?= $theme->e($document->publicId) ?>
                             </small>
                         </div>
@@ -255,6 +272,18 @@ $status = is_array($documentStatus ?? null)
                                         rows="4"
                                         maxlength="4000"
                                     ><?= $theme->e($document->summary) ?></textarea>
+                                </label>
+
+                                <label>
+                                    <span>Рубрики <small>необязательно</small></span>
+                                    <input
+                                        type="text"
+                                        name="categories"
+                                        maxlength="1000"
+                                        value="<?= $theme->e($categoryNames) ?>"
+                                        placeholder="Например: Распоряжения, Приказы"
+                                    >
+                                    <small>До восьми рубрик, разделяйте запятыми.</small>
                                 </label>
 
                                 <label>
