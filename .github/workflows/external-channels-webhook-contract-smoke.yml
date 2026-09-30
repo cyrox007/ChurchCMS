@@ -1,0 +1,117 @@
+name: Проверка webhook-контракта внешних каналов
+
+on:
+  push:
+    branches:
+      - develop
+      - main
+    paths:
+      - 'core/Request.php'
+      - 'core/Response.php'
+      - 'modules/social/ChannelWebhookRequest.php'
+      - 'modules/social/ChannelWebhookResult.php'
+      - 'modules/social/ChannelWebhookAdapter.php'
+      - 'modules/social/ChannelWebhookSignature.php'
+      - 'modules/social/ChannelWebhookException.php'
+      - 'modules/social/ChannelWebhookService.php'
+      - 'modules/social/SocialWebhookController.php'
+      - 'modules/social/runtime.php'
+      - 'tools/external-channels-webhook-contract-smoke.php'
+      - '.github/workflows/external-channels-webhook-contract-smoke.yml'
+  pull_request:
+    branches:
+      - develop
+      - main
+    paths:
+      - 'core/Request.php'
+      - 'core/Response.php'
+      - 'modules/social/ChannelWebhookRequest.php'
+      - 'modules/social/ChannelWebhookResult.php'
+      - 'modules/social/ChannelWebhookAdapter.php'
+      - 'modules/social/ChannelWebhookSignature.php'
+      - 'modules/social/ChannelWebhookException.php'
+      - 'modules/social/ChannelWebhookService.php'
+      - 'modules/social/SocialWebhookController.php'
+      - 'modules/social/runtime.php'
+      - 'tools/external-channels-webhook-contract-smoke.php'
+      - '.github/workflows/external-channels-webhook-contract-smoke.yml'
+
+permissions:
+  contents: read
+
+jobs:
+  external-channels-webhook-contract:
+    runs-on: ubuntu-latest
+
+    services:
+      postgres:
+        image: postgres:16
+        env:
+          POSTGRES_DB: churchcms
+          POSTGRES_USER: churchcms
+          POSTGRES_PASSWORD: churchcms
+        ports:
+          - 5432:5432
+        options: >-
+          --health-cmd pg_isready
+          --health-interval 10s
+          --health-timeout 5s
+          --health-retries 5
+
+    steps:
+      - name: Получить исходный код
+        uses: actions/checkout@v4
+
+      - name: Подготовить PHP 8.3
+        uses: shivammathur/setup-php@v2
+        with:
+          php-version: '8.3'
+          extensions: pdo, pdo_pgsql, mbstring, openssl
+          coverage: none
+
+      - name: Проверить PHP
+        run: |
+          set -euo pipefail
+          php -l core/Request.php
+          php -l core/Response.php
+          php -l modules/social/ChannelWebhookRequest.php
+          php -l modules/social/ChannelWebhookResult.php
+          php -l modules/social/ChannelWebhookAdapter.php
+          php -l modules/social/ChannelWebhookSignature.php
+          php -l modules/social/ChannelWebhookException.php
+          php -l modules/social/ChannelWebhookService.php
+          php -l modules/social/SocialWebhookController.php
+          php -l modules/social/runtime.php
+          php -l tools/external-channels-webhook-contract-smoke.php
+          php bin/migrate.php validate
+
+      - name: Подготовить тестовую установку
+        run: |
+          set -euo pipefail
+          mkdir -p storage/cache storage/logs storage/sessions storage/rate-limits storage/uploads
+
+          cat > config/local.php <<'PHP'
+          <?php
+
+          declare(strict_types=1);
+
+          return [
+              'installation' => ['completed' => true],
+              'security' => [
+                  'secret_key' => base64_encode(str_repeat('w', 32)),
+              ],
+              'database' => [
+                  'driver' => 'pgsql',
+                  'host' => '127.0.0.1',
+                  'port' => 5432,
+                  'database' => 'churchcms',
+                  'username' => 'churchcms',
+                  'password' => 'churchcms',
+              ],
+          ];
+          PHP
+
+          php bin/migrate.php
+
+      - name: Проверить подпись, raw body и inbound queue
+        run: php tools/external-channels-webhook-contract-smoke.php
