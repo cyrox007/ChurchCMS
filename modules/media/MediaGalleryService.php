@@ -98,6 +98,48 @@ final class MediaGalleryService
         return $publicId;
     }
 
+    public function updateDetails(
+        string $galleryPublicId,
+        string $title,
+        string $description,
+        string $siteKey = 'default',
+    ): void {
+        $gallery = $this->requiredGallery(
+            $galleryPublicId,
+            $siteKey,
+        );
+
+        if ($gallery->status === 'archived') {
+            throw new InvalidArgumentException(
+                'Архивную галерею нельзя редактировать.'
+            );
+        }
+
+        $statement = $this->pdo->prepare(
+            'UPDATE media_galleries
+             SET title = :title,
+                 description = :description,
+                 updated_at = :updated_at
+             WHERE public_id = :public_id
+               AND site_key = :site_key'
+        );
+        $statement->execute([
+            'title' => self::requiredText(
+                $title,
+                255,
+                'Название галереи обязательно.',
+            ),
+            'description' => self::text(
+                $description,
+                4000,
+                'Описание галереи слишком длинное.',
+            ),
+            'updated_at' => gmdate('Y-m-d H:i:s'),
+            'public_id' => $gallery->publicId,
+            'site_key' => $gallery->siteKey,
+        ]);
+    }
+
     /**
      * @param list<string> $mediaPublicIds
      */
