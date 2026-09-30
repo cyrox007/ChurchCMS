@@ -46,6 +46,7 @@
     "gallery.index": "galleries/index",
     "gallery.show": "galleries/show",
     "auth.password_forgot": "auth/password-forgot",
-    "auth.password_reset": "auth/password-reset"
+    "auth.password_reset": "auth/password-reset",
+    "admin.navigation": "admin/navigation"
   }
 }

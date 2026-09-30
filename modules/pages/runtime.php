@@ -10,9 +10,13 @@ use ChurchCMS\App\Middlewares\RequireAdminMiddleware;
 use ChurchCMS\App\Services\AdminNavigationRegistry;
 use ChurchCMS\Core\ModuleRuntimeProvider;
 use ChurchCMS\Core\Router;
+use ChurchCMS\Core\ThemeGlobalDataRegistry;
 use ChurchCMS\Modules\Pages\PagesApiController;
 use ChurchCMS\Modules\Pages\PagesController;
 use ChurchCMS\Modules\Pages\PagesAdminController;
+use ChurchCMS\Modules\Pages\NavigationMenuAdminController;
+use ChurchCMS\Modules\Pages\NavigationMenuCapability;
+use ChurchCMS\Modules\Pages\NavigationThemeDataProvider;
 
 $moduleRoot = __DIR__;
 foreach ([
@@ -22,6 +26,13 @@ foreach ([
     'PageService.php',
     'PageOrganizationAccessService.php',
     'PageApiResource.php',
+    'NavigationMenu.php',
+    'NavigationMenuItem.php',
+    'NavigationMenuRepository.php',
+    'NavigationMenuService.php',
+    'NavigationMenuCapability.php',
+    'NavigationThemeDataProvider.php',
+    'NavigationMenuAdminController.php',
     'PagesController.php',
     'PagesApiController.php',
     'PagesAdminController.php',
@@ -37,7 +48,10 @@ return new class implements ModuleRuntimeProvider {
 
     public function capabilities(): array
     {
-        return [];
+        return [
+            'pages.navigation' =>
+                new NavigationMenuCapability(),
+        ];
     }
 
     public function boot(): void
@@ -48,6 +62,18 @@ return new class implements ModuleRuntimeProvider {
             route: 'admin_pages',
             permission: 'pages.read',
             priority: 25,
+        );
+        AdminNavigationRegistry::register(
+            id: 'navigation',
+            label: 'Меню',
+            route: 'admin_navigation',
+            permission: 'pages.edit',
+            priority: 26,
+        );
+
+        ThemeGlobalDataRegistry::register(
+            'pages.navigation',
+            new NavigationThemeDataProvider(),
         );
 
         $router = Router::getInstance();
@@ -105,6 +131,44 @@ return new class implements ModuleRuntimeProvider {
             [PagesAdminController::class, 'unpublish'],
             [RequireAdminMiddleware::class, CsrfMiddleware::class],
             'admin_page_unpublish',
+        );
+
+        $router->add(
+            'GET',
+            '/admin/navigation',
+            [NavigationMenuAdminController::class, 'index'],
+            [RequireAdminMiddleware::class],
+            'admin_navigation',
+        );
+        $router->add(
+            'POST',
+            '/admin/navigation/items',
+            [NavigationMenuAdminController::class, 'create'],
+            [
+                RequireAdminMiddleware::class,
+                CsrfMiddleware::class,
+            ],
+            'admin_navigation_item_create',
+        );
+        $router->add(
+            'POST',
+            '/admin/navigation/items/{publicId}',
+            [NavigationMenuAdminController::class, 'update'],
+            [
+                RequireAdminMiddleware::class,
+                CsrfMiddleware::class,
+            ],
+            'admin_navigation_item_update',
+        );
+        $router->add(
+            'POST',
+            '/admin/navigation/items/{publicId}/delete',
+            [NavigationMenuAdminController::class, 'delete'],
+            [
+                RequireAdminMiddleware::class,
+                CsrfMiddleware::class,
+            ],
+            'admin_navigation_item_delete',
         );
 
         $router->add(

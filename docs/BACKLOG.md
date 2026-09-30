@@ -140,7 +140,7 @@ Priority is ordered within each section.
   - [x] domain repository/service and safe subtree moves;
   - [x] public/admin/API vertical slice;
 - [x] publication categories/tags with site-scoped normalized storage, editor fields, public/API/syndication projections and PostgreSQL/MySQL smoke coverage;
-- menus;
+- [x] menus: primary navigation с ordered Page/system-route/HTTPS items, Admin Shell и глобальным theme provider;
 - content revisions;
 - [x] worker/cron отложенной публикации;
 - [x] canonical URL/SEO metadata foundation;

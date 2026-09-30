@@ -50,6 +50,11 @@ final class ThemeRenderer
         array $data = [],
         string $layout = 'layout.main',
     ): never {
+        $data = array_replace(
+            ThemeGlobalDataRegistry::data(),
+            $data,
+        );
+
         $content = $this->capture($logicalName, $data);
         $layoutData = $data;
         $layoutData['content'] = $content;
