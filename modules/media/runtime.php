@@ -111,6 +111,17 @@ return new class implements ModuleRuntimeProvider {
         );
 
         $router->add(
+            'POST',
+            '/admin/media/{publicId}/visibility',
+            [MediaAdminController::class, 'visibility'],
+            [
+                RequireAdminMiddleware::class,
+                CsrfMiddleware::class,
+            ],
+            'admin_media_visibility',
+        );
+
+        $router->add(
             'GET',
             '/admin/media/galleries',
             [MediaGalleryAdminController::class, 'index'],
