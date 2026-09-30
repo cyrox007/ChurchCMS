@@ -216,12 +216,12 @@ $checkLabels = [
 
                             <?php if ($ready && !$codeOnly): ?>
                                 <small class="admin-operations-warning">
-                                    Пакет содержит миграции. Автоматическое применение отключено до появления безопасного rollback схемы БД.
+                                    Пакет содержит миграции. Перед применением ChurchCMS разрешит только новые обратимые миграции; замена, удаление или необратимая миграция остановят обновление до изменения установки.
                                 </small>
                             <?php endif; ?>
                         </div>
 
-                        <?php if ($ready && $codeOnly): ?>
+                        <?php if ($ready): ?>
                             <form
                                 class="admin-update-apply"
                                 method="post"
@@ -238,7 +238,10 @@ $checkLabels = [
                                         value="<?= $theme->e($stageId) ?>"
                                         required
                                     >
-                                    <span>Создать резервную копию и применить это обновление</span>
+                                    <span>
+                                        Создать резервную копию и применить это обновление.
+                                        Для пакета с миграциями будет выполнена предварительная проверка безопасного отката схемы.
+                                    </span>
                                 </label>
                                 <button class="button button--primary" type="submit">Применить</button>
                             </form>
