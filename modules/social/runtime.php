@@ -11,6 +11,7 @@ use ChurchCMS\Core\Router;
 use ChurchCMS\Modules\Social\ExternalChannelsCapability;
 use ChurchCMS\Modules\Social\SocialAdminController;
 use ChurchCMS\Modules\Social\SocialAdminTaskProvider;
+use ChurchCMS\Modules\Social\SocialWebhookController;
 
 $moduleRoot = __DIR__;
 foreach ([
@@ -25,6 +26,11 @@ foreach ([
     'ChannelAdapter.php',
     'ChannelConnectionTestResult.php',
     'ChannelConnectionTester.php',
+    'ChannelWebhookRequest.php',
+    'ChannelWebhookResult.php',
+    'ChannelWebhookAdapter.php',
+    'ChannelWebhookSignature.php',
+    'ChannelWebhookException.php',
     'ChannelAdapterRegistry.php',
     'NativeHttpClient.php',
     'SocialConnectionRepository.php',
@@ -35,11 +41,13 @@ foreach ([
     'ExternalChannelItemRepository.php',
     'ChannelSyncStateRepository.php',
     'ChannelSyncService.php',
+    'ChannelWebhookService.php',
     'ChannelOutboundDispatcher.php',
     'SocialOutboundFailureService.php',
     'ExternalChannelsCapability.php',
     'SocialAdminTaskProvider.php',
     'SocialAdminController.php',
+    'SocialWebhookController.php',
 ] as $file) {
     require_once $moduleRoot . '/' . $file;
 }
@@ -84,6 +92,14 @@ return new class implements ModuleRuntimeProvider {
         );
 
         $router = Router::getInstance();
+
+        $router->add(
+            'POST',
+            '/api/v1/external-channels/{connectionPublicId}/webhook',
+            [SocialWebhookController::class, 'receive'],
+            [],
+            'external_channels_webhook',
+        );
 
         $router->add(
             'GET',
