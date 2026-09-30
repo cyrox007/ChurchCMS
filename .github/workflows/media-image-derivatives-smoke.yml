@@ -1,0 +1,108 @@
+name: Проверка derivatives изображений Media
+
+on:
+  push:
+    branches:
+      - develop
+      - main
+    paths:
+      - 'modules/media/MediaDerivative.php'
+      - 'modules/media/MediaDerivativeRepository.php'
+      - 'modules/media/MediaImageDerivativeService.php'
+      - 'modules/media/MediaDerivativeCapability.php'
+      - 'modules/media/runtime.php'
+      - 'modules/media/migrations/20260930_100000_create_media_derivatives.php'
+      - 'tools/media-image-derivatives-smoke.php'
+      - '.github/workflows/media-image-derivatives-smoke.yml'
+  pull_request:
+    branches:
+      - develop
+      - main
+    paths:
+      - 'modules/media/MediaDerivative.php'
+      - 'modules/media/MediaDerivativeRepository.php'
+      - 'modules/media/MediaImageDerivativeService.php'
+      - 'modules/media/MediaDerivativeCapability.php'
+      - 'modules/media/runtime.php'
+      - 'modules/media/migrations/20260930_100000_create_media_derivatives.php'
+      - 'tools/media-image-derivatives-smoke.php'
+      - '.github/workflows/media-image-derivatives-smoke.yml'
+
+permissions:
+  contents: read
+
+jobs:
+  media-image-derivatives:
+    runs-on: ubuntu-latest
+
+    services:
+      postgres:
+        image: postgres:16
+        env:
+          POSTGRES_DB: churchcms
+          POSTGRES_USER: churchcms
+          POSTGRES_PASSWORD: churchcms
+        ports:
+          - 5432:5432
+        options: >-
+          --health-cmd pg_isready
+          --health-interval 10s
+          --health-timeout 5s
+          --health-retries 5
+
+    steps:
+      - name: Получить исходный код
+        uses: actions/checkout@v4
+
+      - name: Подготовить PHP 8.3
+        uses: shivammathur/setup-php@v2
+        with:
+          php-version: '8.3'
+          extensions: pdo, pdo_pgsql, fileinfo, gd
+          coverage: none
+
+      - name: Проверить PHP
+        run: |
+          set -euo pipefail
+          php -l modules/media/MediaDerivative.php
+          php -l modules/media/MediaDerivativeRepository.php
+          php -l modules/media/MediaImageDerivativeService.php
+          php -l modules/media/MediaDerivativeCapability.php
+          php -l modules/media/runtime.php
+          php -l modules/media/migrations/20260930_100000_create_media_derivatives.php
+          php -l tools/media-image-derivatives-smoke.php
+          php bin/migrate.php validate
+
+      - name: Подготовить тестовую установку
+        run: |
+          set -euo pipefail
+          mkdir -p storage/cache storage/logs storage/sessions storage/rate-limits storage/uploads
+          MEDIA_STORAGE="${RUNNER_TEMP}/churchcms-media-derivatives"
+          mkdir -p "${MEDIA_STORAGE}"
+
+          cat > config/local.php <<PHP
+          <?php
+
+          declare(strict_types=1);
+
+          return [
+              'installation' => ['completed' => true],
+              'database' => [
+                  'driver' => 'pgsql',
+                  'host' => '127.0.0.1',
+                  'port' => 5432,
+                  'database' => 'churchcms',
+                  'username' => 'churchcms',
+                  'password' => 'churchcms',
+              ],
+              'media' => [
+                  'storage_path' => '${MEDIA_STORAGE}',
+                  'max_upload_bytes' => 10485760,
+              ],
+          ];
+          PHP
+
+          php bin/migrate.php
+
+      - name: Проверить resize, storage и отсутствие апскейла
+        run: php tools/media-image-derivatives-smoke.php
