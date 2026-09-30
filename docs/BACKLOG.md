@@ -152,9 +152,12 @@ Priority is ordered within each section.
 
 ## P1 — Media
 
-- safe uploads;
-- MIME sniffing;
-- checksums;
+- [ ] safe uploads;
+  - [x] приватное content-addressed blob-хранилище вне корня ChurchCMS;
+  - [x] сервисная загрузка файла с атомарным сохранением и лимитом размера;
+  - [ ] multipart upload в Admin Shell поверх MediaUploadService;
+- [x] MIME sniffing по содержимому через Fileinfo;
+- [x] SHA-256 checksums фактического blob;
 - image metadata;
 - usage references;
 - derivatives;

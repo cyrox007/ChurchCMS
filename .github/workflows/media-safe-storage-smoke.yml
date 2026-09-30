@@ -1,0 +1,108 @@
+name: Проверка безопасного Media storage
+
+on:
+  push:
+    branches:
+      - develop
+      - main
+    paths:
+      - 'config/app.php'
+      - 'modules/media/MediaStoredBlob.php'
+      - 'modules/media/MediaBlobStorage.php'
+      - 'modules/media/MediaUploadService.php'
+      - 'modules/media/runtime.php'
+      - 'modules/media/README.md'
+      - 'tools/media-safe-storage-smoke.php'
+      - '.github/workflows/media-safe-storage-smoke.yml'
+  pull_request:
+    branches:
+      - develop
+      - main
+    paths:
+      - 'config/app.php'
+      - 'modules/media/MediaStoredBlob.php'
+      - 'modules/media/MediaBlobStorage.php'
+      - 'modules/media/MediaUploadService.php'
+      - 'modules/media/runtime.php'
+      - 'modules/media/README.md'
+      - 'tools/media-safe-storage-smoke.php'
+      - '.github/workflows/media-safe-storage-smoke.yml'
+
+permissions:
+  contents: read
+
+jobs:
+  media-safe-storage:
+    runs-on: ubuntu-latest
+
+    services:
+      postgres:
+        image: postgres:16
+        env:
+          POSTGRES_DB: churchcms
+          POSTGRES_USER: churchcms
+          POSTGRES_PASSWORD: churchcms
+        ports:
+          - 5432:5432
+        options: >-
+          --health-cmd pg_isready
+          --health-interval 10s
+          --health-timeout 5s
+          --health-retries 5
+
+    steps:
+      - name: Получить исходный код
+        uses: actions/checkout@v4
+
+      - name: Подготовить PHP 8.3
+        uses: shivammathur/setup-php@v2
+        with:
+          php-version: '8.3'
+          extensions: pdo, pdo_pgsql, fileinfo, openssl, mbstring
+          coverage: none
+
+      - name: Проверить PHP
+        run: |
+          set -euo pipefail
+          php -l modules/media/MediaStoredBlob.php
+          php -l modules/media/MediaBlobStorage.php
+          php -l modules/media/MediaUploadService.php
+          php -l modules/media/runtime.php
+          php -l tools/media-safe-storage-smoke.php
+          php bin/migrate.php validate
+
+      - name: Подготовить тестовую установку
+        run: |
+          set -euo pipefail
+          rm -rf /tmp/churchcms-media-safe-storage /tmp/churchcms-media-safe-source /tmp/churchcms-media-config
+          mkdir -p storage/cache storage/logs storage/sessions storage/rate-limits storage/uploads
+
+          cat > config/local.php <<'PHP'
+          <?php
+
+          declare(strict_types=1);
+
+          return [
+              'installation' => ['completed' => true],
+              'security' => [
+                  'secret_key' => base64_encode(str_repeat('m', 32)),
+              ],
+              'media' => [
+                  'storage_path' => '/tmp/churchcms-media-config',
+                  'max_upload_bytes' => 1048576,
+              ],
+              'database' => [
+                  'driver' => 'pgsql',
+                  'host' => '127.0.0.1',
+                  'port' => 5432,
+                  'database' => 'churchcms',
+                  'username' => 'churchcms',
+                  'password' => 'churchcms',
+              ],
+          ];
+          PHP
+
+          php bin/migrate.php
+
+      - name: Проверить storage, MIME и SHA-256
+        run: php tools/media-safe-storage-smoke.php
