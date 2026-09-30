@@ -122,13 +122,42 @@ payload. Исходное имя файла, filesystem path и blob отсут�
 узла и canonical URL. Tombstone, parent/peer, неактивные связи и связи без
 `content.read` исключаются.
 
+## Производные изображения
+
+Для локальных image-asset доступны два стабильных варианта:
+
+- `thumbnail` — вписывание в 320×320;
+- `medium` — вписывание в 1280×1280.
+
+Пропорции сохраняются, апскейл запрещён. Если оригинал уже помещается в
+выбранный предел, derivative указывает на тот же проверенный content-addressed
+blob и не создаёт лишнюю копию.
+
+Уменьшение первой версии поддерживает JPEG, PNG и WebP через PHP GD.
+Полученный файл не считается доверенным автоматически: он повторно проходит
+`MediaBlobStorage`, включая MIME sniffing, SHA-256, лимит размера и безопасный
+путь вне web-root. Связь asset + variant хранится отдельно в
+`media_derivatives`; исходный SHA-256 и оригинальный blob не изменяются.
+
+GIF и AVIF пока не перекодируются: для них сервис возвращает явную ошибку
+вместо неявной потери анимации или несовместимой обработки.
+
+## Usage references
+
+Медиатека хранит явные ссылки использования asset другими сущностями через
+`media_usage_references`. Один consumer slot уникален по
+`site_key + consumer_type + consumer_public_id + usage_key`.
+
+Архивирование Media блокируется, пока существуют активные ссылки. Замена набора
+ссылок одного consumer выполняется атомарно и не позволяет сослаться на
+архивный или отсутствующий asset.
+
 ## Следующие инкременты
 
 Остаются:
 
-- derivatives изображений;
-- usage references;
-- Admin Shell;
-- public/API;
-- Galleries/Documents;
-- обычные публичные Media-страницы после появления безопасного blob/storage.
+- galleries;
+- document catalog / связь Documents с Media;
+- обычный public/API для локальных blob и derivatives;
+- подключение derivatives к редакторам и публичным шаблонам;
+- binary/resumable pipeline для видео и outbound YouTube/Rutube.
