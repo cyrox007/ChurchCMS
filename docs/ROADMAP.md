@@ -31,7 +31,7 @@ Status: in progress.
 - [ ] Публикации (основной процесс, public/admin/API/синдикация, категории/теги и отложенная публикация реализованы; остаются ревизии и связь с Media).
 - [x] Pages/content tree (schema, domain, public API, organization-scoped Admin Shell and public canonical HTML implemented).
 - [ ] Navigation/menu.
-- [ ] Media library (foundation метаданных, organization owner, visibility и полный federation-путь source → worker → remote projection/tombstone → безопасная metadata-only агрегация реализованы; безопасный upload/storage, MIME sniffing, derivatives, usage references, Admin и обычные public/API остаются).
+- [ ] Media library (foundation, organization owner, visibility, federation, безопасный upload/storage, MIME sniffing, SHA-256, Admin upload и технические размеры изображений реализованы; остаются derivatives, usage references и полноценные public/API представления blob).
 - [ ] People/clergy (основа схемы, доменного слоя и организационных связей назначений реализована; Admin Shell, публичная часть и API остаются).
 - [ ] Worship schedule (schema/domain foundation с обязательным organization owner реализован; Admin Shell, public/API, повторяющиеся правила и праздничные шаблоны остаются).
 - [ ] Events (schema/domain foundation с обязательным organization owner реализован; Admin Shell, публикация, public/API, календарные представления и повторяющиеся правила остаются).
