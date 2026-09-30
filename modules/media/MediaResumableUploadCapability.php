@@ -20,4 +20,51 @@ final class MediaResumableUploadCapability
             $siteKey,
         );
     }
+
+    /**
+     * @return array{
+     *     type:string,
+     *     public_id:string,
+     *     mime_type:string,
+     *     bytes:int,
+     *     sha256:string
+     * }|null
+     */
+    public function publicationVideo(
+        string $publicationPublicId,
+        string $siteKey = 'default',
+    ): ?array {
+        $usage = MediaUsageService::fromDatabase();
+        $mediaPublicId = null;
+
+        foreach (
+            $usage->forConsumer(
+                'publication-seo',
+                $publicationPublicId,
+                $siteKey,
+            ) as $reference
+        ) {
+            if ($reference->usageKey === 'video') {
+                $mediaPublicId = $reference->mediaPublicId;
+                break;
+            }
+        }
+
+        if ($mediaPublicId === null) {
+            return null;
+        }
+
+        $source = $this->source(
+            $mediaPublicId,
+            $siteKey,
+        );
+
+        return [
+            'type' => 'video',
+            'public_id' => $source->mediaPublicId,
+            'mime_type' => $source->mimeType,
+            'bytes' => $source->bytes,
+            'sha256' => $source->sha256,
+        ];
+    }
 }
