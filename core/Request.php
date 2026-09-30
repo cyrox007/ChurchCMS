@@ -8,10 +8,13 @@ use JsonException;
 
 final class Request
 {
-    private const MAX_JSON_BYTES = 1048576;
+    private const MAX_BODY_BYTES = 1048576;
 
     private array $json = [];
     private ?string $jsonError = null;
+    private ?string $bodyError = null;
+    private ?string $rawBody = null;
+    private bool $rawBodyLoaded = false;
     private array $attributes = [];
 
     public function __construct(
@@ -19,7 +22,18 @@ final class Request
         private readonly array $post = [],
         private readonly array $files = [],
         private readonly array $server = [],
+        ?string $rawBody = null,
     ) {
+        if ($rawBody !== null) {
+            $this->rawBodyLoaded = true;
+
+            if (strlen($rawBody) > self::MAX_BODY_BYTES) {
+                $this->bodyError = 'request_body_too_large';
+            } else {
+                $this->rawBody = $rawBody;
+            }
+        }
+
         $this->parseJson();
     }
 
@@ -75,6 +89,43 @@ final class Request
         return $this->server[$key] ?? $default;
     }
 
+    /**
+     * @return array<string,string>
+     */
+    public function headers(): array
+    {
+        $headers = [];
+
+        foreach ($this->server as $key => $value) {
+            if (!is_string($key) || !is_scalar($value)) {
+                continue;
+            }
+
+            if (str_starts_with($key, 'HTTP_')) {
+                $name = substr($key, 5);
+            } elseif (in_array($key, ['CONTENT_TYPE', 'CONTENT_LENGTH'], true)) {
+                $name = $key;
+            } else {
+                continue;
+            }
+
+            $name = strtolower(str_replace('_', '-', $name));
+            $headers[$name] = (string) $value;
+        }
+
+        return $headers;
+    }
+
+    public function rawBody(): ?string
+    {
+        return $this->loadRawBody();
+    }
+
+    public function bodyError(): ?string
+    {
+        return $this->bodyError;
+    }
+
     public function ip(): string
     {
         $ip = (string) ($this->server['REMOTE_ADDR'] ?? '');
@@ -121,22 +172,60 @@ final class Request
 
     private function parseJson(): void
     {
-        $contentType = strtolower(trim((string) ($this->server['CONTENT_TYPE'] ?? '')));
+        $contentType = strtolower(
+            trim((string) ($this->server['CONTENT_TYPE'] ?? ''))
+        );
         if (!str_starts_with($contentType, 'application/json')) {
             return;
         }
 
-        $raw = file_get_contents('php://input', false, null, 0, self::MAX_JSON_BYTES + 1);
-        if ($raw === false || strlen($raw) > self::MAX_JSON_BYTES) {
-            $this->jsonError = 'json_body_unreadable_or_too_large';
+        $raw = $this->loadRawBody();
+        if ($raw === null) {
+            $this->jsonError = $this->bodyError
+                ?? 'json_body_unreadable_or_too_large';
             return;
         }
 
         try {
-            $decoded = json_decode($raw, true, 64, JSON_THROW_ON_ERROR);
+            $decoded = json_decode(
+                $raw,
+                true,
+                64,
+                JSON_THROW_ON_ERROR,
+            );
             $this->json = is_array($decoded) ? $decoded : [];
         } catch (JsonException) {
             $this->jsonError = 'json_body_invalid';
         }
+    }
+
+    private function loadRawBody(): ?string
+    {
+        if ($this->rawBodyLoaded) {
+            return $this->rawBody;
+        }
+
+        $this->rawBodyLoaded = true;
+        $raw = file_get_contents(
+            'php://input',
+            false,
+            null,
+            0,
+            self::MAX_BODY_BYTES + 1,
+        );
+
+        if ($raw === false) {
+            $this->bodyError = 'request_body_unreadable';
+            return null;
+        }
+
+        if (strlen($raw) > self::MAX_BODY_BYTES) {
+            $this->bodyError = 'request_body_too_large';
+            return null;
+        }
+
+        $this->rawBody = $raw;
+
+        return $this->rawBody;
     }
 }
