@@ -73,6 +73,29 @@ final class PublicationRevisionService
         );
     }
 
+    public function revision(
+        string $publicationPublicId,
+        string $revisionPublicId,
+        string $siteKey = 'default',
+    ): ContentRevision {
+        $revision = $this->revisions->findByPublicId(
+            trim($revisionPublicId),
+            $siteKey,
+        );
+
+        if (
+            $revision === null
+            || $revision->entityType !== 'publication'
+            || $revision->entityPublicId !== trim($publicationPublicId)
+        ) {
+            throw new InvalidArgumentException(
+                'Revision публикации не найден.'
+            );
+        }
+
+        return $revision;
+    }
+
     public function restore(
         string $publicationPublicId,
         string $revisionPublicId,
@@ -82,21 +105,17 @@ final class PublicationRevisionService
             trim($publicationPublicId),
             $siteKey,
         );
-        $revision = $this->revisions->findByPublicId(
-            trim($revisionPublicId),
-            $siteKey,
-        );
-
-        if (
-            $publication === null
-            || $revision === null
-            || $revision->entityType !== 'publication'
-            || $revision->entityPublicId !== $publication->publicId
-        ) {
+        if ($publication === null) {
             throw new InvalidArgumentException(
-                'Revision публикации не найден.'
+                'Публикация не найдена.'
             );
         }
+
+        $revision = $this->revision(
+            $publication->publicId,
+            $revisionPublicId,
+            $siteKey,
+        );
 
         $snapshot = $revision->snapshot;
         $type = PublicationType::tryFrom(
