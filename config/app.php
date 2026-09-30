@@ -28,6 +28,13 @@ return [
         'dispatch_batch_size' => 20,
         'max_attempts' => 5,
     ],
+    'media' => [
+        // Blob-хранилище по умолчанию находится рядом с каталогом сайта,
+        // а не внутри web-root ChurchCMS.
+        'storage_path' => dirname(__DIR__, 2)
+            . '/' . basename(dirname(__DIR__)) . '-media',
+        'max_upload_bytes' => 536870912,
+    ],
     'performance' => [
         'page_cache' => [
             'enabled' => true,
