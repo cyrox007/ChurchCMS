@@ -118,6 +118,9 @@ $status = is_array($mediaStatus ?? null) ? $mediaStatus : null;
                                 <?= $theme->e($asset->mediaType) ?>
                                 · <?= $theme->e($asset->mimeType) ?>
                                 · <?= $theme->e(number_format($asset->bytes, 0, '.', ' ')) ?> байт
+                                <?php if ($asset->pixelWidth !== null && $asset->pixelHeight !== null): ?>
+                                    · <?= $theme->e($asset->pixelWidth) ?>×<?= $theme->e($asset->pixelHeight) ?> px
+                                <?php endif; ?>
                             </span>
                             <small>
                                 владелец: <?= $theme->e($asset->ownerOrganizationPublicId) ?>

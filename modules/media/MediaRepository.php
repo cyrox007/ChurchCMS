@@ -271,11 +271,28 @@ final class MediaRepository
             mimeType: (string) $row['mime_type'],
             bytes: (int) $row['bytes'],
             sha256: (string) $row['sha256'],
+            pixelWidth: self::nullableInt(
+                $row['pixel_width'] ?? null,
+            ),
+            pixelHeight: self::nullableInt(
+                $row['pixel_height'] ?? null,
+            ),
             title: self::nullable($row['title'] ?? null),
             altText: self::nullable($row['alt_text'] ?? null),
             createdAt: (string) $row['created_at'],
             updatedAt: (string) $row['updated_at'],
         );
+    }
+
+    private static function nullableInt(mixed $value): ?int
+    {
+        if ($value === null || $value === '') {
+            return null;
+        }
+
+        $int = (int) $value;
+
+        return $int > 0 ? $int : null;
     }
 
     private static function nullable(mixed $value): ?string

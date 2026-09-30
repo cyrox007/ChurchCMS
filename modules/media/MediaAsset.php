@@ -18,6 +18,8 @@ final readonly class MediaAsset
         public string $mimeType,
         public int $bytes,
         public string $sha256,
+        public ?int $pixelWidth,
+        public ?int $pixelHeight,
         public ?string $title,
         public ?string $altText,
         public string $createdAt,

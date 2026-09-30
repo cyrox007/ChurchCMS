@@ -33,6 +33,8 @@ final class MediaApiResource implements ApiResource
             'mime_type' => $this->asset->mimeType,
             'bytes' => $this->asset->bytes,
             'sha256' => $this->asset->sha256,
+            'pixel_width' => $this->asset->pixelWidth,
+            'pixel_height' => $this->asset->pixelHeight,
             'title' => $this->asset->title,
             'alt_text' => $this->asset->altText,
             'organization_owner_id' =>
