@@ -127,10 +127,10 @@ Priority is ordered within each section.
 - [x] roles/permissions schema and authorization service;
 - [x] scope storage schema и enforcement для организационного дерева;
 - [x] audit log foundation and publication/comment events;
-- [ ] password reset/rotation;
+- [x] password reset/rotation;
   - [x] самостоятельная смена пароля из Admin Shell с проверкой текущего пароля;
   - [x] отзыв старых административных сессий через `auth_version`;
-  - [ ] forgotten-password/reset flow с безопасным каналом доставки одноразового подтверждения;
+  - [x] forgotten-password/reset flow: одноразовый hashed token, TTL, neutral response, CSRF/rate-limit и подключаемый канал доставки;
 - [x] production error handler.
 
 ## P1 — Content

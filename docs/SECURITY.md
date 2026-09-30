@@ -134,15 +134,24 @@ The migration also creates core permission keys for administration, publications
 
 A normal role receives permissions through `role_permissions`. Superadmin is treated as unrestricted by `AuthorizationService`.
 
-## Pending security work
+## Восстановление пароля
 
-Before release:
+Forgotten-password flow использует одноразовые 256-битные токены. В БД
+хранится только SHA-256, срок жизни и отметка использования. Новый запрос
+инвалидирует предыдущий токен, успешный reset повышает `auth_version` и
+отзывает старые admin-сессии.
 
-- security/audit event log;
-- permission/role management UI;
-- scope enforcement;
-- password reset;
-- session idle/absolute timeout review;
-- optional or policy-driven 2FA;
-- production error handler;
-- login/user security tests.
+Ответ формы запроса не раскрывает наличие email. Запрос и применение reset
+защищены CSRF и отдельным rate-limit.
+
+Доставка по умолчанию выключена. Встроенный native mail transport включается
+только через локальную конфигурацию. Ошибка доставки инвалидирует созданный
+токен; plaintext token не пишется в журнал.
+
+## Незакрытые security-задачи
+
+Перед релизом ещё стоит отдельно решить:
+
+- UI управления ролями/permissions;
+- review idle/absolute session timeout;
+- optional/policy-driven 2FA.

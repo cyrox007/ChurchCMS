@@ -22,6 +22,13 @@ return [
         'csp_report_only' => false,
         // Generated during installation and overridden in config/local.php.
         'secret_key' => '',
+        'password_reset' => [
+            // По умолчанию доставка отключена. Для native mail задайте "mail"
+            // и mail_from в config/local.php.
+            'transport' => 'disabled',
+            'mail_from' => '',
+            'ttl_seconds' => 1800,
+        ],
     ],
     'social' => [
         'enabled' => true,
