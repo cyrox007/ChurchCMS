@@ -45,7 +45,10 @@ $successAdapter = new class implements
 
     public function capabilities(): array
     {
-        return [ChannelCapability::WEBHOOK];
+        return [
+            ChannelCapability::IMPORT_POSTS,
+            ChannelCapability::WEBHOOK,
+        ];
     }
 
     public function testConnection(
@@ -109,7 +112,10 @@ $failedAdapter = new class implements
 
     public function capabilities(): array
     {
-        return [ChannelCapability::WEBHOOK];
+        return [
+            ChannelCapability::IMPORT_POSTS,
+            ChannelCapability::WEBHOOK,
+        ];
     }
 
     public function testConnection(

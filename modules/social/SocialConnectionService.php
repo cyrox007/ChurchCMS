@@ -29,7 +29,9 @@ final class SocialConnectionService
      *     id:string,
      *     label:string,
      *     capabilities:list<string>,
-     *     can_test:bool
+     *     can_test:bool,
+     *     can_publish:bool,
+     *     can_import:bool
      * }>
      */
     public function availableAdapters(): array
@@ -49,6 +51,28 @@ final class SocialConnectionService
                     : $id,
                 'capabilities' => $capabilities,
                 'can_test' => $adapter instanceof ChannelConnectionTester,
+                'can_publish' => self::supportsAny(
+                    $capabilities,
+                    [
+                        ChannelCapability::PUBLISH_TEXT,
+                        ChannelCapability::PUBLISH_LINK,
+                        ChannelCapability::PUBLISH_IMAGE,
+                        ChannelCapability::PUBLISH_VIDEO,
+                    ],
+                ),
+                'can_import' => self::supportsAny(
+                    $capabilities,
+                    [
+                        ChannelCapability::IMPORT_POSTS,
+                        ChannelCapability::IMPORT_VIDEO,
+                    ],
+                ) && self::supportsAny(
+                    $capabilities,
+                    [
+                        ChannelCapability::POLLING,
+                        ChannelCapability::WEBHOOK,
+                    ],
+                ),
             ];
         }
 
@@ -107,6 +131,44 @@ final class SocialConnectionService
         if ($adapter === null) {
             throw new InvalidArgumentException(
                 'Выбранный адаптер внешнего канала недоступен.'
+            );
+        }
+
+        $capabilities = array_values(
+            array_unique($adapter->capabilities())
+        );
+        $canPublish = self::supportsAny(
+            $capabilities,
+            [
+                ChannelCapability::PUBLISH_TEXT,
+                ChannelCapability::PUBLISH_LINK,
+                ChannelCapability::PUBLISH_IMAGE,
+                ChannelCapability::PUBLISH_VIDEO,
+            ],
+        );
+        $canImport = self::supportsAny(
+            $capabilities,
+            [
+                ChannelCapability::IMPORT_POSTS,
+                ChannelCapability::IMPORT_VIDEO,
+            ],
+        ) && self::supportsAny(
+            $capabilities,
+            [
+                ChannelCapability::POLLING,
+                ChannelCapability::WEBHOOK,
+            ],
+        );
+
+        if ($outboundEnabled && !$canPublish) {
+            throw new InvalidArgumentException(
+                'Выбранный адаптер не поддерживает исходящую публикацию.'
+            );
+        }
+
+        if ($inboundEnabled && !$canImport) {
+            throw new InvalidArgumentException(
+                'Выбранный адаптер не поддерживает входящую синхронизацию.'
             );
         }
 
@@ -185,6 +247,27 @@ final class SocialConnectionService
         }
 
         return $activated;
+    }
+
+    /**
+     * @param list<string> $available
+     * @param list<string> $expected
+     */
+    private static function supportsAny(
+        array $available,
+        array $expected,
+    ): bool {
+        foreach ($expected as $capability) {
+            if (in_array(
+                $capability,
+                $available,
+                true,
+            )) {
+                return true;
+            }
+        }
+
+        return false;
     }
 
     private function webhookUrl(
