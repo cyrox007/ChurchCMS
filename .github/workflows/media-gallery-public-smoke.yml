@@ -1,0 +1,113 @@
+name: Проверка public/API галерей Media
+
+on:
+  push:
+    branches:
+      - develop
+      - main
+    paths:
+      - 'modules/media/MediaGalleryPublicService.php'
+      - 'modules/media/MediaGalleryApiController.php'
+      - 'modules/media/MediaGalleryPublicController.php'
+      - 'modules/media/runtime.php'
+      - 'themes/default/templates/galleries/index.php'
+      - 'themes/default/templates/galleries/show.php'
+      - 'themes/default/theme.json'
+      - 'tools/media-gallery-public-smoke.php'
+      - '.github/workflows/media-gallery-public-smoke.yml'
+  pull_request:
+    branches:
+      - develop
+      - main
+    paths:
+      - 'modules/media/MediaGalleryPublicService.php'
+      - 'modules/media/MediaGalleryApiController.php'
+      - 'modules/media/MediaGalleryPublicController.php'
+      - 'modules/media/runtime.php'
+      - 'themes/default/templates/galleries/index.php'
+      - 'themes/default/templates/galleries/show.php'
+      - 'themes/default/theme.json'
+      - 'tools/media-gallery-public-smoke.php'
+      - '.github/workflows/media-gallery-public-smoke.yml'
+
+permissions:
+  contents: read
+
+jobs:
+  media-gallery-public:
+    runs-on: ubuntu-latest
+
+    services:
+      postgres:
+        image: postgres:16
+        env:
+          POSTGRES_DB: churchcms
+          POSTGRES_USER: churchcms
+          POSTGRES_PASSWORD: churchcms
+        ports:
+          - 5432:5432
+        options: >-
+          --health-cmd pg_isready
+          --health-interval 10s
+          --health-timeout 5s
+          --health-retries 5
+
+    steps:
+      - name: Получить исходный код
+        uses: actions/checkout@v4
+
+      - name: Подготовить PHP 8.3
+        uses: shivammathur/setup-php@v2
+        with:
+          php-version: '8.3'
+          extensions: pdo, pdo_pgsql, fileinfo, gd
+          coverage: none
+
+      - name: Проверить PHP
+        run: |
+          set -euo pipefail
+          php -l modules/media/MediaGalleryPublicService.php
+          php -l modules/media/MediaGalleryApiController.php
+          php -l modules/media/MediaGalleryPublicController.php
+          php -l modules/media/runtime.php
+          php -l themes/default/templates/galleries/index.php
+          php -l themes/default/templates/galleries/show.php
+          php -l tools/media-gallery-public-smoke.php
+          php -r "json_decode(file_get_contents('themes/default/theme.json'), true, 512, JSON_THROW_ON_ERROR);"
+          php bin/migrate.php validate
+          php bin/theme-check.php
+
+      - name: Подготовить тестовую установку
+        run: |
+          set -euo pipefail
+          mkdir -p storage/cache storage/logs storage/sessions storage/rate-limits storage/uploads
+          MEDIA_STORAGE="${RUNNER_TEMP}/churchcms-public-gallery"
+          mkdir -p "${MEDIA_STORAGE}"
+
+          cat > config/local.php <<PHP
+          <?php
+
+          declare(strict_types=1);
+
+          return [
+              'installation' => ['completed' => true],
+              'api' => ['enabled' => true],
+              'database' => [
+                  'driver' => 'pgsql',
+                  'host' => '127.0.0.1',
+                  'port' => 5432,
+                  'database' => 'churchcms',
+                  'username' => 'churchcms',
+                  'password' => 'churchcms',
+              ],
+              'media' => [
+                  'storage_path' => '${MEDIA_STORAGE}',
+                  'max_upload_bytes' => 10485760,
+              ],
+          ];
+          PHP
+
+          php bin/migrate.php
+
+      - name: Проверить public/private projection, derivatives и шаблоны
+        run: php tools/media-gallery-public-smoke.php
