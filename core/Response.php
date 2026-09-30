@@ -25,6 +25,30 @@ final class Response
         exit;
     }
 
+    public static function raw(
+        string $body,
+        int $status = 200,
+        string $contentType = 'text/plain; charset=utf-8',
+    ): never {
+        if (
+            $status < 100
+            || $status > 599
+            || $contentType === ''
+            || str_contains($contentType, "\r")
+            || str_contains($contentType, "\n")
+        ) {
+            throw new InvalidArgumentException(
+                'Invalid raw response metadata.'
+            );
+        }
+
+        http_response_code($status);
+        header('Content-Type: ' . $contentType);
+        header('Cache-Control: no-store');
+        echo $body;
+        exit;
+    }
+
     public static function redirectLocal(string $path, int $status = 303): never
     {
         if (
