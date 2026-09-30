@@ -14,14 +14,18 @@ final class SeoCapability
     public function metaForPublication(
         Publication $publication,
     ): array {
-        $meta = PublicationSeoRepository::fromDatabase()
-            ->metaFor($publication);
+        $repository = PublicationSeoRepository::fromDatabase();
+        $meta = $repository->metaFor($publication);
+        $form = $repository->formFor($publication);
 
         try {
             return (new PublicationStructuredMediaSeoService())
                 ->enrichMeta(
                     $publication,
                     $meta,
+                    trim((string) (
+                        $form['social_image_url'] ?? ''
+                    )) === '',
                 );
         } catch (Throwable $error) {
             error_log(
