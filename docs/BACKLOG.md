@@ -259,6 +259,6 @@ Priority is ordered within each section.
 - [ ] MAX adapter;
 - [ ] YouTube adapter;
 - [ ] Rutube adapter;
-- [ ] webhook receiver contract/signature validation;
+- [x] webhook receiver contract/signature validation;
 - [x] loop prevention tests;
 - [x] retry/dead-letter UI.
