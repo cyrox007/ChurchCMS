@@ -18,9 +18,9 @@ final class MediaApiResource implements ApiResource
     /**
      * Безопасная projection метаданных для federation/partner API.
      *
-     * В ChurchCMS пока нет доверенного blob/storage pipeline, поэтому
-     * projection не содержит пути или файла и явно сообщает metadata-only
-     * состояние.
+     * Partner/federation projection намеренно остаётся metadata-only:
+     * локальная публичная выдача blob не расширяет межузловой контракт
+     * и не раскрывает путь или файл удалённому узлу.
      *
      * @return array<string,mixed>
      */
