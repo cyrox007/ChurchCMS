@@ -210,14 +210,13 @@ Withdraw возвращает `draft/private`. Archive переводит кар
 `archived/private` и снимает её usage references, поэтому изображения после
 этого снова можно архивировать.
 
-Foundation пока не добавляет операторский редактор и публичный gallery API:
-это отдельный следующий инкремент.
+Admin Shell предоставляет отдельный раздел «Галереи» под `media.manage`: создание черновика, редактирование карточки, scoped-выбор доступных изображений, числовой порядок, publish/withdraw/archive. Сервер повторно проверяет organization scope и каждого выбранного Media asset. Публичный gallery API остаётся отдельным следующим инкрементом.
 
 ## Следующие инкременты
 
 Остаются:
 
-- Admin/public UI галерей и управление порядком;
+- public/API галерей;
 - подключение derivatives к редакторам и публичным шаблонам;
 - HTTP Range/resumable pipeline для audio/video;
 - binary/resumable outbound YouTube/Rutube.
