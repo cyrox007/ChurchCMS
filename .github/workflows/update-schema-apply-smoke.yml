@@ -123,23 +123,24 @@ jobs:
           package="$RUNNER_TEMP/update-schema-success"
           mkdir -p "$package/config" "$package/database/migrations"
 
-          php -r '
-          $source = file_get_contents("config/app.php");
-          if (!is_string($source)) {
-              exit(1);
-          }
-          $updated = str_replace(
-              "'''version''' => '''0.1.0-dev'''",
-              "'''version''' => '''999.1.0-ci'''",
-              $source,
-              $count,
-          );
-          if ($count !== 1) {
-              fwrite(STDERR, "Не удалось подготовить config/app.php успешного schema-пакета.\n");
-              exit(1);
-          }
-          file_put_contents($argv[1] . "/config/app.php", $updated);
-          ' "$package"
+          python3 - "$package" <<'PY'
+          from pathlib import Path
+          import sys
+
+          package = Path(sys.argv[1])
+          source = Path("config/app.php").read_text()
+          old = "'version' => '0.1.0-dev'"
+          updated = "'version' => '999.1.0-ci'"
+
+          if source.count(old) != 1:
+              raise SystemExit(
+                  "Не удалось подготовить config/app.php успешного schema-пакета."
+              )
+
+          (package / "config/app.php").write_text(
+              source.replace(old, updated, 1)
+          )
+          PY
 
           cat > "$package/database/migrations/20990102_000000_schema_success.php" <<'PHP'
           <?php
@@ -232,19 +233,24 @@ jobs:
           package="$RUNNER_TEMP/update-schema-broken"
           mkdir -p "$package/config" "$package/database/migrations" "$package/core"
 
-          php -r '
-          $source = file_get_contents("config/app.php");
-          $updated = str_replace(
-              "'''version''' => '''999.1.0-ci'''",
-              "'''version''' => '''999.1.1-ci'''",
-              (string) $source,
-              $count,
-          );
-          if ($count !== 1) {
-              exit(1);
-          }
-          file_put_contents($argv[1] . "/config/app.php", $updated);
-          ' "$package"
+          python3 - "$package" <<'PY'
+          from pathlib import Path
+          import sys
+
+          package = Path(sys.argv[1])
+          source = Path("config/app.php").read_text()
+          old = "'version' => '999.1.0-ci'"
+          updated = "'version' => '999.1.1-ci'"
+
+          if source.count(old) != 1:
+              raise SystemExit(
+                  "Не удалось подготовить config/app.php rollback-пакета."
+              )
+
+          (package / "config/app.php").write_text(
+              source.replace(old, updated, 1)
+          )
+          PY
 
           cat > "$package/database/migrations/20990102_000001_schema_broken.php" <<'PHP'
           <?php
@@ -372,19 +378,26 @@ jobs:
           };
           PHP
 
+          python3 - "$package" <<'PY'
+          from pathlib import Path
+          import sys
+
+          package = Path(sys.argv[1])
+          path = package / "config/app.php"
+          source = path.read_text()
+          old = "'version' => '999.1.0-ci'"
+          updated = "'version' => '999.1.2-ci'"
+
+          if source.count(old) != 1:
+              raise SystemExit(
+                  "Не удалось подготовить config/app.php необратимого пакета."
+              )
+
+          path.write_text(source.replace(old, updated, 1))
+          PY
+
           php -r '
           $package = $argv[1];
-          $config = file_get_contents($package . "/config/app.php");
-          $config = str_replace(
-              "'''version''' => '''999.1.0-ci'''",
-              "'''version''' => '''999.1.2-ci'''",
-              (string) $config,
-              $count,
-          );
-          if ($count !== 1) {
-              exit(1);
-          }
-          file_put_contents($package . "/config/app.php", $config);
 
           $paths = [
               "config/app.php",
