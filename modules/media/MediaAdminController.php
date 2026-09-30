@@ -146,6 +146,76 @@ final class MediaAdminController
         }
     }
 
+    public function visibility(
+        Request $request,
+        string $publicId,
+    ): never {
+        AdminAuthorization::requirePermission(
+            $request,
+            'media.manage',
+        );
+
+        $userId = self::requiredUserId($request);
+        $asset = MediaRepository::fromDatabase()
+            ->findByPublicId(trim($publicId));
+
+        if ($asset === null) {
+            Response::text('404 Not Found', 404);
+        }
+
+        $visibleOwners =
+            MediaOrganizationAccessService::fromDatabase()
+                ->visibleOwnerPublicIds($userId);
+
+        if (!in_array(
+            $asset->ownerOrganizationPublicId,
+            $visibleOwners,
+            true,
+        )) {
+            Response::text('403 Forbidden', 403);
+        }
+
+        $visibility = trim((string) $request->post(
+            'visibility',
+            '',
+        ));
+
+        try {
+            MediaService::fromDatabase()->setVisibility(
+                $asset->publicId,
+                $visibility,
+                $asset->siteKey,
+            );
+
+            AuditLog::emit(
+                eventType: 'media.visibility_changed',
+                actorUserId: $userId,
+                subjectType: 'media_asset',
+                subjectId: $asset->publicId,
+                metadata: [
+                    'from' => $asset->visibility,
+                    'to' => $visibility,
+                    'owner_organization_public_id' =>
+                        $asset->ownerOrganizationPublicId,
+                ],
+                request: $request,
+            );
+
+            Response::redirectLocal(
+                '/admin/media?status=visibility-updated',
+            );
+        } catch (InvalidArgumentException $error) {
+            error_log(
+                'ChurchCMS Media visibility: '
+                . $error->getMessage()
+            );
+
+            Response::redirectLocal(
+                '/admin/media?status=visibility-invalid',
+            );
+        }
+    }
+
     /**
      * @return array{kind:string,title:string,message:string}|null
      */
@@ -166,6 +236,16 @@ final class MediaAdminController
                 'kind' => 'error',
                 'title' => 'Загрузка не завершена',
                 'message' => 'Файл не добавлен в медиатеку. Подробность записана в журнал сервера.',
+            ],
+            'visibility-updated' => [
+                'kind' => 'success',
+                'title' => 'Видимость обновлена',
+                'message' => 'Новая граница публикации Media сохранена.',
+            ],
+            'visibility-invalid' => [
+                'kind' => 'error',
+                'title' => 'Видимость не изменена',
+                'message' => 'Проверьте состояние файла и выбранный режим.',
             ],
             default => null,
         };

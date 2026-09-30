@@ -154,6 +154,7 @@ Priority is ordered within each section.
 
 - [x] safe uploads;
   - [x] приватное content-addressed blob-хранилище вне корня ChurchCMS;
+  - [x] organization-scoped управление видимостью Media в Admin Shell;
   - [x] сервисная загрузка файла с атомарным сохранением и лимитом размера;
   - [x] multipart upload в Admin Shell поверх MediaUploadService;
 - [x] MIME sniffing по содержимому через Fileinfo;
