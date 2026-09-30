@@ -1,0 +1,96 @@
+name: Проверка защиты от циклов внешних каналов
+
+on:
+  push:
+    branches:
+      - develop
+      - main
+    paths:
+      - 'modules/social/ExternalChannelItemRepository.php'
+      - 'modules/social/SocialPostRepository.php'
+      - 'modules/social/SocialPublicationChannelService.php'
+      - 'tools/external-channels-loop-prevention-smoke.php'
+      - '.github/workflows/external-channels-loop-prevention-smoke.yml'
+  pull_request:
+    branches:
+      - develop
+      - main
+    paths:
+      - 'modules/social/ExternalChannelItemRepository.php'
+      - 'modules/social/SocialPostRepository.php'
+      - 'modules/social/SocialPublicationChannelService.php'
+      - 'tools/external-channels-loop-prevention-smoke.php'
+      - '.github/workflows/external-channels-loop-prevention-smoke.yml'
+
+permissions:
+  contents: read
+
+jobs:
+  external-channels-loop-prevention:
+    runs-on: ubuntu-latest
+
+    services:
+      postgres:
+        image: postgres:16
+        env:
+          POSTGRES_DB: churchcms
+          POSTGRES_USER: churchcms
+          POSTGRES_PASSWORD: churchcms
+        ports:
+          - 5432:5432
+        options: >-
+          --health-cmd pg_isready
+          --health-interval 10s
+          --health-timeout 5s
+          --health-retries 5
+
+    steps:
+      - name: Получить исходный код
+        uses: actions/checkout@v4
+
+      - name: Подготовить PHP 8.3
+        uses: shivammathur/setup-php@v2
+        with:
+          php-version: '8.3'
+          extensions: pdo, pdo_pgsql, mbstring, openssl
+          coverage: none
+
+      - name: Проверить PHP
+        run: |
+          set -euo pipefail
+          php -l tools/external-channels-loop-prevention-smoke.php
+          php -l modules/social/ExternalChannelItemRepository.php
+          php -l modules/social/SocialPostRepository.php
+          php -l modules/social/SocialPublicationChannelService.php
+          php bin/migrate.php validate
+
+      - name: Подготовить тестовую установку
+        run: |
+          set -euo pipefail
+          mkdir -p storage/cache storage/logs storage/sessions storage/rate-limits storage/uploads
+
+          cat > config/local.php <<'PHP'
+          <?php
+
+          declare(strict_types=1);
+
+          return [
+              'installation' => ['completed' => true],
+              'security' => [
+                  'secret_key' => base64_encode(str_repeat('l', 32)),
+              ],
+              'database' => [
+                  'driver' => 'pgsql',
+                  'host' => '127.0.0.1',
+                  'port' => 5432,
+                  'database' => 'churchcms',
+                  'username' => 'churchcms',
+                  'password' => 'churchcms',
+              ],
+          ];
+          PHP
+
+          php bin/migrate.php
+
+      - name: Проверить идемпотентность и отсутствие автоматического обратного outbox
+        run: php tools/external-channels-loop-prevention-smoke.php
