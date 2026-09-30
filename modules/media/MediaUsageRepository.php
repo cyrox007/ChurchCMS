@@ -46,6 +46,34 @@ final class MediaUsageRepository
         );
     }
 
+    /**
+     * @return list<MediaUsageReference>
+     */
+    public function forConsumer(
+        string $consumerType,
+        string $consumerPublicId,
+        string $siteKey = 'default',
+    ): array {
+        $statement = $this->pdo->prepare(
+            'SELECT *
+             FROM media_usage_references
+             WHERE site_key = :site_key
+               AND consumer_type = :consumer_type
+               AND consumer_public_id = :consumer_public_id
+             ORDER BY usage_key, id'
+        );
+        $statement->execute([
+            'site_key' => $siteKey,
+            'consumer_type' => $consumerType,
+            'consumer_public_id' => $consumerPublicId,
+        ]);
+
+        return array_map(
+            self::hydrate(...),
+            $statement->fetchAll(),
+        );
+    }
+
     public function countForAsset(
         string $mediaPublicId,
         string $siteKey = 'default',
