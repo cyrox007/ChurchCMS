@@ -14,12 +14,15 @@ use ChurchCMS\Modules\Media\MediaApiController;
 $moduleRoot = __DIR__;
 foreach ([
     'MediaAsset.php',
+    'MediaStoredBlob.php',
+    'MediaBlobStorage.php',
     'MediaRepository.php',
     'MediaApiResource.php',
     'FederatedMediaFeedService.php',
     'MediaPartnerTombstoneRepository.php',
     'MediaPartnerTombstoneApiResource.php',
     'MediaService.php',
+    'MediaUploadService.php',
     'MediaApiController.php',
 ] as $file) {
     require_once $moduleRoot . '/' . $file;
