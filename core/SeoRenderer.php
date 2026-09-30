@@ -77,10 +77,63 @@ final class SeoRenderer
         }
 
         if (!empty($seo['author'])) {
-            $tags[] = self::meta('name', 'author', (string) $seo['author']);
+            $tags[] = self::meta(
+                'name',
+                'author',
+                (string) $seo['author'],
+            );
+        }
+
+        $structuredData = $seo['structured_data'] ?? [];
+        if (is_array($structuredData)) {
+            foreach (self::structuredItems($structuredData) as $item) {
+                try {
+                    $json = json_encode(
+                        $item,
+                        JSON_THROW_ON_ERROR
+                        | JSON_UNESCAPED_UNICODE
+                        | JSON_UNESCAPED_SLASHES
+                        | JSON_HEX_TAG
+                        | JSON_HEX_AMP
+                        | JSON_HEX_APOS
+                        | JSON_HEX_QUOT,
+                    );
+                } catch (\JsonException) {
+                    continue;
+                }
+
+                $tags[] = '<script type="application/ld+json">'
+                    . $json
+                    . '</script>';
+            }
         }
 
         return implode("\n    ", $tags);
+    }
+
+    /**
+     * @param array<mixed> $value
+     * @return list<array<string,mixed>>
+     */
+    private static function structuredItems(array $value): array
+    {
+        if ($value === []) {
+            return [];
+        }
+
+        if (isset($value['@type']) || isset($value['@context'])) {
+            return [$value];
+        }
+
+        return array_values(array_filter(
+            $value,
+            static fn(mixed $item): bool =>
+                is_array($item)
+                && (
+                    isset($item['@type'])
+                    || isset($item['@context'])
+                ),
+        ));
     }
 
     public static function absoluteUrl(string $url): string
