@@ -52,8 +52,16 @@ web-root.
 метаданные и никогда не используется как имя файла на диске.
 
 `MediaUploadService` связывает проверенный blob с существующим
-`MediaService::registerMetadata()`. HTTP/Admin upload остаётся следующим
-слоем и не должен обходить этот сервис.
+`MediaService::registerMetadata()`.
+
+Admin Shell использует тот же pipeline: PHP upload принимается только при
+`UPLOAD_ERR_OK` и успешном `is_uploaded_file()`, затем передаётся в
+`MediaUploadService`. Контроллер не перемещает временный файл напрямую и не
+получает filesystem path итогового blob.
+
+Раздел «Медиатека» требует `media.manage` и применяет organization scope:
+оператор видит только доступные карточки и может назначить владельцем только
+активную организацию из своей ветки.
 
 ## Организационная граница
 
@@ -118,7 +126,6 @@ payload. Исходное имя файла, filesystem path и blob отсут�
 
 Остаются:
 
-- multipart upload в Admin Shell поверх `MediaUploadService`;
 - derivatives изображений;
 - usage references;
 - Admin Shell;

@@ -1,0 +1,198 @@
+name: Проверка Admin upload медиатеки
+
+on:
+  push:
+    branches:
+      - develop
+      - main
+    paths:
+      - 'modules/media/MediaOrganizationAccessService.php'
+      - 'modules/media/MediaRepository.php'
+      - 'modules/media/MediaUploadService.php'
+      - 'modules/media/MediaAdminController.php'
+      - 'modules/media/runtime.php'
+      - 'themes/default/templates/admin/media/index.php'
+      - 'tools/media-admin-upload-smoke.php'
+      - '.github/workflows/media-admin-upload-smoke.yml'
+  pull_request:
+    branches:
+      - develop
+      - main
+    paths:
+      - 'modules/media/MediaOrganizationAccessService.php'
+      - 'modules/media/MediaRepository.php'
+      - 'modules/media/MediaUploadService.php'
+      - 'modules/media/MediaAdminController.php'
+      - 'modules/media/runtime.php'
+      - 'themes/default/templates/admin/media/index.php'
+      - 'tools/media-admin-upload-smoke.php'
+      - '.github/workflows/media-admin-upload-smoke.yml'
+
+permissions:
+  contents: read
+
+jobs:
+  media-admin-upload:
+    runs-on: ubuntu-latest
+
+    services:
+      postgres:
+        image: postgres:16
+        env:
+          POSTGRES_DB: churchcms
+          POSTGRES_USER: churchcms
+          POSTGRES_PASSWORD: churchcms
+        ports:
+          - 5432:5432
+        options: >-
+          --health-cmd pg_isready
+          --health-interval 10s
+          --health-timeout 5s
+          --health-retries 5
+
+    steps:
+      - name: Получить исходный код
+        uses: actions/checkout@v4
+
+      - name: Подготовить PHP 8.3
+        uses: shivammathur/setup-php@v2
+        with:
+          php-version: '8.3'
+          extensions: pdo, pdo_pgsql, fileinfo, openssl, mbstring
+          coverage: none
+
+      - name: Проверить PHP
+        run: |
+          set -euo pipefail
+          php -l modules/media/MediaOrganizationAccessService.php
+          php -l modules/media/MediaRepository.php
+          php -l modules/media/MediaUploadService.php
+          php -l modules/media/MediaAdminController.php
+          php -l modules/media/runtime.php
+          php -l themes/default/templates/admin/media/index.php
+          php -l tools/media-admin-upload-smoke.php
+          php bin/migrate.php validate
+          php bin/theme-check.php
+
+      - name: Подготовить тестовую установку
+        run: |
+          set -euo pipefail
+          rm -rf /tmp/churchcms-media-admin
+          mkdir -p storage/cache storage/logs storage/sessions storage/rate-limits storage/uploads
+
+          cat > config/local.php <<'PHP'
+          <?php
+
+          declare(strict_types=1);
+
+          return [
+              'installation' => ['completed' => true],
+              'security' => [
+                  'secret_key' => base64_encode(str_repeat('u', 32)),
+              ],
+              'media' => [
+                  'storage_path' => '/tmp/churchcms-media-admin',
+                  'max_upload_bytes' => 1048576,
+              ],
+              'database' => [
+                  'driver' => 'pgsql',
+                  'host' => '127.0.0.1',
+                  'port' => 5432,
+                  'database' => 'churchcms',
+                  'username' => 'churchcms',
+                  'password' => 'churchcms',
+              ],
+          ];
+          PHP
+
+          php bin/migrate.php
+
+          php <<'PHP'
+          <?php
+
+          declare(strict_types=1);
+
+          require 'core.php';
+
+          use ChurchCMS\Modules\Organizations\OrganizationService;
+
+          $organizations = OrganizationService::fromDatabase();
+          $root = $organizations->ensureSiteRoot(
+              'Media Admin smoke',
+              'parish',
+          );
+          $allowed = $organizations->create(
+              name: 'Доступная Media-организация',
+              type: 'department',
+              parentPublicId: $root->publicId,
+          );
+          $organizations->create(
+              name: 'Дочерняя Media-организация',
+              type: 'department',
+              parentPublicId: $allowed,
+          );
+          $organizations->create(
+              name: 'Недоступная Media-организация',
+              type: 'department',
+              parentPublicId: $root->publicId,
+          );
+
+          file_put_contents('/tmp/media-allowed-owner', $allowed);
+          PHP
+
+      - name: Проверить настоящий multipart upload
+        run: |
+          set -euo pipefail
+
+          cat > /tmp/media-upload-router.php <<'PHP'
+          <?php
+
+          declare(strict_types=1);
+
+          require getcwd() . '/core.php';
+
+          use ChurchCMS\Modules\Media\MediaUploadService;
+
+          $owner = trim((string) ($_POST['owner'] ?? ''));
+          $file = $_FILES['media_file'] ?? null;
+
+          if ($owner === '' || !is_array($file)) {
+              http_response_code(400);
+              exit('invalid request');
+          }
+
+          try {
+              $publicId = MediaUploadService::fromConfig()
+                  ->importUploadedFile(
+                      file: $file,
+                      ownerOrganizationPublicId: $owner,
+                      title: 'Multipart smoke',
+                  );
+              header('Content-Type: text/plain');
+              echo $publicId;
+          } catch (Throwable $error) {
+              http_response_code(500);
+              echo $error::class . ': ' . $error->getMessage();
+          }
+          PHP
+
+          php -S 127.0.0.1:18095 /tmp/media-upload-router.php >/tmp/media-upload-server.log 2>&1 &
+          SERVER_PID=$!
+          trap 'kill "$SERVER_PID" 2>/dev/null || true' EXIT
+
+          for attempt in $(seq 1 20); do
+            if curl -sS http://127.0.0.1:18095/ >/dev/null 2>&1; then
+              break
+            fi
+            sleep 0.2
+          done
+
+          printf '%s' 'iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAQAAAC1HAwCAAAAC0lEQVR42mNk+A8AAQUBAScY42YAAAAASUVORK5CYII='             | base64 -d >/tmp/media-admin.png
+
+          OWNER="$(cat /tmp/media-allowed-owner)"
+          RESULT="$(curl -fsS             -F "owner=$OWNER"             -F "media_file=@/tmp/media-admin.png;filename=dangerous.php"             http://127.0.0.1:18095/upload)"
+
+          test -n "$RESULT"
+
+      - name: Проверить organization scope и Admin template
+        run: php tools/media-admin-upload-smoke.php

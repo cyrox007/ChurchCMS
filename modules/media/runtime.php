@@ -6,9 +6,13 @@ use ChurchCMS\App\Middlewares\ApiCorsMiddleware;
 use ChurchCMS\App\Middlewares\ApiEnabledMiddleware;
 use ChurchCMS\App\Middlewares\ApiPartnerRateLimitMiddleware;
 use ChurchCMS\App\Middlewares\ApiPublicRateLimitMiddleware;
+use ChurchCMS\App\Middlewares\CsrfMiddleware;
 use ChurchCMS\App\Middlewares\PartnerApiMiddleware;
+use ChurchCMS\App\Middlewares\RequireAdminMiddleware;
+use ChurchCMS\App\Services\AdminNavigationRegistry;
 use ChurchCMS\Core\ModuleRuntimeProvider;
 use ChurchCMS\Core\Router;
+use ChurchCMS\Modules\Media\MediaAdminController;
 use ChurchCMS\Modules\Media\MediaApiController;
 
 $moduleRoot = __DIR__;
@@ -17,12 +21,14 @@ foreach ([
     'MediaStoredBlob.php',
     'MediaBlobStorage.php',
     'MediaRepository.php',
+    'MediaOrganizationAccessService.php',
     'MediaApiResource.php',
     'FederatedMediaFeedService.php',
     'MediaPartnerTombstoneRepository.php',
     'MediaPartnerTombstoneApiResource.php',
     'MediaService.php',
     'MediaUploadService.php',
+    'MediaAdminController.php',
     'MediaApiController.php',
 ] as $file) {
     require_once $moduleRoot . '/' . $file;
@@ -41,7 +47,34 @@ return new class implements ModuleRuntimeProvider {
 
     public function boot(): void
     {
+        AdminNavigationRegistry::register(
+            id: 'media',
+            label: 'Медиатека',
+            route: 'admin_media',
+            permission: 'media.manage',
+            priority: 35,
+        );
+
         $router = Router::getInstance();
+
+        $router->add(
+            'GET',
+            '/admin/media',
+            [MediaAdminController::class, 'index'],
+            [RequireAdminMiddleware::class],
+            'admin_media',
+        );
+
+        $router->add(
+            'POST',
+            '/admin/media/upload',
+            [MediaAdminController::class, 'upload'],
+            [
+                RequireAdminMiddleware::class,
+                CsrfMiddleware::class,
+            ],
+            'admin_media_upload',
+        );
 
         $router->add(
             'GET',
