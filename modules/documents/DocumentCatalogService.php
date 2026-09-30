@@ -9,6 +9,7 @@ final class DocumentCatalogService
     public function __construct(
         private readonly DocumentRepository $documents,
         private readonly DocumentMediaService $media,
+        private readonly DocumentCategoryService $categories,
     ) {
     }
 
@@ -17,6 +18,7 @@ final class DocumentCatalogService
         return new self(
             DocumentRepository::fromDatabase(),
             DocumentMediaService::fromDatabase(),
+            DocumentCategoryService::fromDatabase(),
         );
     }
 
@@ -74,6 +76,9 @@ final class DocumentCatalogService
             $document->publicId,
             $document->siteKey,
         );
+        $categories = $this->categories->forDocument(
+            $document->id,
+        );
 
         return [
             'id' => $document->publicId,
@@ -83,6 +88,7 @@ final class DocumentCatalogService
             'document_number' => $document->documentNumber,
             'issued_on' => $document->issuedOn,
             'summary' => $document->summary,
+            'categories' => $categories,
             'organization_owner_id' =>
                 $document->ownerOrganizationPublicId,
             'url' => '/documents/'
