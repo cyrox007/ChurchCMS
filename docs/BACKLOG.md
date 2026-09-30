@@ -254,7 +254,7 @@ Priority is ordered within each section.
 - [x] connection setup/testing UI;
 - [x] per-publication external channel selector;
 - [x] per-channel custom post text;
-- [ ] Telegram adapter;
+- [x] Telegram adapter;
 - [ ] VK adapter;
 - [ ] MAX adapter;
 - [ ] YouTube adapter;
