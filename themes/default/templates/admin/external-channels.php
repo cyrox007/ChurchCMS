@@ -263,12 +263,24 @@ $status = is_array($channelStatus ?? null) ? $channelStatus : null;
                     <select name="provider" required>
                         <option value="">Выберите адаптер</option>
                         <?php foreach ($adapters as $adapter): ?>
-                            <?php $canTest = ($adapter['can_test'] ?? false) === true; ?>
+                            <?php
+                            $canTest = ($adapter['can_test'] ?? false) === true;
+                            $canPublish = ($adapter['can_publish'] ?? false) === true;
+                            $canImport = ($adapter['can_import'] ?? false) === true;
+                            $usable = $canTest && ($canPublish || $canImport);
+                            $directionLabel = match (true) {
+                                $canPublish && $canImport => 'исходящие + входящие',
+                                $canPublish => 'только исходящие',
+                                $canImport => 'только входящие',
+                                default => 'нет доступных направлений',
+                            };
+                            ?>
                             <option
                                 value="<?= $theme->e((string) ($adapter['id'] ?? '')) ?>"
-                                <?= $canTest ? '' : 'disabled' ?>
+                                <?= $usable ? '' : 'disabled' ?>
                             >
                                 <?= $theme->e((string) ($adapter['label'] ?? $adapter['id'] ?? '')) ?>
+                                — <?= $theme->e($directionLabel) ?>
                                 <?= $canTest ? '' : ' — проверка подключения не поддерживается' ?>
                             </option>
                         <?php endforeach; ?>
@@ -309,12 +321,16 @@ $status = is_array($channelStatus ?? null) ? $channelStatus : null;
                     >
                 </label>
 
+                <p>
+                    Выберите только направления, которые указаны рядом с выбранной платформой.
+                    ChurchCMS повторно проверит это на сервере.
+                </p>
+
                 <label>
                     <input
                         type="checkbox"
                         name="outbound_enabled"
                         value="1"
-                        checked
                     >
                     <span>Разрешить исходящую публикацию</span>
                 </label>
