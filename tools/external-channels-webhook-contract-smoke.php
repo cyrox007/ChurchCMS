@@ -154,6 +154,7 @@ $adapter = new class implements ChannelAdapter, ChannelWebhookAdapter {
                     kind: 'post',
                     title: (string) ($payload['title'] ?? ''),
                     text: (string) ($payload['text'] ?? ''),
+                    canonicalUrl: null,
                     payload: $payload,
                 ),
             ],
