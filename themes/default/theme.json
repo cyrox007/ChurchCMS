@@ -1,7 +1,7 @@
 {
   "id": "default",
   "name": "ChurchCMS Default",
-  "version": "0.8.11",
+  "version": "0.8.12",
   "profiles": [
     "small-parish",
     "parish",
@@ -47,6 +47,7 @@
     "gallery.show": "galleries/show",
     "auth.password_forgot": "auth/password-forgot",
     "auth.password_reset": "auth/password-reset",
-    "admin.navigation": "admin/navigation"
+    "admin.navigation": "admin/navigation",
+    "admin.redirects": "admin/redirects"
   }
 }
