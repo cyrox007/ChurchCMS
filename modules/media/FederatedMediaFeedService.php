@@ -174,7 +174,7 @@ final class FederatedMediaFeedService
         if (
             !in_array(
                 $asset->mediaType,
-                ['image', 'document'],
+                ['image', 'document', 'audio', 'video'],
                 true,
             )
             || $this->storageUnavailable

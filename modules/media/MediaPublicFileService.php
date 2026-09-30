@@ -56,7 +56,7 @@ final class MediaPublicFileService
             || $asset->visibility !== 'public'
             || !in_array(
                 $asset->mediaType,
-                ['image', 'document'],
+                ['image', 'document', 'audio', 'video'],
                 true,
             )
         ) {

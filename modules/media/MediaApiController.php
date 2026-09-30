@@ -44,7 +44,7 @@ final class MediaApiController
             if (
                 in_array(
                     $asset->mediaType,
-                    ['image', 'document'],
+                    ['image', 'document', 'audio', 'video'],
                     true,
                 )
                 && $storage->readablePath(
