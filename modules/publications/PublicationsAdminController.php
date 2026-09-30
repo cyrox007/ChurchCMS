@@ -89,6 +89,13 @@ final class PublicationsAdminController
             Response::text('403 Forbidden', 403);
         }
 
+        $this->validateSeoMedia(
+            $request,
+            $form,
+            'publications.create',
+            'default',
+        );
+
         try {
             $repository = PublicationRepository::fromDatabase();
             $publicId = PublicationService::fromDatabase()->createDraft(
@@ -196,6 +203,13 @@ final class PublicationsAdminController
         if ($owner === null) {
             Response::text('403 Forbidden', 403);
         }
+
+        $this->validateSeoMedia(
+            $request,
+            $form,
+            'publications.edit',
+            $publication->siteKey,
+        );
 
         try {
             $externalSettings =
@@ -951,6 +965,42 @@ final class PublicationsAdminController
         return $publication->publishedAt
             ->setTimezone($timezone)
             ->format('Y-m-d\\TH:i');
+    }
+
+    private function validateSeoMedia(
+        Request $request,
+        array $form,
+        string $permission,
+        string $siteKey,
+    ): void {
+        $capability = ModuleRuntimeLoader::capability(
+            'seo',
+            'seo.publications',
+        );
+
+        if (
+            $capability === null
+            || !method_exists(
+                $capability,
+                'validateStructuredMediaSelection',
+            )
+        ) {
+            return;
+        }
+
+        $ownerPublicIds =
+            PublicationOrganizationAccessService::fromDatabase()
+                ->visibleOwnerPublicIds(
+                    self::requiredUserId($request),
+                    $permission,
+                    $siteKey,
+                );
+
+        $capability->validateStructuredMediaSelection(
+            $form,
+            $ownerPublicIds,
+            $siteKey,
+        );
     }
 
     private function saveSeo(
