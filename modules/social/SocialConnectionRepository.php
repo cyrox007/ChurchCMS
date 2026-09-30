@@ -150,6 +150,43 @@ final class SocialConnectionRepository
         return $connection;
     }
 
+    public function setEnabled(
+        int $id,
+        bool $enabled,
+    ): bool {
+        if ($id <= 0) {
+            return false;
+        }
+
+        $statement = $this->pdo->prepare(
+            'UPDATE social_connections
+             SET enabled = :enabled,
+                 updated_at = :updated_at
+             WHERE id = :id'
+        );
+        $statement->execute([
+            'enabled' => $enabled ? 1 : 0,
+            'updated_at' => gmdate('Y-m-d H:i:s'),
+            'id' => $id,
+        ]);
+
+        return $statement->rowCount() === 1;
+    }
+
+    public function deleteById(int $id): bool
+    {
+        if ($id <= 0) {
+            return false;
+        }
+
+        $statement = $this->pdo->prepare(
+            'DELETE FROM social_connections WHERE id = :id'
+        );
+        $statement->execute(['id' => $id]);
+
+        return $statement->rowCount() === 1;
+    }
+
     public function findByPublicId(string $publicId): ?SocialConnection
     {
         $statement = $this->pdo->prepare(

@@ -4,6 +4,8 @@ declare(strict_types=1);
 
 namespace ChurchCMS\Modules\Social;
 
+use ChurchCMS\Core\Config;
+use ChurchCMS\Core\Router;
 use ChurchCMS\Core\SecretVault;
 use InvalidArgumentException;
 use RuntimeException;
@@ -126,18 +128,98 @@ final class SocialConnectionService
             );
         }
 
-        return $this->connections->create(
+        $requiresActivation = $inboundEnabled
+            && $adapter instanceof ChannelConnectionActivator;
+
+        $connection = $this->connections->create(
             provider: $provider,
             name: $name,
             targetRef: $targetRef,
             tokenEncrypted: SecretVault::encrypt($credentials),
             settings: [],
-            enabled: true,
+            enabled: !$requiresActivation,
             outboundEnabled: $outboundEnabled,
             inboundEnabled: $inboundEnabled,
             inboundPolicy: $inboundEnabled ? $inboundPolicy : 'disabled',
             connectionKind: $connectionKind,
         );
+
+        if (!$requiresActivation) {
+            return $connection;
+        }
+
+        try {
+            $adapter->activateConnection(
+                $connection,
+                $credentials,
+                $this->webhookUrl($connection),
+            );
+
+            if (!$this->connections->setEnabled(
+                $connection->id,
+                true,
+            )) {
+                throw new RuntimeException(
+                    'Не удалось активировать локальное подключение.'
+                );
+            }
+        } catch (\Throwable $error) {
+            $this->connections->deleteById(
+                $connection->id,
+            );
+
+            throw new RuntimeException(
+                'Не удалось зарегистрировать входящий webhook у провайдера.',
+                0,
+                $error,
+            );
+        }
+
+        $activated = $this->connections->findById(
+            $connection->id,
+        );
+        if ($activated === null || !$activated->enabled) {
+            throw new RuntimeException(
+                'Активированное подключение не удалось перечитать.'
+            );
+        }
+
+        return $activated;
+    }
+
+    private function webhookUrl(
+        SocialConnection $connection,
+    ): string {
+        $baseUrl = trim((string) Config::get(
+            'syndication.site_url',
+            Config::get('app.url', ''),
+        ));
+
+        $parts = parse_url($baseUrl);
+        if (
+            !is_array($parts)
+            || strtolower((string) ($parts['scheme'] ?? '')) !== 'https'
+            || trim((string) ($parts['host'] ?? '')) === ''
+            || isset($parts['user'])
+            || isset($parts['pass'])
+            || isset($parts['query'])
+            || isset($parts['fragment'])
+        ) {
+            throw new RuntimeException(
+                'Для входящего webhook требуется канонический HTTPS URL сайта.'
+            );
+        }
+
+        $path = Router::getInstance()->url(
+            'external_channels_webhook',
+            [
+                'connectionPublicId' =>
+                    $connection->publicId,
+            ],
+        );
+
+        return rtrim($baseUrl, '/')
+            . $path;
     }
 
     private function assertLength(

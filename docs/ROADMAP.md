@@ -106,6 +106,6 @@ Status: in progress.
 - [x] Admin connection wizard.
 - [x] Outbound worker and retry/dead-letter processing.
 - [x] Inbound review/import workflow.
-- [ ] Built-in Telegram/VK/MAX adapters.
+- [x] Built-in Telegram/VK/MAX adapters.
 - [ ] Built-in YouTube/Rutube adapters.
 - [ ] Adapter SDK documentation for other/future platforms.
