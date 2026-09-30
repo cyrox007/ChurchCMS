@@ -22,6 +22,10 @@ foreach ([
     'MediaBlobStorage.php',
     'MediaImageMetadata.php',
     'MediaImageMetadataReader.php',
+    'MediaDerivative.php',
+    'MediaDerivativeRepository.php',
+    'MediaImageDerivativeService.php',
+    'MediaDerivativeCapability.php',
     'MediaRepository.php',
     'MediaUsageReference.php',
     'MediaUsageRepository.php',
@@ -51,6 +55,8 @@ return new class implements ModuleRuntimeProvider {
         return [
             'media.usage-references' =>
                 new \ChurchCMS\Modules\Media\MediaUsageCapability(),
+            'media.derivatives' =>
+                new \ChurchCMS\Modules\Media\MediaDerivativeCapability(),
         ];
     }
 
