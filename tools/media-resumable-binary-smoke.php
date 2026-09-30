@@ -144,10 +144,32 @@ if (
 $stored = MediaResumableTransferRepository::fromDatabase()
     ->findByPublicId($transfer->publicId);
 
+$encryptedPayload = $stored !== null
+    ? base64_decode(
+        $stored->sessionEncrypted,
+        true,
+    )
+    : false;
+$encryptedJson = is_string($encryptedPayload)
+    ? json_decode(
+        $encryptedPayload,
+        true,
+    )
+    : null;
+
 if (
     $stored === null
     || $stored->sessionEncrypted === $session
-    || !str_starts_with($stored->sessionEncrypted, 'enc:v1:')
+    || !is_array($encryptedJson)
+    || ($encryptedJson['v'] ?? null) !== 1
+    || !isset(
+        $encryptedJson['iv'],
+        $encryptedJson['tag'],
+        $encryptedJson['data'],
+    )
+    || SecretVault::decrypt(
+        $stored->sessionEncrypted,
+    ) !== $session
 ) {
     fwrite(STDERR, "Remote resumable session хранится небезопасно.\n");
     exit(1);
