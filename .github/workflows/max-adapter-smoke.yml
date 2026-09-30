@@ -1,0 +1,56 @@
+name: Проверка MAX-адаптера
+
+on:
+  push:
+    branches:
+      - develop
+      - main
+    paths:
+      - 'modules/social/ChannelHttpClient.php'
+      - 'modules/social/NativeHttpClient.php'
+      - 'modules/social/MaxChannelAdapter.php'
+      - 'modules/social/runtime.php'
+      - 'tools/max-adapter-smoke.php'
+      - '.github/workflows/max-adapter-smoke.yml'
+  pull_request:
+    branches:
+      - develop
+      - main
+    paths:
+      - 'modules/social/ChannelHttpClient.php'
+      - 'modules/social/NativeHttpClient.php'
+      - 'modules/social/MaxChannelAdapter.php'
+      - 'modules/social/runtime.php'
+      - 'tools/max-adapter-smoke.php'
+      - '.github/workflows/max-adapter-smoke.yml'
+
+permissions:
+  contents: read
+
+jobs:
+  max-adapter:
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Получить исходный код
+        uses: actions/checkout@v4
+
+      - name: Подготовить PHP 8.3
+        uses: shivammathur/setup-php@v2
+        with:
+          php-version: '8.3'
+          extensions: mbstring, openssl
+          coverage: none
+
+      - name: Проверить PHP
+        run: |
+          set -euo pipefail
+          php -l modules/social/ChannelHttpClient.php
+          php -l modules/social/NativeHttpClient.php
+          php -l modules/social/MaxChannelAdapter.php
+          php -l modules/social/runtime.php
+          php -l tools/max-adapter-smoke.php
+          php bin/migrate.php validate
+
+      - name: Проверить MAX без внешней сети
+        run: php tools/max-adapter-smoke.php
