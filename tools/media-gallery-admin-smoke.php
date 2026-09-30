@@ -193,24 +193,45 @@ $images = array_values(array_filter(
 ));
 
 $renderer = ThemeRenderer::fromConfig();
-$theme = new ThemeContext(
-    $renderer,
-    'default',
-);
-$galleries = [
-    [
-        'gallery' => $updated,
-        'items' => $items,
-    ],
-];
-$organizationUnits = [$allowed];
-$defaultOwnerPublicId = $allowed->publicId;
-$galleryStatus = null;
 
-ob_start();
-require dirname(__DIR__)
-    . '/themes/default/templates/admin/media/galleries.php';
-$html = (string) ob_get_clean();
+$galleryHtml = $renderer->capture(
+    'admin.media.galleries',
+    [
+        'galleries' => [
+            [
+                'gallery' => $updated,
+                'items' => $items,
+            ],
+        ],
+        'images' => $images,
+        'organizationUnits' => [$allowed],
+        'defaultOwnerPublicId' => $allowed->publicId,
+        'galleryStatus' => null,
+    ],
+);
+
+$mediaHtml = $renderer->capture(
+    'admin.media.index',
+    [
+        'assets' => $images,
+        'organizationUnits' => [$allowed],
+        'defaultOwnerPublicId' => $allowed->publicId,
+        'mediaStatus' => null,
+    ],
+);
+
+foreach ([
+    'Медиатека',
+    'Первое изображение',
+] as $expected) {
+    if (!str_contains($mediaHtml, $expected)) {
+        fwrite(
+            STDERR,
+            "Media Admin template не содержит: {$expected}\n",
+        );
+        exit(1);
+    }
+}
 
 foreach ([
     'Галереи',
@@ -222,7 +243,7 @@ foreach ([
     'Опубликовать',
     'Архивировать',
 ] as $expected) {
-    if (!str_contains($html, $expected)) {
+    if (!str_contains($galleryHtml, $expected)) {
         fwrite(
             STDERR,
             "Admin gallery template не содержит: {$expected}\n",
@@ -232,8 +253,8 @@ foreach ([
 }
 
 if (
-    str_contains($html, 'Скрытая галерея')
-    || str_contains($html, 'Скрытое изображение')
+    str_contains($galleryHtml, 'Скрытая галерея')
+    || str_contains($galleryHtml, 'Скрытое изображение')
 ) {
     fwrite(
         STDERR,
