@@ -36,7 +36,7 @@ Status: in progress.
 - [ ] Worship schedule (schema/domain foundation с обязательным organization owner реализован; Admin Shell, public/API, повторяющиеся правила и праздничные шаблоны остаются).
 - [ ] Events (schema/domain foundation с обязательным organization owner реализован; Admin Shell, публикация, public/API, календарные представления и повторяющиеся правила остаются).
 - [x] Galleries (schema/domain foundation, organization owner, ordered image slots, lifecycle, Admin Shell и public/API реализованы).
-- [ ] Documents (foundation, organization owner, visibility, federation, связь с Media-файлом, organization-scoped Admin Shell и обычный public HTML/API реализованы; остаются категории/рубрики и версии/замены файла).
+- [ ] Documents (foundation, organization owner, visibility, federation, связь с Media-файлом, рубрики, organization-scoped Admin Shell и обычный public HTML/API реализованы; остаются версии/замены файла).
 - [ ] Search.
 - [x] SEO foundation: metadata, canonical, OG/social cards, robots, sitemap, sharing.
 - [x] Redirect manager.
