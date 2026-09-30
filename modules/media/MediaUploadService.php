@@ -8,10 +8,15 @@ use InvalidArgumentException;
 
 final class MediaUploadService
 {
+    private readonly MediaImageMetadataReader $imageMetadata;
+
     public function __construct(
         private readonly MediaBlobStorage $storage,
         private readonly MediaService $media,
+        ?MediaImageMetadataReader $imageMetadata = null,
     ) {
+        $this->imageMetadata = $imageMetadata
+            ?? new MediaImageMetadataReader();
     }
 
     public static function fromConfig(): self
@@ -63,6 +68,8 @@ final class MediaUploadService
             siteKey: $siteKey,
             title: $title,
             altText: $altText,
+            pixelWidth: $image?->width,
+            pixelHeight: $image?->height,
         );
     }
 
@@ -79,6 +86,10 @@ final class MediaUploadService
         );
         $blob = $this->storage->storeFile(
             $sourcePath,
+        );
+        $image = $this->imageMetadata->read(
+            $this->storage->pathForHash($blob->sha256),
+            $blob->mimeType,
         );
 
         return $this->media->registerMetadata(
