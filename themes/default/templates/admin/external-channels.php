@@ -268,6 +268,8 @@ $status = is_array($channelStatus ?? null) ? $channelStatus : null;
                             $canPublish = ($adapter['can_publish'] ?? false) === true;
                             $canImport = ($adapter['can_import'] ?? false) === true;
                             $usable = $canTest && ($canPublish || $canImport);
+                            $credentialsRequired =
+                                ($adapter['credentials_required'] ?? true) === true;
                             $directionLabel = match (true) {
                                 $canPublish && $canImport => 'исходящие + входящие',
                                 $canPublish => 'только исходящие',
@@ -281,6 +283,7 @@ $status = is_array($channelStatus ?? null) ? $channelStatus : null;
                             >
                                 <?= $theme->e((string) ($adapter['label'] ?? $adapter['id'] ?? '')) ?>
                                 — <?= $theme->e($directionLabel) ?>
+                                <?= $credentialsRequired ? '' : ' · без секрета' ?>
                                 <?= $canTest ? '' : ' — проверка подключения не поддерживается' ?>
                             </option>
                         <?php endforeach; ?>
@@ -312,11 +315,10 @@ $status = is_array($channelStatus ?? null) ? $channelStatus : null;
                 </label>
 
                 <label>
-                    <span>Секрет / токен</span>
+                    <span>Секрет / токен <small>если требуется платформой</small></span>
                     <input
                         type="password"
                         name="credentials"
-                        required
                         autocomplete="new-password"
                     >
                 </label>
@@ -324,6 +326,7 @@ $status = is_array($channelStatus ?? null) ? $channelStatus : null;
                 <p>
                     Выберите только направления, которые указаны рядом с выбранной платформой.
                     ChurchCMS повторно проверит это на сервере.
+                    Для платформ с пометкой «без секрета» поле секрета должно оставаться пустым.
                 </p>
 
                 <label>

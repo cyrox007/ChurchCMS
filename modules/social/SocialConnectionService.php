@@ -12,6 +12,8 @@ use RuntimeException;
 
 final class SocialConnectionService
 {
+    private const CREDENTIALLESS_MARKER =
+        'churchcms:public-adapter';
     public function __construct(
         private readonly SocialConnectionRepository $connections,
     ) {
@@ -31,7 +33,8 @@ final class SocialConnectionService
      *     capabilities:list<string>,
      *     can_test:bool,
      *     can_publish:bool,
-     *     can_import:bool
+     *     can_import:bool,
+     *     credentials_required:bool
      * }>
      */
     public function availableAdapters(): array
@@ -60,6 +63,8 @@ final class SocialConnectionService
                         ChannelCapability::PUBLISH_VIDEO,
                     ],
                 ),
+                'credentials_required' =>
+                    !$adapter instanceof ChannelCredentialsOptional,
                 'can_import' => self::supportsAny(
                     $capabilities,
                     [
@@ -105,7 +110,6 @@ final class SocialConnectionService
 
         $this->assertLength($name, 1, 120, 'Название подключения');
         $this->assertLength($targetRef, 1, 255, 'Идентификатор канала');
-        $this->assertLength($credentials, 1, 65535, 'Секрет подключения');
 
         if (
             preg_match('/^[a-z][a-z0-9_.-]{1,31}$/D', $connectionKind) !== 1
@@ -131,6 +135,22 @@ final class SocialConnectionService
         if ($adapter === null) {
             throw new InvalidArgumentException(
                 'Выбранный адаптер внешнего канала недоступен.'
+            );
+        }
+
+        $credentialsRequired =
+            !$adapter instanceof ChannelCredentialsOptional;
+
+        if ($credentialsRequired) {
+            $this->assertLength(
+                $credentials,
+                1,
+                65535,
+                'Секрет подключения',
+            );
+        } elseif ($credentials !== '') {
+            throw new InvalidArgumentException(
+                'Выбранная платформа не требует секрета; оставьте поле пустым.'
             );
         }
 
@@ -197,7 +217,11 @@ final class SocialConnectionService
             provider: $provider,
             name: $name,
             targetRef: $targetRef,
-            tokenEncrypted: SecretVault::encrypt($credentials),
+            tokenEncrypted: SecretVault::encrypt(
+                $credentialsRequired
+                    ? $credentials
+                    : self::CREDENTIALLESS_MARKER,
+            ),
             settings: [],
             enabled: !$requiresActivation,
             outboundEnabled: $outboundEnabled,
