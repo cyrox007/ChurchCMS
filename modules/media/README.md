@@ -142,6 +142,41 @@ blob и не создаёт лишнюю копию.
 GIF и AVIF пока не перекодируются: для них сервис возвращает явную ошибку
 вместо неявной потери анимации или несовместимой обработки.
 
+## Публичная выдача локального blob
+
+Локальный Media asset с `visibility=public` может быть отдан только по
+hash-versioned URL:
+
+```text
+/media/{media_public_id}/{sha256}/{variant}
+```
+
+Поддерживаются `GET` и `HEAD`. Запрошенный SHA-256 обязан совпасть с
+оригиналом или зарегистрированным derivative, поэтому при смене содержимого
+меняется и URL. Для ответа используются `ETag`,
+`Cache-Control: public, max-age=31536000, immutable` и
+`X-Content-Type-Options: nosniff`.
+
+Перед отдачей ChurchCMS повторно проверяет:
+
+- asset существует локально;
+- статус не `archived`;
+- видимость строго `public`;
+- тип первой версии — `image` или `document`;
+- blob является обычным читаемым файлом внутри настроенного Media storage;
+- фактический размер совпадает с зарегистрированным.
+
+Private/federated asset, неверный hash, отсутствующий derivative и remote
+federation projection дают 404 и не раскрывают файловый путь.
+
+`GET /api/v1/media/{public_id}` возвращает локальные публичные метаданные,
+`blob_url` и список доступных derivatives. Агрегированная лента помечает
+`blob_available=true` только для локального public asset с реально доступным
+blob. Remote federation по-прежнему остаётся metadata-only.
+
+Audio/video намеренно пока не обслуживаются этим маршрутом: для больших
+медиафайлов сначала нужен корректный HTTP Range/resumable слой.
+
 ## Usage references
 
 Медиатека хранит явные ссылки использования asset другими сущностями через
