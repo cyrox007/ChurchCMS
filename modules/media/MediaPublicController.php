@@ -4,6 +4,7 @@ declare(strict_types=1);
 
 namespace ChurchCMS\Modules\Media;
 
+use ChurchCMS\Core\HttpByteRange;
 use ChurchCMS\Core\Request;
 use ChurchCMS\Core\Response;
 use InvalidArgumentException;
@@ -69,11 +70,46 @@ final class MediaPublicController
             );
         }
 
-        Response::file(
+        $rangeHeader = trim(
+            (string) $request->header(
+                'Range',
+                '',
+            )
+        );
+        $ifRange = trim(
+            (string) $request->header(
+                'If-Range',
+                '',
+            )
+        );
+
+        if (
+            $rangeHeader !== ''
+            && $ifRange !== ''
+            && !hash_equals($etag, $ifRange)
+        ) {
+            $rangeHeader = '';
+        }
+
+        try {
+            $range = HttpByteRange::fromHeader(
+                $rangeHeader,
+                $file->bytes,
+            );
+        } catch (InvalidArgumentException) {
+            Response::rangeNotSatisfiable(
+                $file->bytes,
+                $etag,
+                immutable: true,
+            );
+        }
+
+        Response::rangedFile(
             path: $file->path,
             contentType: $file->mimeType,
             bytes: $file->bytes,
             etag: $etag,
+            range: $range,
             sendBody: $request->method() !== 'HEAD',
             immutable: true,
         );
