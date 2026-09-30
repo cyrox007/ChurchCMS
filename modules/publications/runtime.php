@@ -34,6 +34,7 @@ foreach ([
     'PublicationPartnerTombstoneApiResource.php',
     'PublicationTaxonomyRepository.php',
     'PublicationTaxonomyService.php',
+    'PublicationRevisionService.php',
     'PublicationService.php',
     'PublicationOrganizationAccessService.php',
     'PublicationScheduleWorker.php',
@@ -151,6 +152,13 @@ return new class implements ModuleRuntimeProvider {
             [PublicationsAdminController::class, 'update'],
             [RequireAdminMiddleware::class, CsrfMiddleware::class],
             'admin_publication_update',
+        );
+        $router->add(
+            'POST',
+            '/admin/publications/{publicId}/revisions/{revisionPublicId}/restore',
+            [PublicationsAdminController::class, 'restoreRevision'],
+            [RequireAdminMiddleware::class, CsrfMiddleware::class],
+            'admin_publication_revision_restore',
         );
         $router->add(
             'POST',
