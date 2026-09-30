@@ -1,0 +1,122 @@
+name: Проверка публичного меню
+
+on:
+  push:
+    branches:
+      - develop
+      - main
+    paths:
+      - 'core/ThemeGlobalDataProvider.php'
+      - 'core/ThemeGlobalDataRegistry.php'
+      - 'core/ThemeRenderer.php'
+      - 'modules/pages/NavigationMenu.php'
+      - 'modules/pages/NavigationMenuItem.php'
+      - 'modules/pages/NavigationMenuRepository.php'
+      - 'modules/pages/NavigationMenuService.php'
+      - 'modules/pages/NavigationMenuCapability.php'
+      - 'modules/pages/NavigationThemeDataProvider.php'
+      - 'modules/pages/NavigationMenuAdminController.php'
+      - 'modules/pages/runtime.php'
+      - 'modules/pages/migrations/20260930_130000_create_navigation_menus.php'
+      - 'themes/default/templates/admin/navigation.php'
+      - 'themes/default/theme.json'
+      - 'tools/navigation-menu-smoke.php'
+      - '.github/workflows/navigation-menu-smoke.yml'
+  pull_request:
+    branches:
+      - develop
+      - main
+    paths:
+      - 'core/ThemeGlobalDataProvider.php'
+      - 'core/ThemeGlobalDataRegistry.php'
+      - 'core/ThemeRenderer.php'
+      - 'modules/pages/NavigationMenu.php'
+      - 'modules/pages/NavigationMenuItem.php'
+      - 'modules/pages/NavigationMenuRepository.php'
+      - 'modules/pages/NavigationMenuService.php'
+      - 'modules/pages/NavigationMenuCapability.php'
+      - 'modules/pages/NavigationThemeDataProvider.php'
+      - 'modules/pages/NavigationMenuAdminController.php'
+      - 'modules/pages/runtime.php'
+      - 'modules/pages/migrations/20260930_130000_create_navigation_menus.php'
+      - 'themes/default/templates/admin/navigation.php'
+      - 'themes/default/theme.json'
+      - 'tools/navigation-menu-smoke.php'
+      - '.github/workflows/navigation-menu-smoke.yml'
+
+permissions:
+  contents: read
+
+jobs:
+  navigation-menu:
+    runs-on: ubuntu-latest
+
+    services:
+      postgres:
+        image: postgres:16
+        env:
+          POSTGRES_DB: churchcms
+          POSTGRES_USER: churchcms
+          POSTGRES_PASSWORD: churchcms
+        ports:
+          - 5432:5432
+        options: >-
+          --health-cmd pg_isready
+          --health-interval 10s
+          --health-timeout 5s
+          --health-retries 5
+
+    steps:
+      - name: Получить исходный код
+        uses: actions/checkout@v4
+
+      - name: Подготовить PHP 8.3
+        uses: shivammathur/setup-php@v2
+        with:
+          php-version: '8.3'
+          extensions: pdo, pdo_pgsql
+          coverage: none
+
+      - name: Проверить PHP
+        run: |
+          set -euo pipefail
+          php -l core/ThemeGlobalDataProvider.php
+          php -l core/ThemeGlobalDataRegistry.php
+          php -l core/ThemeRenderer.php
+          php -l modules/pages/NavigationMenuRepository.php
+          php -l modules/pages/NavigationMenuService.php
+          php -l modules/pages/NavigationMenuAdminController.php
+          php -l modules/pages/runtime.php
+          php -l modules/pages/migrations/20260930_130000_create_navigation_menus.php
+          php -l themes/default/templates/admin/navigation.php
+          php -l tools/navigation-menu-smoke.php
+          php bin/migrate.php validate
+          php bin/theme-check.php
+
+      - name: Подготовить тестовую установку
+        run: |
+          set -euo pipefail
+          mkdir -p storage/cache storage/logs storage/sessions storage/rate-limits storage/uploads
+
+          cat > config/local.php <<'PHP'
+          <?php
+
+          declare(strict_types=1);
+
+          return [
+              'installation' => ['completed' => true],
+              'database' => [
+                  'driver' => 'pgsql',
+                  'host' => '127.0.0.1',
+                  'port' => 5432,
+                  'database' => 'churchcms',
+                  'username' => 'churchcms',
+                  'password' => 'churchcms',
+              ],
+          ];
+          PHP
+
+          php bin/migrate.php
+
+      - name: Проверить цели, порядок и Theme navigation
+        run: php tools/navigation-menu-smoke.php
