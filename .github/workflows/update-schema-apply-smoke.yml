@@ -1,0 +1,435 @@
+name: Проверка schema-changing updater
+
+on:
+  push:
+    branches:
+      - develop
+      - main
+    paths:
+      - 'core/MigrationRunner.php'
+      - 'core/UpdatePackageApplier.php'
+      - 'bin/update.php'
+      - 'modules/operations/OperationsService.php'
+      - 'modules/operations/OperationsAdminController.php'
+      - 'themes/default/templates/admin/operations.php'
+      - 'docs/UPDATES.md'
+      - 'docs/BACKLOG.md'
+      - '.github/workflows/update-schema-apply-smoke.yml'
+  pull_request:
+    branches:
+      - develop
+      - main
+    paths:
+      - 'core/MigrationRunner.php'
+      - 'core/UpdatePackageApplier.php'
+      - 'bin/update.php'
+      - 'modules/operations/OperationsService.php'
+      - 'modules/operations/OperationsAdminController.php'
+      - 'themes/default/templates/admin/operations.php'
+      - 'docs/UPDATES.md'
+      - 'docs/BACKLOG.md'
+      - '.github/workflows/update-schema-apply-smoke.yml'
+
+permissions:
+  contents: read
+
+jobs:
+  update-schema-apply:
+    runs-on: ubuntu-latest
+
+    services:
+      postgres:
+        image: postgres:16
+        env:
+          POSTGRES_DB: churchcms
+          POSTGRES_USER: churchcms
+          POSTGRES_PASSWORD: churchcms
+        ports:
+          - 5432:5432
+        options: >-
+          --health-cmd pg_isready
+          --health-interval 10s
+          --health-timeout 5s
+          --health-retries 5
+
+    steps:
+      - name: Получить исходный код
+        uses: actions/checkout@v4
+
+      - name: Подготовить PHP 8.3
+        uses: shivammathur/setup-php@v2
+        with:
+          php-version: '8.3'
+          extensions: pdo, pdo_pgsql, openssl
+          coverage: none
+
+      - name: Проверить синтаксис
+        run: |
+          set -euo pipefail
+          php -l core/MigrationRunner.php
+          php -l core/UpdatePackageApplier.php
+          php -l bin/update.php
+          php -l modules/operations/OperationsService.php
+          php -l modules/operations/OperationsAdminController.php
+          php -l themes/default/templates/admin/operations.php
+
+      - name: Подготовить установку и ключ релизов
+        shell: bash
+        run: |
+          set -euo pipefail
+
+          mkdir -p storage/cache storage/logs storage/sessions storage/rate-limits storage/uploads
+
+          openssl genpkey             -algorithm RSA             -pkeyopt rsa_keygen_bits:2048             -out "$RUNNER_TEMP/update-private.pem" >/dev/null 2>&1
+
+          openssl pkey             -in "$RUNNER_TEMP/update-private.pem"             -pubout             -out "$RUNNER_TEMP/update-public.pem" >/dev/null 2>&1
+
+          cat > config/local.php <<'PHP'
+          <?php
+
+          declare(strict_types=1);
+
+          return [
+              'installation' => ['completed' => true],
+              'security' => [
+                  'secret_key' => base64_encode(str_repeat('s', 32)),
+              ],
+              'operations' => [
+                  'update_trusted_public_keys' => [
+                      'schema-ci' => file_get_contents(
+                          getenv('RUNNER_TEMP') . '/update-public.pem'
+                      ),
+                  ],
+              ],
+              'database' => [
+                  'driver' => 'pgsql',
+                  'host' => '127.0.0.1',
+                  'port' => 5432,
+                  'database' => 'churchcms',
+                  'username' => 'churchcms',
+                  'password' => 'churchcms',
+              ],
+          ];
+          PHP
+
+          php bin/migrate.php
+
+          psql             postgresql://churchcms:churchcms@127.0.0.1:5432/churchcms             -v ON_ERROR_STOP=1             -c "CREATE TABLE update_schema_smoke_state (id INTEGER PRIMARY KEY, value VARCHAR(64) NOT NULL)"             -c "INSERT INTO update_schema_smoke_state (id, value) VALUES (1, 'before')"
+
+      - name: Подготовить успешный schema-changing пакет
+        shell: bash
+        run: |
+          set -euo pipefail
+          package="$RUNNER_TEMP/update-schema-success"
+          mkdir -p "$package/config" "$package/database/migrations"
+
+          php -r '
+          $source = file_get_contents("config/app.php");
+          if (!is_string($source)) {
+              exit(1);
+          }
+          $updated = str_replace(
+              "'''version''' => '''0.1.0-dev'''",
+              "'''version''' => '''999.1.0-ci'''",
+              $source,
+              $count,
+          );
+          if ($count !== 1) {
+              fwrite(STDERR, "Не удалось подготовить config/app.php успешного schema-пакета.\n");
+              exit(1);
+          }
+          file_put_contents($argv[1] . "/config/app.php", $updated);
+          ' "$package"
+
+          cat > "$package/database/migrations/20990102_000000_schema_success.php" <<'PHP'
+          <?php
+
+          declare(strict_types=1);
+
+          use ChurchCMS\Core\ReversibleMigration;
+          use PDO;
+
+          return new class implements ReversibleMigration {
+              public function id(): string
+              {
+                  return '20990102_000000_schema_success';
+              }
+
+              public function up(PDO $pdo, string $driver): void
+              {
+                  $pdo->exec(
+                      'CREATE TABLE update_schema_success '
+                      . '(id INTEGER PRIMARY KEY, note VARCHAR(64) NOT NULL)'
+                  );
+                  $pdo->exec(
+                      "INSERT INTO update_schema_success (id, note) "
+                      . "VALUES (1, 'applied')"
+                  );
+              }
+
+              public function down(PDO $pdo, string $driver): void
+              {
+                  $pdo->exec('DROP TABLE update_schema_success');
+              }
+          };
+          PHP
+
+          php -r '
+          $package = $argv[1];
+          $paths = [
+              "config/app.php",
+              "database/migrations/20990102_000000_schema_success.php",
+          ];
+          $files = [];
+          foreach ($paths as $path) {
+              $file = $package . "/" . $path;
+              $files[] = [
+                  "path" => $path,
+                  "bytes" => filesize($file),
+                  "sha256" => hash_file("sha256", $file),
+              ];
+          }
+          file_put_contents(
+              $package . "/manifest.json",
+              json_encode([
+                  "format" => "churchcms-update-v1",
+                  "from_version" => "0.1.0-dev",
+                  "version" => "999.1.0-ci",
+                  "php_min" => "8.3",
+                  "files" => $files,
+                  "deleted_files" => [],
+              ], JSON_THROW_ON_ERROR | JSON_PRETTY_PRINT | JSON_UNESCAPED_SLASHES) . PHP_EOL
+          );
+          ' "$package"
+
+          php tools/update-sign.php             "$package/manifest.json"             "$RUNNER_TEMP/update-private.pem"             schema-ci
+
+          php bin/update.php stage             "$package"             --path="$RUNNER_TEMP/update-staging"
+
+          manifest="$(find "$RUNNER_TEMP/update-staging" -mindepth 2 -maxdepth 2 -name manifest.json -type f -printf '%T@ %p\n' | sort -nr | head -1 | cut -d' ' -f2-)"
+          basename "$(dirname "$manifest")" > "$RUNNER_TEMP/schema-success-stage-id"
+
+      - name: Применить успешный schema-changing пакет
+        shell: bash
+        run: |
+          set -euo pipefail
+          stage_id="$(cat "$RUNNER_TEMP/schema-success-stage-id")"
+
+          php bin/update.php apply             "$stage_id"             --confirm="$stage_id"             --path="$RUNNER_TEMP/update-staging"             --backup-path="$RUNNER_TEMP/update-backups"             | tee "$RUNNER_TEMP/schema-success-output.txt"
+
+          grep -q "миграций: 1" "$RUNNER_TEMP/schema-success-output.txt"
+          grep -q "'version' => '999.1.0-ci'" config/app.php
+          test -f database/migrations/20990102_000000_schema_success.php
+
+          psql             postgresql://churchcms:churchcms@127.0.0.1:5432/churchcms             -Atqc "SELECT note FROM update_schema_success WHERE id = 1"             | grep -qx applied
+
+          psql             postgresql://churchcms:churchcms@127.0.0.1:5432/churchcms             -Atqc "SELECT COUNT(*) FROM churchcms_migrations WHERE migration_id = '20990102_000000_schema_success'"             | grep -qx 1
+
+      - name: Подготовить пакет с post-migration ошибкой
+        shell: bash
+        run: |
+          set -euo pipefail
+          package="$RUNNER_TEMP/update-schema-broken"
+          mkdir -p "$package/config" "$package/database/migrations" "$package/core"
+
+          php -r '
+          $source = file_get_contents("config/app.php");
+          $updated = str_replace(
+              "'''version''' => '''999.1.0-ci'''",
+              "'''version''' => '''999.1.1-ci'''",
+              (string) $source,
+              $count,
+          );
+          if ($count !== 1) {
+              exit(1);
+          }
+          file_put_contents($argv[1] . "/config/app.php", $updated);
+          ' "$package"
+
+          cat > "$package/database/migrations/20990102_000001_schema_broken.php" <<'PHP'
+          <?php
+
+          declare(strict_types=1);
+
+          use ChurchCMS\Core\ReversibleMigration;
+          use PDO;
+
+          return new class implements ReversibleMigration {
+              public function id(): string
+              {
+                  return '20990102_000001_schema_broken';
+              }
+
+              public function up(PDO $pdo, string $driver): void
+              {
+                  $pdo->exec(
+                      'CREATE TABLE update_schema_broken_added '
+                      . '(id INTEGER PRIMARY KEY)'
+                  );
+                  $pdo->exec(
+                      "UPDATE update_schema_smoke_state "
+                      . "SET value = 'mutated' WHERE id = 1"
+                  );
+              }
+
+              public function down(PDO $pdo, string $driver): void
+              {
+                  $pdo->exec('DROP TABLE update_schema_broken_added');
+              }
+          };
+          PHP
+
+          printf '%s\n' '<?php this is not valid php {' > "$package/core/SchemaRollbackMarker.php"
+
+          php -r '
+          $package = $argv[1];
+          $paths = [
+              "config/app.php",
+              "database/migrations/20990102_000001_schema_broken.php",
+              "core/SchemaRollbackMarker.php",
+          ];
+          $files = [];
+          foreach ($paths as $path) {
+              $file = $package . "/" . $path;
+              $files[] = [
+                  "path" => $path,
+                  "bytes" => filesize($file),
+                  "sha256" => hash_file("sha256", $file),
+              ];
+          }
+          file_put_contents(
+              $package . "/manifest.json",
+              json_encode([
+                  "format" => "churchcms-update-v1",
+                  "from_version" => "999.1.0-ci",
+                  "version" => "999.1.1-ci",
+                  "php_min" => "8.3",
+                  "files" => $files,
+                  "deleted_files" => [],
+              ], JSON_THROW_ON_ERROR | JSON_PRETTY_PRINT | JSON_UNESCAPED_SLASHES) . PHP_EOL
+          );
+          ' "$package"
+
+          php tools/update-sign.php             "$package/manifest.json"             "$RUNNER_TEMP/update-private.pem"             schema-ci
+
+          php bin/update.php stage             "$package"             --path="$RUNNER_TEMP/update-staging"
+
+          manifest="$(find "$RUNNER_TEMP/update-staging" -mindepth 2 -maxdepth 2 -name manifest.json -type f -printf '%T@ %p\n' | sort -nr | head -1 | cut -d' ' -f2-)"
+          basename "$(dirname "$manifest")" > "$RUNNER_TEMP/schema-broken-stage-id"
+
+      - name: Проверить rollback схемы данных и файлов
+        shell: bash
+        run: |
+          set -euo pipefail
+          stage_id="$(cat "$RUNNER_TEMP/schema-broken-stage-id")"
+
+          if php bin/update.php apply             "$stage_id"             --confirm="$stage_id"             --path="$RUNNER_TEMP/update-staging"             --backup-path="$RUNNER_TEMP/update-backups"; then
+              echo "Пакет с post-migration ошибкой ошибочно применён." >&2
+              exit 1
+          fi
+
+          grep -q "'version' => '999.1.0-ci'" config/app.php
+          test ! -e core/SchemaRollbackMarker.php
+          test ! -e database/migrations/20990102_000001_schema_broken.php
+
+          psql             postgresql://churchcms:churchcms@127.0.0.1:5432/churchcms             -Atqc "SELECT value FROM update_schema_smoke_state WHERE id = 1"             | grep -qx before
+
+          psql             postgresql://churchcms:churchcms@127.0.0.1:5432/churchcms             -Atqc "SELECT COUNT(*) FROM information_schema.tables WHERE table_schema = 'public' AND table_name = 'update_schema_broken_added'"             | grep -qx 0
+
+          psql             postgresql://churchcms:churchcms@127.0.0.1:5432/churchcms             -Atqc "SELECT COUNT(*) FROM churchcms_migrations WHERE migration_id = '20990102_000001_schema_broken'"             | grep -qx 0
+
+          psql             postgresql://churchcms:churchcms@127.0.0.1:5432/churchcms             -Atqc "SELECT COUNT(*) FROM churchcms_migrations WHERE migration_id = '20990102_000000_schema_success'"             | grep -qx 1
+
+          echo "Rollback schema-changing updater проверен"
+
+      - name: Проверить предварительный отказ необратимой миграции
+        shell: bash
+        run: |
+          set -euo pipefail
+          package="$RUNNER_TEMP/update-schema-irreversible"
+          mkdir -p "$package/config" "$package/database/migrations"
+
+          cp config/app.php "$package/config/app.php"
+
+          cat > "$package/database/migrations/20990102_000002_irreversible.php" <<'PHP'
+          <?php
+
+          declare(strict_types=1);
+
+          use ChurchCMS\Core\Migration;
+          use PDO;
+
+          return new class implements Migration {
+              public function id(): string
+              {
+                  return '20990102_000002_irreversible';
+              }
+
+              public function up(PDO $pdo, string $driver): void
+              {
+                  $pdo->exec('CREATE TABLE irreversible_update_should_not_exist (id INTEGER PRIMARY KEY)');
+              }
+          };
+          PHP
+
+          php -r '
+          $package = $argv[1];
+          $config = file_get_contents($package . "/config/app.php");
+          $config = str_replace(
+              "'''version''' => '''999.1.0-ci'''",
+              "'''version''' => '''999.1.2-ci'''",
+              (string) $config,
+              $count,
+          );
+          if ($count !== 1) {
+              exit(1);
+          }
+          file_put_contents($package . "/config/app.php", $config);
+
+          $paths = [
+              "config/app.php",
+              "database/migrations/20990102_000002_irreversible.php",
+          ];
+          $files = [];
+          foreach ($paths as $path) {
+              $file = $package . "/" . $path;
+              $files[] = [
+                  "path" => $path,
+                  "bytes" => filesize($file),
+                  "sha256" => hash_file("sha256", $file),
+              ];
+          }
+          file_put_contents(
+              $package . "/manifest.json",
+              json_encode([
+                  "format" => "churchcms-update-v1",
+                  "from_version" => "999.1.0-ci",
+                  "version" => "999.1.2-ci",
+                  "php_min" => "8.3",
+                  "files" => $files,
+                  "deleted_files" => [],
+              ], JSON_THROW_ON_ERROR | JSON_PRETTY_PRINT | JSON_UNESCAPED_SLASHES) . PHP_EOL
+          );
+          ' "$package"
+
+          php tools/update-sign.php             "$package/manifest.json"             "$RUNNER_TEMP/update-private.pem"             schema-ci
+
+          php bin/update.php stage             "$package"             --path="$RUNNER_TEMP/update-staging"
+
+          manifest="$(find "$RUNNER_TEMP/update-staging" -mindepth 2 -maxdepth 2 -name manifest.json -type f -printf '%T@ %p\n' | sort -nr | head -1 | cut -d' ' -f2-)"
+          stage_id="$(basename "$(dirname "$manifest")")"
+
+          before_count="$(find "$RUNNER_TEMP/update-backups" -mindepth 1 -maxdepth 1 -type d | wc -l)"
+
+          if php bin/update.php apply             "$stage_id"             --confirm="$stage_id"             --path="$RUNNER_TEMP/update-staging"             --backup-path="$RUNNER_TEMP/update-backups"; then
+              echo "Необратимая миграция ошибочно допущена." >&2
+              exit 1
+          fi
+
+          after_count="$(find "$RUNNER_TEMP/update-backups" -mindepth 1 -maxdepth 1 -type d | wc -l)"
+          test "$before_count" = "$after_count"
+          test ! -e database/migrations/20990102_000002_irreversible.php
+
+          psql             postgresql://churchcms:churchcms@127.0.0.1:5432/churchcms             -Atqc "SELECT COUNT(*) FROM information_schema.tables WHERE table_schema = 'public' AND table_name = 'irreversible_update_should_not_exist'"             | grep -qx 0
+
+          echo "Необратимая миграция отклонена до изменения установки"
