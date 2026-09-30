@@ -23,6 +23,10 @@ foreach ([
     'MediaImageMetadata.php',
     'MediaImageMetadataReader.php',
     'MediaRepository.php',
+    'MediaUsageReference.php',
+    'MediaUsageRepository.php',
+    'MediaUsageService.php',
+    'MediaUsageCapability.php',
     'MediaOrganizationAccessService.php',
     'MediaApiResource.php',
     'FederatedMediaFeedService.php',
@@ -44,7 +48,10 @@ return new class implements ModuleRuntimeProvider {
 
     public function capabilities(): array
     {
-        return [];
+        return [
+            'media.usage-references' =>
+                new \ChurchCMS\Modules\Media\MediaUsageCapability(),
+        ];
     }
 
     public function boot(): void
