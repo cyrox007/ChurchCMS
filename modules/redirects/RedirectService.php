@@ -298,7 +298,7 @@ final class RedirectService
             );
         }
 
-        if (strlen($path) > 1000) {
+        if (strlen($path) > 700) {
             throw new InvalidArgumentException(
                 'Исходный путь редиректа слишком длинный.'
             );
