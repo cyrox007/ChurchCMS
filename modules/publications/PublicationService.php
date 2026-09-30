@@ -200,6 +200,22 @@ final class PublicationService
         }
 
         try {
+            $currentPublication =
+                (new PublicationRepository($this->pdo))
+                    ->findByPublicId(
+                        $publicId,
+                        $data['site_key'],
+                    );
+
+            if ($currentPublication === null) {
+                throw new InvalidArgumentException(
+                    'Публикация не найдена.'
+                );
+            }
+
+            (new PublicationRevisionService($this->pdo))
+                ->capture($currentPublication);
+
             $publicationId = $this->publicationDatabaseId(
                 $publicId,
                 $data['site_key'],

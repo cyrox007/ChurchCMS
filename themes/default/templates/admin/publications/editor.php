@@ -23,6 +23,10 @@ $externalStatusLabels = [
 $formAction = $isEdit
     ? $theme->route('admin_publication_update', ['publicId' => $publication->publicId])
     : $theme->route('admin_publication_create');
+
+$revisions = is_array($revisions ?? null)
+    ? $revisions
+    : [];
 ?>
 <section class="admin-shell">
     <header class="admin-heading">
@@ -347,4 +351,53 @@ $formAction = $isEdit
             <?php endif; ?>
         </section>
     <?php endif; ?>
+
+    <?php if ($isEdit && $revisions !== []): ?>
+        <details class="editor-card editor-advanced">
+            <summary>
+                История изменений
+                <small>версий: <?= $theme->e(count($revisions)) ?></small>
+            </summary>
+
+            <p class="editor-card__hint">
+                Восстановление создаёт новую текущую версию и не удаляет последующие записи истории.
+            </p>
+
+            <div class="admin-operations-list" role="list">
+                <?php foreach ($revisions as $revision): ?>
+                    <?php
+                    $snapshotTitle = is_string($revision->snapshot['title'] ?? null)
+                        ? (string) $revision->snapshot['title']
+                        : 'Без заголовка';
+                    ?>
+                    <article class="admin-operations-row" role="listitem">
+                        <div class="admin-operations-row__body">
+                            <strong>
+                                Версия №<?= $theme->e($revision->revisionNumber) ?>
+                                · <?= $theme->e($snapshotTitle) ?>
+                            </strong>
+                            <span><?= $theme->e($revision->createdAt) ?> UTC</span>
+                        </div>
+
+                        <form
+                            method="post"
+                            action="<?= $theme->e($theme->route(
+                                'admin_publication_revision_restore',
+                                [
+                                    'publicId' => $publication->publicId,
+                                    'revisionPublicId' => $revision->publicId,
+                                ],
+                            )) ?>"
+                        >
+                            <?= $theme->csrfInput() ?>
+                            <button class="button button--quiet" type="submit">
+                                Восстановить эту версию
+                            </button>
+                        </form>
+                    </article>
+                <?php endforeach; ?>
+            </div>
+        </details>
+    <?php endif; ?>
+
 </section>

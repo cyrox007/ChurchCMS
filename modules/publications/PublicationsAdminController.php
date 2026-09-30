@@ -236,6 +236,84 @@ final class PublicationsAdminController
         }
     }
 
+    public function restoreRevision(
+        Request $request,
+        string $publicId,
+        string $revisionPublicId,
+    ): never {
+        AdminAuthorization::requirePermission(
+            $request,
+            'publications.edit',
+        );
+
+        $publication = PublicationRepository::fromDatabase()
+            ->findByPublicId($publicId);
+        if ($publication === null) {
+            Response::text('404 Not Found', 404);
+        }
+
+        $this->requirePublicationAccess(
+            $request,
+            $publication,
+            'publications.edit',
+        );
+
+        try {
+            $revisions = PublicationRevisionService::fromDatabase();
+            $revision = $revisions->revision(
+                $publication->publicId,
+                $revisionPublicId,
+                $publication->siteKey,
+            );
+            $ownerPublicId = is_string(
+                $revision->snapshot['owner_organization_public_id']
+                    ?? null
+            )
+                ? trim((string) $revision->snapshot[
+                    'owner_organization_public_id'
+                ])
+                : '';
+
+            if (
+                $ownerPublicId === ''
+                || PublicationOrganizationAccessService::fromDatabase()
+                    ->assignableOwner(
+                        self::requiredUserId($request),
+                        'publications.edit',
+                        $ownerPublicId,
+                        $publication->siteKey,
+                    ) === null
+            ) {
+                Response::text('403 Forbidden', 403);
+            }
+
+            $revisions->restore(
+                $publication->publicId,
+                $revision->publicId,
+                $publication->siteKey,
+            );
+
+            $this->audit(
+                $request,
+                'publication.revision_restored',
+                $publication->publicId,
+            );
+
+            Response::redirectLocal(
+                '/admin/publications/'
+                . rawurlencode($publication->publicId)
+                . '?saved=1'
+            );
+        } catch (InvalidArgumentException $error) {
+            $this->renderEditor(
+                $request,
+                $publication,
+                $this->formFromPublication($publication),
+                $error->getMessage(),
+            );
+        }
+    }
+
     public function publish(Request $request, string $publicId): never
     {
         AdminAuthorization::requirePermission($request, 'publications.publish');
@@ -444,6 +522,17 @@ final class PublicationsAdminController
             'canSyndicate' => AdminAuthorization::can($request, 'publications.syndicate'),
             'canExternalPublish' => $canExternalPublish,
             'externalChannels' => $externalChannels,
+            'revisions' => $publication !== null
+                && AdminAuthorization::can(
+                    $request,
+                    'publications.edit',
+                )
+                    ? PublicationRevisionService::fromDatabase()
+                        ->history(
+                            $publication->publicId,
+                            $publication->siteKey,
+                        )
+                    : [],
             'scheduleTimezone' => $this->applicationTimezone()
                 ->getName(),
             'scheduledAtLocal' => $this->scheduledAtLocal(

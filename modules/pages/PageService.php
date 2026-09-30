@@ -282,6 +282,8 @@ final class PageService
 
         try {
             $page = $this->requiredPage($publicId, $siteKey);
+            (new PageRevisionService($this->pdo))->capture($page);
+
             $parent = $this->parent($parentPublicId, $siteKey);
 
             if ($parent !== null) {
@@ -387,6 +389,8 @@ final class PageService
                 $publicId,
                 $siteKey,
             );
+            (new PageRevisionService($this->pdo))->capture($page);
+
             $parent = $page->parentId !== null
                 ? $this->repository->findById(
                     $page->parentId,
@@ -468,6 +472,8 @@ final class PageService
                 $publicId,
                 $siteKey,
             );
+            (new PageRevisionService($this->pdo))->capture($page);
+
             $parent = $this->parent(
                 $newParentPublicId,
                 $siteKey,

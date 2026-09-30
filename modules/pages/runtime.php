@@ -23,6 +23,7 @@ foreach ([
     'PageStatus.php',
     'Page.php',
     'PageRepository.php',
+    'PageRevisionService.php',
     'PageService.php',
     'PageOrganizationAccessService.php',
     'PageApiResource.php',
@@ -117,6 +118,13 @@ return new class implements ModuleRuntimeProvider {
             [PagesAdminController::class, 'update'],
             [RequireAdminMiddleware::class, CsrfMiddleware::class],
             'admin_page_update',
+        );
+        $router->add(
+            'POST',
+            '/admin/pages/{publicId}/revisions/{revisionPublicId}/restore',
+            [PagesAdminController::class, 'restoreRevision'],
+            [RequireAdminMiddleware::class, CsrfMiddleware::class],
+            'admin_page_revision_restore',
         );
         $router->add(
             'POST',
