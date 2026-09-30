@@ -5,6 +5,7 @@ declare(strict_types=1);
 namespace ChurchCMS\Modules\Social;
 
 use ChurchCMS\Core\Config;
+use ChurchCMS\Core\ModuleRuntimeLoader;
 use ChurchCMS\Core\SecretVault;
 use ChurchCMS\Modules\Publications\Publication;
 use ChurchCMS\Modules\Publications\PublicationRepository;
@@ -110,23 +111,6 @@ final class ChannelOutboundDispatcher
             );
         }
 
-        if (
-            !in_array(
-                ChannelCapability::PUBLISH_TEXT,
-                $adapter->capabilities(),
-                true,
-            )
-            && !in_array(
-                ChannelCapability::PUBLISH_LINK,
-                $adapter->capabilities(),
-                true,
-            )
-        ) {
-            throw new RuntimeException(
-                'Адаптер внешнего канала не поддерживает публикацию.'
-            );
-        }
-
         $publication = $this->publications->findById(
             $post->publicationId,
         );
@@ -141,16 +125,32 @@ final class ChannelOutboundDispatcher
             );
         }
 
+        $item = $this->outboundItem(
+            $publication,
+            $post,
+            in_array(
+                ChannelCapability::PUBLISH_VIDEO,
+                $adapter->capabilities(),
+                true,
+            ),
+        );
+
+        if (!self::canPublish(
+            $adapter,
+            $item,
+        )) {
+            throw new RuntimeException(
+                'Адаптер внешнего канала не поддерживает доступный тип публикации.'
+            );
+        }
+
         $credentials = SecretVault::decrypt(
             $connection->tokenEncrypted,
         );
         $result = $adapter->publish(
             $connection,
             $credentials,
-            $this->outboundItem(
-                $publication,
-                $post,
-            ),
+            $item,
         );
 
         if (!$result->success) {
@@ -170,6 +170,7 @@ final class ChannelOutboundDispatcher
     private function outboundItem(
         Publication $publication,
         SocialPost $post,
+        bool $includeVideo = false,
     ): ChannelOutboundItem {
         $baseUrl = rtrim(
             (string) Config::get(
@@ -190,13 +191,85 @@ final class ChannelOutboundDispatcher
             $text = $publication->title;
         }
 
+        $media = [];
+
+        if ($includeVideo) {
+            $mediaCapability = ModuleRuntimeLoader::capability(
+                'media',
+                'media.resumable-upload',
+            );
+
+            if (
+                $mediaCapability !== null
+                && method_exists(
+                    $mediaCapability,
+                    'publicationVideo',
+                )
+            ) {
+                $video = $mediaCapability->publicationVideo(
+                    $publication->publicId,
+                    $publication->siteKey,
+                );
+
+                if (is_array($video)) {
+                    $media[] = $video;
+                }
+            }
+        }
+
         return new ChannelOutboundItem(
             sourceId: $publication->publicId,
             kind: $publication->type->value,
             title: $publication->title,
             text: $text,
             canonicalUrl: $canonicalUrl,
+            media: $media,
         );
+    }
+
+    private static function canPublish(
+        ChannelAdapter $adapter,
+        ChannelOutboundItem $item,
+    ): bool {
+        $capabilities = $adapter->capabilities();
+
+        if (
+            in_array(
+                ChannelCapability::PUBLISH_TEXT,
+                $capabilities,
+                true,
+            )
+            || in_array(
+                ChannelCapability::PUBLISH_LINK,
+                $capabilities,
+                true,
+            )
+        ) {
+            return true;
+        }
+
+        if (
+            !in_array(
+                ChannelCapability::PUBLISH_VIDEO,
+                $capabilities,
+                true,
+            )
+        ) {
+            return false;
+        }
+
+        foreach ($item->media as $media) {
+            if (
+                is_array($media)
+                && ($media['type'] ?? null) === 'video'
+                && is_string($media['public_id'] ?? null)
+                && trim((string) $media['public_id']) !== ''
+            ) {
+                return true;
+            }
+        }
+
+        return false;
     }
 
     private static function safeError(Throwable $error): string

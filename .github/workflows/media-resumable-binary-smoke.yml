@@ -1,0 +1,123 @@
+name: Проверка resumable binary Media pipeline
+
+on:
+  push:
+    branches:
+      - develop
+      - main
+    paths:
+      - 'modules/media/MediaBinarySource.php'
+      - 'modules/media/MediaBinaryChunk.php'
+      - 'modules/media/MediaBinarySourceService.php'
+      - 'modules/media/MediaResumableTransfer.php'
+      - 'modules/media/MediaResumableTransferRepository.php'
+      - 'modules/media/MediaResumableTransferService.php'
+      - 'modules/media/MediaResumableUploadCapability.php'
+      - 'modules/media/runtime.php'
+      - 'modules/media/migrations/20260930_120000_create_media_resumable_transfers.php'
+      - 'modules/social/ChannelOutboundDispatcher.php'
+      - 'tools/media-resumable-binary-smoke.php'
+      - '.github/workflows/media-resumable-binary-smoke.yml'
+  pull_request:
+    branches:
+      - develop
+      - main
+    paths:
+      - 'modules/media/MediaBinarySource.php'
+      - 'modules/media/MediaBinaryChunk.php'
+      - 'modules/media/MediaBinarySourceService.php'
+      - 'modules/media/MediaResumableTransfer.php'
+      - 'modules/media/MediaResumableTransferRepository.php'
+      - 'modules/media/MediaResumableTransferService.php'
+      - 'modules/media/MediaResumableUploadCapability.php'
+      - 'modules/media/runtime.php'
+      - 'modules/media/migrations/20260930_120000_create_media_resumable_transfers.php'
+      - 'modules/social/ChannelOutboundDispatcher.php'
+      - 'tools/media-resumable-binary-smoke.php'
+      - '.github/workflows/media-resumable-binary-smoke.yml'
+
+permissions:
+  contents: read
+
+jobs:
+  media-resumable-binary:
+    runs-on: ubuntu-latest
+
+    services:
+      postgres:
+        image: postgres:16
+        env:
+          POSTGRES_DB: churchcms
+          POSTGRES_USER: churchcms
+          POSTGRES_PASSWORD: churchcms
+        ports:
+          - 5432:5432
+        options: >-
+          --health-cmd pg_isready
+          --health-interval 10s
+          --health-timeout 5s
+          --health-retries 5
+
+    steps:
+      - name: Получить исходный код
+        uses: actions/checkout@v4
+
+      - name: Подготовить PHP 8.3
+        uses: shivammathur/setup-php@v2
+        with:
+          php-version: '8.3'
+          extensions: pdo, pdo_pgsql, openssl
+          coverage: none
+
+      - name: Проверить PHP
+        run: |
+          set -euo pipefail
+          php -l modules/media/MediaBinarySource.php
+          php -l modules/media/MediaBinaryChunk.php
+          php -l modules/media/MediaBinarySourceService.php
+          php -l modules/media/MediaResumableTransfer.php
+          php -l modules/media/MediaResumableTransferRepository.php
+          php -l modules/media/MediaResumableTransferService.php
+          php -l modules/media/MediaResumableUploadCapability.php
+          php -l modules/media/runtime.php
+          php -l modules/media/migrations/20260930_120000_create_media_resumable_transfers.php
+          php -l modules/social/ChannelOutboundDispatcher.php
+          php -l tools/media-resumable-binary-smoke.php
+          php bin/migrate.php validate
+
+      - name: Подготовить тестовую установку
+        run: |
+          set -euo pipefail
+          mkdir -p storage/cache storage/logs storage/sessions storage/rate-limits storage/uploads
+          MEDIA_STORAGE="${RUNNER_TEMP}/churchcms-resumable-media"
+          mkdir -p "${MEDIA_STORAGE}"
+
+          cat > config/local.php <<PHP
+          <?php
+
+          declare(strict_types=1);
+
+          return [
+              'installation' => ['completed' => true],
+              'security' => [
+                  'secret_key' => base64_encode(str_repeat('r', 32)),
+              ],
+              'database' => [
+                  'driver' => 'pgsql',
+                  'host' => '127.0.0.1',
+                  'port' => 5432,
+                  'database' => 'churchcms',
+                  'username' => 'churchcms',
+                  'password' => 'churchcms',
+              ],
+              'media' => [
+                  'storage_path' => '${MEDIA_STORAGE}',
+                  'max_upload_bytes' => 536870912,
+              ],
+          ];
+          PHP
+
+          php bin/migrate.php
+
+      - name: Проверить chunks, resume, encryption и compare-and-set offset
+        run: php tools/media-resumable-binary-smoke.php
