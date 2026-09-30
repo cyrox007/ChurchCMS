@@ -127,22 +127,11 @@ final class YoutubeChannelAdapter implements
         }
 
         $limit = max(1, min(50, $limit));
-        $result = $this->api(
-            '/playlistItems',
-            [
-                'part' => 'snippet,contentDetails,status',
-                'playlistId' => $playlistId,
-                'maxResults' => 50,
-                'key' => $apiKey,
-            ],
-        );
-
-        $rows = is_array($result['items'] ?? null)
-            ? $result['items']
-            : [];
-
-        $cursorPoint = self::parseCursor(
-            $cursor,
+        $cursorPoint = self::parseCursor($cursor);
+        $rows = $this->playlistRows(
+            $playlistId,
+            $apiKey,
+            $cursorPoint,
         );
         $candidates = [];
 
@@ -210,6 +199,89 @@ final class YoutubeChannelAdapter implements
             $items,
             $nextCursor,
         );
+    }
+
+    /**
+     * @param array{timestamp:int,video_id:string}|null $cursorPoint
+     * @return list<array<string,mixed>>
+     */
+    private function playlistRows(
+        string $playlistId,
+        string $apiKey,
+        ?array $cursorPoint,
+    ): array {
+        $rows = [];
+        $pageToken = null;
+        $pageCount = 0;
+        $reachedCursor = $cursorPoint === null;
+
+        do {
+            $query = [
+                'part' => 'snippet,contentDetails,status',
+                'playlistId' => $playlistId,
+                'maxResults' => 50,
+                'key' => $apiKey,
+            ];
+
+            if ($pageToken !== null) {
+                $query['pageToken'] = $pageToken;
+            }
+
+            $result = $this->api(
+                '/playlistItems',
+                $query,
+            );
+
+            $items = is_array($result['items'] ?? null)
+                ? $result['items']
+                : [];
+
+            foreach ($items as $row) {
+                if (!is_array($row)) {
+                    continue;
+                }
+
+                $rows[] = $row;
+
+                if ($cursorPoint === null) {
+                    continue;
+                }
+
+                $point = self::itemPoint($row);
+                if (
+                    $point !== null
+                    && self::comparePoint(
+                        $point,
+                        $cursorPoint,
+                    ) <= 0
+                ) {
+                    $reachedCursor = true;
+                }
+            }
+
+            $pageCount++;
+            $next = trim((string) (
+                $result['nextPageToken'] ?? ''
+            ));
+            $pageToken = $next !== '' ? $next : null;
+
+            if ($cursorPoint === null) {
+                break;
+            }
+
+            if ($reachedCursor || $pageToken === null) {
+                break;
+            }
+
+            if ($pageCount >= 20) {
+                throw new RuntimeException(
+                    'YouTube накопил слишком много изменений между синхронизациями; '
+                    . 'cursor не найден в первых 1000 загрузках.'
+                );
+            }
+        } while (true);
+
+        return $rows;
     }
 
     /**
