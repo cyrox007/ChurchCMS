@@ -6,7 +6,7 @@ namespace ChurchCMS\Modules\Social;
 
 use RuntimeException;
 
-final class NativeHttpClient
+final class NativeHttpClient implements ChannelHttpClient
 {
     /**
      * @param array<string,string|int|float|bool|null> $query
