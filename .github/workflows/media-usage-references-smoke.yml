@@ -1,0 +1,111 @@
+name: Проверка ссылок использования Media
+
+on:
+  push:
+    branches:
+      - develop
+      - main
+    paths:
+      - 'modules/media/migrations/20260930_090000_create_media_usage_references.php'
+      - 'modules/media/MediaUsageReference.php'
+      - 'modules/media/MediaUsageRepository.php'
+      - 'modules/media/MediaUsageService.php'
+      - 'modules/media/MediaUsageCapability.php'
+      - 'modules/media/MediaRepository.php'
+      - 'modules/media/MediaService.php'
+      - 'modules/media/runtime.php'
+      - 'tools/media-usage-references-smoke.php'
+      - '.github/workflows/media-usage-references-smoke.yml'
+  pull_request:
+    branches:
+      - develop
+      - main
+    paths:
+      - 'modules/media/migrations/20260930_090000_create_media_usage_references.php'
+      - 'modules/media/MediaUsageReference.php'
+      - 'modules/media/MediaUsageRepository.php'
+      - 'modules/media/MediaUsageService.php'
+      - 'modules/media/MediaUsageCapability.php'
+      - 'modules/media/MediaRepository.php'
+      - 'modules/media/MediaService.php'
+      - 'modules/media/runtime.php'
+      - 'tools/media-usage-references-smoke.php'
+      - '.github/workflows/media-usage-references-smoke.yml'
+
+permissions:
+  contents: read
+
+jobs:
+  media-usage-references:
+    runs-on: ubuntu-latest
+
+    services:
+      postgres:
+        image: postgres:16
+        env:
+          POSTGRES_DB: churchcms
+          POSTGRES_USER: churchcms
+          POSTGRES_PASSWORD: churchcms
+        ports:
+          - 5432:5432
+        options: >-
+          --health-cmd pg_isready
+          --health-interval 10s
+          --health-timeout 5s
+          --health-retries 5
+
+    steps:
+      - name: Получить исходный код
+        uses: actions/checkout@v4
+
+      - name: Подготовить PHP 8.3
+        uses: shivammathur/setup-php@v2
+        with:
+          php-version: '8.3'
+          extensions: pdo, pdo_pgsql, openssl
+          coverage: none
+
+      - name: Проверить PHP
+        run: |
+          set -euo pipefail
+          php -l modules/media/migrations/20260930_090000_create_media_usage_references.php
+          php -l modules/media/MediaUsageReference.php
+          php -l modules/media/MediaUsageRepository.php
+          php -l modules/media/MediaUsageService.php
+          php -l modules/media/MediaUsageCapability.php
+          php -l modules/media/MediaRepository.php
+          php -l modules/media/MediaService.php
+          php -l modules/media/runtime.php
+          php -l tools/media-usage-references-smoke.php
+          php bin/migrate.php validate
+
+      - name: Подготовить тестовую установку
+        run: |
+          set -euo pipefail
+          mkdir -p storage/cache storage/logs storage/sessions storage/rate-limits storage/uploads
+
+          cat > config/local.php <<'PHP'
+          <?php
+
+          declare(strict_types=1);
+
+          return [
+              'installation' => ['completed' => true],
+              'security' => [
+                  'secret_key' => base64_encode(str_repeat('r', 32)),
+              ],
+              'database' => [
+                  'driver' => 'pgsql',
+                  'host' => '127.0.0.1',
+                  'port' => 5432,
+                  'database' => 'churchcms',
+                  'username' => 'churchcms',
+                  'password' => 'churchcms',
+              ],
+          ];
+          PHP
+
+          php bin/migrate.php
+
+      - name: Проверить жизненный цикл Media references
+        run: php tools/media-usage-references-smoke.php
