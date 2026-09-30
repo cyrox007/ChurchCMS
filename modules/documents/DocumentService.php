@@ -40,6 +40,7 @@ final class DocumentService
         ?string $documentNumber = null,
         ?string $issuedOn = null,
         string $summary = '',
+        array $categoryNames = [],
     ): string {
         $siteKey = self::siteKey($siteKey);
         $owner = $this->resolveOrganization(
@@ -114,6 +115,26 @@ final class DocumentService
             'updated_at' => $now,
         ]);
 
+        $document = $this->documents->findByPublicId(
+            $publicId,
+            $siteKey,
+        );
+
+        if ($document === null) {
+            throw new InvalidArgumentException(
+                'Созданный документ не найден.'
+            );
+        }
+
+        (new DocumentCategoryService($this->pdo))
+            ->replaceForDocument(
+                $document->id,
+                $siteKey,
+                DocumentCategoryService::fromNames(
+                    $categoryNames,
+                ),
+            );
+
         return $publicId;
     }
 
@@ -125,6 +146,7 @@ final class DocumentService
         ?string $issuedOn,
         string $summary,
         string $siteKey = 'default',
+        array $categoryNames = [],
     ): void {
         $siteKey = self::siteKey($siteKey);
         $document = $this->documents->findByPublicId(
@@ -177,6 +199,15 @@ final class DocumentService
             'public_id' => $document->publicId,
             'site_key' => $siteKey,
         ]);
+
+        (new DocumentCategoryService($this->pdo))
+            ->replaceForDocument(
+                $document->id,
+                $siteKey,
+                DocumentCategoryService::fromNames(
+                    $categoryNames,
+                ),
+            );
     }
 
     public function assignOrganizationOwner(
