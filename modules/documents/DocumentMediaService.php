@@ -93,6 +93,65 @@ final class DocumentMediaService
         );
     }
 
+    /**
+     * @param list<string>|null $ownerPublicIds
+     * @return list<array<string,mixed>>
+     */
+    public function availableFiles(
+        ?array $ownerPublicIds,
+        string $siteKey = 'default',
+    ): array {
+        $capability = self::mediaCapability();
+
+        if (!method_exists($capability, 'selectableAssets')) {
+            throw new RuntimeException(
+                'Media capability не предоставляет список файлов.'
+            );
+        }
+
+        return $capability->selectableAssets(
+            $ownerPublicIds,
+            'document',
+            $siteKey,
+        );
+    }
+
+    /**
+     * @return array<string,mixed>|null
+     */
+    public function publicFileDescriptor(
+        string $documentPublicId,
+        string $siteKey = 'default',
+    ): ?array {
+        $mediaPublicId = $this->fileMediaPublicId(
+            $documentPublicId,
+            $siteKey,
+        );
+
+        if ($mediaPublicId === null) {
+            return null;
+        }
+
+        $capability = self::mediaCapability();
+
+        if (!method_exists(
+            $capability,
+            'publicAssetDescriptor',
+        )) {
+            return null;
+        }
+
+        $descriptor = $capability->publicAssetDescriptor(
+            $mediaPublicId,
+            $siteKey,
+        );
+
+        return is_array($descriptor)
+            && ($descriptor['media_type'] ?? null) === 'document'
+                ? $descriptor
+                : null;
+    }
+
     public function fileMediaPublicId(
         string $documentPublicId,
         string $siteKey = 'default',

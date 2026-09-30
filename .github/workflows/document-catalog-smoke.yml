@@ -1,0 +1,121 @@
+name: Проверка каталога документов
+
+on:
+  push:
+    branches:
+      - develop
+      - main
+    paths:
+      - 'modules/documents/**'
+      - 'modules/media/MediaUsageService.php'
+      - 'modules/media/MediaUsageCapability.php'
+      - 'themes/default/templates/admin/documents.php'
+      - 'themes/default/templates/documents/**'
+      - 'themes/default/theme.json'
+      - 'tools/document-catalog-smoke.php'
+      - '.github/workflows/document-catalog-smoke.yml'
+  pull_request:
+    branches:
+      - develop
+      - main
+    paths:
+      - 'modules/documents/**'
+      - 'modules/media/MediaUsageService.php'
+      - 'modules/media/MediaUsageCapability.php'
+      - 'themes/default/templates/admin/documents.php'
+      - 'themes/default/templates/documents/**'
+      - 'themes/default/theme.json'
+      - 'tools/document-catalog-smoke.php'
+      - '.github/workflows/document-catalog-smoke.yml'
+
+permissions:
+  contents: read
+
+jobs:
+  document-catalog:
+    runs-on: ubuntu-latest
+
+    services:
+      postgres:
+        image: postgres:16
+        env:
+          POSTGRES_DB: churchcms
+          POSTGRES_USER: churchcms
+          POSTGRES_PASSWORD: churchcms
+        ports:
+          - 5432:5432
+        options: >-
+          --health-cmd pg_isready
+          --health-interval 10s
+          --health-timeout 5s
+          --health-retries 5
+
+    steps:
+      - name: Получить исходный код
+        uses: actions/checkout@v4
+
+      - name: Подготовить PHP 8.3
+        uses: shivammathur/setup-php@v2
+        with:
+          php-version: '8.3'
+          extensions: pdo, pdo_pgsql, fileinfo
+          coverage: none
+
+      - name: Проверить PHP
+        run: |
+          set -euo pipefail
+          php -l modules/documents/DocumentOrganizationAccessService.php
+          php -l modules/documents/DocumentCatalogService.php
+          php -l modules/documents/DocumentsAdminController.php
+          php -l modules/documents/DocumentsPublicController.php
+          php -l modules/documents/DocumentsPublicApiController.php
+          php -l modules/documents/DocumentMediaService.php
+          php -l modules/documents/DocumentRepository.php
+          php -l modules/documents/DocumentService.php
+          php -l modules/documents/runtime.php
+          php -l modules/media/MediaUsageService.php
+          php -l modules/media/MediaUsageCapability.php
+          php -l themes/default/templates/admin/documents.php
+          php -l themes/default/templates/documents/index.php
+          php -l themes/default/templates/documents/show.php
+          php -l tools/document-catalog-smoke.php
+          php bin/migrate.php validate
+          php bin/theme-check.php
+
+      - name: Подготовить тестовую установку
+        run: |
+          set -euo pipefail
+          mkdir -p storage/cache storage/logs storage/sessions storage/rate-limits storage/uploads
+          MEDIA_STORAGE="${RUNNER_TEMP}/churchcms-document-catalog"
+          mkdir -p "${MEDIA_STORAGE}"
+
+          cat > config/local.php <<PHP
+          <?php
+
+          declare(strict_types=1);
+
+          return [
+              'installation' => ['completed' => true],
+              'api' => ['enabled' => true],
+              'app' => [
+                  'url' => 'https://example.test',
+              ],
+              'database' => [
+                  'driver' => 'pgsql',
+                  'host' => '127.0.0.1',
+                  'port' => 5432,
+                  'database' => 'churchcms',
+                  'username' => 'churchcms',
+                  'password' => 'churchcms',
+              ],
+              'media' => [
+                  'storage_path' => '${MEDIA_STORAGE}',
+                  'max_upload_bytes' => 10485760,
+              ],
+          ];
+          PHP
+
+          php bin/migrate.php
+
+      - name: Проверить scoped RBAC, PDF и public/API projection
+        run: php tools/document-catalog-smoke.php

@@ -78,6 +78,101 @@ final class MediaUsageCapability
      * @param list<string>|null $ownerPublicIds
      * @return list<array<string,mixed>>
      */
+    public function selectableAssets(
+        ?array $ownerPublicIds,
+        string $mediaType,
+        string $siteKey = 'default',
+    ): array {
+        $mediaType = trim($mediaType);
+        $result = [];
+
+        foreach (
+            MediaRepository::fromDatabase()->adminList(
+                $ownerPublicIds,
+                $siteKey,
+                500,
+            ) as $asset
+        ) {
+            if (
+                $asset->status === 'archived'
+                || $asset->mediaType !== $mediaType
+            ) {
+                continue;
+            }
+
+            $result[] = [
+                'public_id' => $asset->publicId,
+                'media_type' => $asset->mediaType,
+                'mime_type' => $asset->mimeType,
+                'bytes' => $asset->bytes,
+                'title' => $asset->title
+                    ?? $asset->originalName,
+                'visibility' => $asset->visibility,
+                'owner_organization_public_id' =>
+                    $asset->ownerOrganizationPublicId,
+            ];
+        }
+
+        return $result;
+    }
+
+    /**
+     * @return array<string,mixed>|null
+     */
+    public function publicAssetDescriptor(
+        string $mediaPublicId,
+        string $siteKey = 'default',
+    ): ?array {
+        $asset = MediaRepository::fromDatabase()
+            ->findByPublicId(
+                trim($mediaPublicId),
+                $siteKey,
+            );
+
+        if (
+            $asset === null
+            || $asset->status === 'archived'
+            || $asset->visibility !== 'public'
+        ) {
+            return null;
+        }
+
+        try {
+            $file = MediaPublicFileService::fromConfig()
+                ->resolve(
+                    $asset->publicId,
+                    $asset->sha256,
+                    'original',
+                    $siteKey,
+                );
+        } catch (\Throwable) {
+            return null;
+        }
+
+        if ($file === null) {
+            return null;
+        }
+
+        return [
+            'public_id' => $asset->publicId,
+            'media_type' => $asset->mediaType,
+            'mime_type' => $asset->mimeType,
+            'bytes' => $asset->bytes,
+            'sha256' => $asset->sha256,
+            'title' => $asset->title
+                ?? $asset->originalName,
+            'url' => MediaPublicFileService::url(
+                $asset->publicId,
+                $asset->sha256,
+                'original',
+            ),
+        ];
+    }
+
+    /**
+     * @param list<string>|null $ownerPublicIds
+     * @return list<array<string,mixed>>
+     */
     public function structuredSeoAssets(
         ?array $ownerPublicIds,
         string $siteKey = 'default',

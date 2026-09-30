@@ -117,6 +117,68 @@ final class DocumentService
         return $publicId;
     }
 
+    public function updateDetails(
+        string $documentPublicId,
+        string $title,
+        string $documentType,
+        ?string $documentNumber,
+        ?string $issuedOn,
+        string $summary,
+        string $siteKey = 'default',
+    ): void {
+        $siteKey = self::siteKey($siteKey);
+        $document = $this->documents->findByPublicId(
+            trim($documentPublicId),
+            $siteKey,
+        );
+
+        if (
+            $document === null
+            || $document->status === 'archived'
+        ) {
+            throw new InvalidArgumentException(
+                'Документ недоступен для редактирования.'
+            );
+        }
+
+        $statement = $this->pdo->prepare(
+            'UPDATE documents
+             SET title = :title,
+                 document_type = :document_type,
+                 document_number = :document_number,
+                 issued_on = :issued_on,
+                 summary = :summary,
+                 updated_at = :updated_at
+             WHERE public_id = :public_id
+               AND site_key = :site_key'
+        );
+        $statement->execute([
+            'title' => self::requiredText(
+                $title,
+                255,
+                'Название документа обязательно.',
+            ),
+            'document_type' => self::machineKey(
+                $documentType,
+                'Некорректный тип документа.',
+            ),
+            'document_number' => self::optionalText(
+                $documentNumber,
+                120,
+                'Номер документа слишком длинный.',
+            ),
+            'issued_on' => self::date($issuedOn),
+            'summary' => self::text(
+                $summary,
+                4000,
+                'Краткое описание документа слишком длинное.',
+            ),
+            'updated_at' => gmdate('Y-m-d H:i:s'),
+            'public_id' => $document->publicId,
+            'site_key' => $siteKey,
+        ]);
+    }
+
     public function assignOrganizationOwner(
         string $documentPublicId,
         string $organizationPublicId,
