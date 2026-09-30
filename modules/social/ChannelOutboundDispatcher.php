@@ -111,23 +111,6 @@ final class ChannelOutboundDispatcher
             );
         }
 
-        if (
-            !in_array(
-                ChannelCapability::PUBLISH_TEXT,
-                $adapter->capabilities(),
-                true,
-            )
-            && !in_array(
-                ChannelCapability::PUBLISH_LINK,
-                $adapter->capabilities(),
-                true,
-            )
-        ) {
-            throw new RuntimeException(
-                'Адаптер внешнего канала не поддерживает публикацию.'
-            );
-        }
-
         $publication = $this->publications->findById(
             $post->publicationId,
         );
@@ -142,16 +125,27 @@ final class ChannelOutboundDispatcher
             );
         }
 
+        $item = $this->outboundItem(
+            $publication,
+            $post,
+        );
+
+        if (!self::canPublish(
+            $adapter,
+            $item,
+        )) {
+            throw new RuntimeException(
+                'Адаптер внешнего канала не поддерживает доступный тип публикации.'
+            );
+        }
+
         $credentials = SecretVault::decrypt(
             $connection->tokenEncrypted,
         );
         $result = $adapter->publish(
             $connection,
             $credentials,
-            $this->outboundItem(
-                $publication,
-                $post,
-            ),
+            $item,
         );
 
         if (!$result->success) {
@@ -222,6 +216,51 @@ final class ChannelOutboundDispatcher
             canonicalUrl: $canonicalUrl,
             media: $media,
         );
+    }
+
+    private static function canPublish(
+        ChannelAdapter $adapter,
+        ChannelOutboundItem $item,
+    ): bool {
+        $capabilities = $adapter->capabilities();
+
+        if (
+            in_array(
+                ChannelCapability::PUBLISH_TEXT,
+                $capabilities,
+                true,
+            )
+            || in_array(
+                ChannelCapability::PUBLISH_LINK,
+                $capabilities,
+                true,
+            )
+        ) {
+            return true;
+        }
+
+        if (
+            !in_array(
+                ChannelCapability::PUBLISH_VIDEO,
+                $capabilities,
+                true,
+            )
+        ) {
+            return false;
+        }
+
+        foreach ($item->media as $media) {
+            if (
+                is_array($media)
+                && ($media['type'] ?? null) === 'video'
+                && is_string($media['public_id'] ?? null)
+                && trim((string) $media['public_id']) !== ''
+            ) {
+                return true;
+            }
+        }
+
+        return false;
     }
 
     private static function safeError(Throwable $error): string
