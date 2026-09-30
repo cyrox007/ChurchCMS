@@ -1,0 +1,100 @@
+name: Проверка Admin Shell галерей Media
+
+on:
+  push:
+    branches:
+      - develop
+      - main
+    paths:
+      - 'modules/media/MediaGalleryAdminController.php'
+      - 'modules/media/MediaGalleryRepository.php'
+      - 'modules/media/MediaGalleryService.php'
+      - 'modules/media/runtime.php'
+      - 'themes/default/templates/admin/media/galleries.php'
+      - 'tools/media-gallery-admin-smoke.php'
+      - '.github/workflows/media-gallery-admin-smoke.yml'
+  pull_request:
+    branches:
+      - develop
+      - main
+    paths:
+      - 'modules/media/MediaGalleryAdminController.php'
+      - 'modules/media/MediaGalleryRepository.php'
+      - 'modules/media/MediaGalleryService.php'
+      - 'modules/media/runtime.php'
+      - 'themes/default/templates/admin/media/galleries.php'
+      - 'tools/media-gallery-admin-smoke.php'
+      - '.github/workflows/media-gallery-admin-smoke.yml'
+
+permissions:
+  contents: read
+
+jobs:
+  media-gallery-admin:
+    runs-on: ubuntu-latest
+
+    services:
+      postgres:
+        image: postgres:16
+        env:
+          POSTGRES_DB: churchcms
+          POSTGRES_USER: churchcms
+          POSTGRES_PASSWORD: churchcms
+        ports:
+          - 5432:5432
+        options: >-
+          --health-cmd pg_isready
+          --health-interval 10s
+          --health-timeout 5s
+          --health-retries 5
+
+    steps:
+      - name: Получить исходный код
+        uses: actions/checkout@v4
+
+      - name: Подготовить PHP 8.3
+        uses: shivammathur/setup-php@v2
+        with:
+          php-version: '8.3'
+          extensions: pdo, pdo_pgsql
+          coverage: none
+
+      - name: Проверить PHP
+        run: |
+          set -euo pipefail
+          php -l modules/media/MediaGalleryAdminController.php
+          php -l modules/media/MediaGalleryRepository.php
+          php -l modules/media/MediaGalleryService.php
+          php -l modules/media/runtime.php
+          php -l themes/default/templates/admin/media/galleries.php
+          php -l tools/media-gallery-admin-smoke.php
+          php bin/migrate.php validate
+          php bin/theme-check.php
+
+      - name: Подготовить тестовую установку
+        run: |
+          set -euo pipefail
+          mkdir -p storage/cache storage/logs storage/sessions storage/rate-limits storage/uploads
+
+          cat > config/local.php <<'PHP'
+          <?php
+
+          declare(strict_types=1);
+
+          return [
+              'installation' => ['completed' => true],
+              'database' => [
+                  'driver' => 'pgsql',
+                  'host' => '127.0.0.1',
+                  'port' => 5432,
+                  'database' => 'churchcms',
+                  'username' => 'churchcms',
+                  'password' => 'churchcms',
+              ],
+          ];
+          PHP
+
+          php bin/migrate.php
+
+      - name: Проверить scoped список, маршруты и шаблон
+        run: php tools/media-gallery-admin-smoke.php
