@@ -42,6 +42,8 @@ final class MediaService
         string $siteKey = 'default',
         ?string $title = null,
         ?string $altText = null,
+        ?int $pixelWidth = null,
+        ?int $pixelHeight = null,
     ): string {
         $siteKey = self::siteKey($siteKey);
         $owner = $this->resolveOrganization(
@@ -76,6 +78,27 @@ final class MediaService
             );
         }
 
+        if (
+            ($pixelWidth === null) !== ($pixelHeight === null)
+            || ($pixelWidth !== null && $pixelWidth <= 0)
+            || ($pixelHeight !== null && $pixelHeight <= 0)
+            || ($pixelWidth !== null && $pixelWidth > 1000000)
+            || ($pixelHeight !== null && $pixelHeight > 1000000)
+        ) {
+            throw new InvalidArgumentException(
+                'Некорректные размеры изображения.'
+            );
+        }
+
+        if (
+            $mediaType !== 'image'
+            && ($pixelWidth !== null || $pixelHeight !== null)
+        ) {
+            throw new InvalidArgumentException(
+                'Размеры изображения допустимы только для Media типа image.'
+            );
+        }
+
         if (preg_match('/^[a-f0-9]{64}$/D', $sha256) !== 1) {
             throw new InvalidArgumentException(
                 'Некорректная SHA-256 сумма медиаматериала.'
@@ -97,6 +120,8 @@ final class MediaService
                 mime_type,
                 bytes,
                 sha256,
+                pixel_width,
+                pixel_height,
                 title,
                 alt_text,
                 created_at,
@@ -112,6 +137,8 @@ final class MediaService
                 :mime_type,
                 :bytes,
                 :sha256,
+                :pixel_width,
+                :pixel_height,
                 :title,
                 :alt_text,
                 :created_at,
@@ -129,6 +156,8 @@ final class MediaService
             'mime_type' => $mimeType,
             'bytes' => $bytes,
             'sha256' => $sha256,
+            'pixel_width' => $pixelWidth,
+            'pixel_height' => $pixelHeight,
             'title' => $title,
             'alt_text' => $altText,
             'created_at' => $now,
