@@ -461,7 +461,7 @@ $matched = array_values(array_filter(
 if (
     count($matched) !== 1
     || $matched[0]->remoteId !== '777:webhook-mid'
-    || $matched[0]->text !== 'MAX webhook post'
+    || $matched[0]->bodyText !== 'MAX webhook post'
 ) {
     fwrite(
         STDERR,
