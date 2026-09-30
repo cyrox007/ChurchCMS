@@ -241,23 +241,60 @@ final class MediaService
         string $siteKey = 'default',
     ): void {
         $siteKey = self::siteKey($siteKey);
-        $asset = $this->media->findByPublicId(
-            $mediaPublicId,
-            $siteKey,
-        );
+        $ownsTransaction = !$this->pdo->inTransaction();
 
-        if ($asset === null) {
-            throw new InvalidArgumentException(
-                'Медиаматериал не найден.'
-            );
+        if ($ownsTransaction) {
+            $this->pdo->beginTransaction();
         }
 
-        $this->transitionExternalState(
-            $asset,
-            'archived',
-            'private',
-            'archived',
-        );
+        try {
+            $asset = $this->media->findByPublicIdForUpdate(
+                $mediaPublicId,
+                $siteKey,
+            );
+
+            if ($asset === null) {
+                throw new InvalidArgumentException(
+                    'Медиаматериал не найден.'
+                );
+            }
+
+            $usage = new MediaUsageRepository(
+                $this->pdo,
+            );
+
+            if (
+                $usage->countForAsset(
+                    $asset->publicId,
+                    $siteKey,
+                ) > 0
+            ) {
+                throw new InvalidArgumentException(
+                    'Медиаматериал используется контентом. '
+                    . 'Сначала снимите все активные ссылки.'
+                );
+            }
+
+            $this->transitionExternalState(
+                $asset,
+                'archived',
+                'private',
+                'archived',
+            );
+
+            if ($ownsTransaction) {
+                $this->pdo->commit();
+            }
+        } catch (Throwable $error) {
+            if (
+                $ownsTransaction
+                && $this->pdo->inTransaction()
+            ) {
+                $this->pdo->rollBack();
+            }
+
+            throw $error;
+        }
     }
 
     private function transitionExternalState(
