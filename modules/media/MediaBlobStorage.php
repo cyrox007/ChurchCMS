@@ -101,6 +101,7 @@ final class MediaBlobStorage
         }
 
         $this->ensureDirectory($this->root);
+        $this->assertResolvedRoot();
 
         $temporary = tempnam(
             $this->root,
@@ -365,31 +366,69 @@ final class MediaBlobStorage
 
     private function assertSafeRoot(): void
     {
-        if (
-            $this->root === ''
-            || $this->root[0] !== DIRECTORY_SEPARATOR
-        ) {
+        if (!self::isAbsolutePath($this->root)) {
             throw new InvalidArgumentException(
                 'media.storage_path должен быть абсолютным путём.'
             );
         }
 
-        $root = self::normalizePath($this->root);
-        $application = self::normalizePath(
+        self::assertOutsideApplication(
+            self::normalizePath($this->root),
+            self::normalizePath($this->applicationRoot),
+        );
+    }
+
+    private function assertResolvedRoot(): void
+    {
+        $resolvedRoot = realpath($this->root);
+        $resolvedApplication = realpath(
             $this->applicationRoot,
         );
 
         if (
-            $root === $application
+            !is_string($resolvedRoot)
+            || !is_string($resolvedApplication)
+        ) {
+            throw new RuntimeException(
+                'Не удалось разрешить путь Media storage.'
+            );
+        }
+
+        self::assertOutsideApplication(
+            self::normalizePath($resolvedRoot),
+            self::normalizePath($resolvedApplication),
+        );
+    }
+
+    private static function assertOutsideApplication(
+        string $root,
+        string $application,
+    ): void {
+        $rootKey = self::pathKey($root);
+        $applicationKey = self::pathKey($application);
+
+        if (
+            $rootKey === $applicationKey
             || str_starts_with(
-                $root . DIRECTORY_SEPARATOR,
-                $application . DIRECTORY_SEPARATOR,
+                $rootKey . DIRECTORY_SEPARATOR,
+                $applicationKey . DIRECTORY_SEPARATOR,
             )
         ) {
             throw new InvalidArgumentException(
                 'Media storage должен находиться вне корня ChurchCMS.'
             );
         }
+    }
+
+    private static function isAbsolutePath(string $path): bool
+    {
+        $path = trim($path);
+
+        return str_starts_with($path, '/')
+            || preg_match(
+                '/^[A-Za-z]:[\\\\\/]/D',
+                $path,
+            ) === 1;
     }
 
     private static function normalizePath(string $path): string
@@ -399,6 +438,18 @@ final class MediaBlobStorage
             DIRECTORY_SEPARATOR,
             trim($path),
         );
+
+        $prefix = '';
+        if (
+            preg_match(
+                '/^[A-Za-z]:/D',
+                $path,
+                $matches,
+            ) === 1
+        ) {
+            $prefix = strtoupper($matches[0]);
+            $path = substr($path, 2);
+        }
 
         $segments = [];
         foreach (
@@ -417,7 +468,24 @@ final class MediaBlobStorage
             $segments[] = $segment;
         }
 
-        return DIRECTORY_SEPARATOR
-            . implode(DIRECTORY_SEPARATOR, $segments);
+        $body = implode(
+            DIRECTORY_SEPARATOR,
+            $segments,
+        );
+
+        if ($prefix !== '') {
+            return $prefix
+                . DIRECTORY_SEPARATOR
+                . $body;
+        }
+
+        return DIRECTORY_SEPARATOR . $body;
+    }
+
+    private static function pathKey(string $path): string
+    {
+        return DIRECTORY_SEPARATOR === '\\'
+            ? strtolower($path)
+            : $path;
     }
 }
