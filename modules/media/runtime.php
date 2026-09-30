@@ -41,6 +41,7 @@ foreach ([
     'MediaUsageReference.php',
     'MediaUsageRepository.php',
     'MediaUsageService.php',
+    'MediaStructuredSeoService.php',
     'MediaUsageCapability.php',
     'MediaOrganizationAccessService.php',
     'MediaApiResource.php',
