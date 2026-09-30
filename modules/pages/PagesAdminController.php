@@ -205,6 +205,91 @@ final class PagesAdminController
         }
     }
 
+    public function restoreRevision(
+        Request $request,
+        string $publicId,
+        string $revisionPublicId,
+    ): never {
+        AdminAuthorization::requirePermission(
+            $request,
+            'pages.edit',
+        );
+
+        $page = $this->requiredPage($publicId);
+        $this->requirePageSubtreeAccess(
+            $request,
+            $page,
+            'pages.edit',
+        );
+
+        try {
+            $revisions = PageRevisionService::fromDatabase();
+            $revision = $revisions->revision(
+                $page->publicId,
+                $revisionPublicId,
+                $page->siteKey,
+            );
+            $snapshot = $revision->snapshot;
+            $ownerPublicId = is_string(
+                $snapshot['owner_organization_public_id'] ?? null
+            )
+                ? trim((string) $snapshot['owner_organization_public_id'])
+                : '';
+            $parentPublicId = is_string(
+                $snapshot['parent_public_id'] ?? null
+            )
+                ? trim((string) $snapshot['parent_public_id'])
+                : '';
+
+            $userId = self::requiredUserId($request);
+            $access = PageOrganizationAccessService::fromDatabase();
+
+            if (
+                $ownerPublicId === ''
+                || $access->assignableOwner(
+                    $userId,
+                    'pages.edit',
+                    $ownerPublicId,
+                    $page->siteKey,
+                ) === null
+                || !$this->canUseParent(
+                    $access,
+                    $userId,
+                    'pages.edit',
+                    $parentPublicId,
+                    $page->siteKey,
+                )
+            ) {
+                Response::text('403 Forbidden', 403);
+            }
+
+            $revisions->restore(
+                $page->publicId,
+                $revision->publicId,
+                $page->siteKey,
+            );
+
+            $this->audit(
+                $request,
+                'page.revision_restored',
+                $page->publicId,
+            );
+
+            Response::redirectLocal(
+                '/admin/pages/'
+                . rawurlencode($page->publicId)
+                . '?saved=1'
+            );
+        } catch (InvalidArgumentException $error) {
+            $this->renderEditor(
+                $request,
+                $page,
+                $this->formFromPage($page),
+                $error->getMessage(),
+            );
+        }
+    }
+
     public function publish(Request $request, string $publicId): never
     {
         AdminAuthorization::requirePermission($request, 'pages.publish');
@@ -328,6 +413,17 @@ final class PagesAdminController
             'organizationUnits' => $owners,
             'parentPages' => $parentPages,
             'canPublish' => $canPublish,
+            'revisions' => $page !== null
+                && AdminAuthorization::can(
+                    $request,
+                    'pages.edit',
+                )
+                    ? PageRevisionService::fromDatabase()
+                        ->history(
+                            $page->publicId,
+                            $page->siteKey,
+                        )
+                    : [],
         ], 'pages');
     }
 
