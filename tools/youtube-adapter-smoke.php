@@ -81,15 +81,57 @@ final class YoutubeSmokeHttpClient implements ChannelHttpClient
                 );
             }
 
+            if (!isset($query['pageToken'])) {
+                return self::ok([
+                    'items' => [
+                        self::item(
+                            id: 'playlist-new-2',
+                            videoId: 'newvideo002',
+                            publishedAt: '2026-09-30T07:00:00Z',
+                            title: 'Новое видео 2',
+                            description: 'Описание 2',
+                            thumbnail: 'https://img.youtube.test/new2.jpg',
+                        ),
+                        [
+                            'id' => 'playlist-foreign',
+                            'snippet' => [
+                                'channelId' => 'UC9999999999999999999999',
+                                'title' => 'Чужой канал',
+                                'description' => '',
+                                'publishedAt' => '2026-09-30T08:00:00Z',
+                                'resourceId' => [
+                                    'kind' => 'youtube#video',
+                                    'videoId' => 'foreign001',
+                                ],
+                            ],
+                            'contentDetails' => [
+                                'videoId' => 'foreign001',
+                                'videoPublishedAt' => '2026-09-30T08:00:00Z',
+                            ],
+                            'status' => [
+                                'privacyStatus' => 'public',
+                            ],
+                        ],
+                    ],
+                    'nextPageToken' => 'page-2',
+                ]);
+            }
+
+            if (($query['pageToken'] ?? null) !== 'page-2') {
+                throw new \RuntimeException(
+                    'YouTube playlistItems.list получил неверный pageToken.'
+                );
+            }
+
             return self::ok([
                 'items' => [
                     self::item(
-                        id: 'playlist-new-2',
-                        videoId: 'newvideo002',
-                        publishedAt: '2026-09-30T07:00:00Z',
-                        title: 'Новое видео 2',
-                        description: 'Описание 2',
-                        thumbnail: 'https://img.youtube.test/new2.jpg',
+                        id: 'playlist-new-1',
+                        videoId: 'newvideo001',
+                        publishedAt: '2026-09-30T06:00:00Z',
+                        title: 'Новое видео 1',
+                        description: 'Описание 1',
+                        thumbnail: 'https://img.youtube.test/new1.jpg',
                     ),
                     self::item(
                         id: 'playlist-old',
@@ -99,34 +141,6 @@ final class YoutubeSmokeHttpClient implements ChannelHttpClient
                         description: 'Старое описание',
                         thumbnail: 'https://img.youtube.test/old.jpg',
                     ),
-                    self::item(
-                        id: 'playlist-new-1',
-                        videoId: 'newvideo001',
-                        publishedAt: '2026-09-30T06:00:00Z',
-                        title: 'Новое видео 1',
-                        description: 'Описание 1',
-                        thumbnail: 'https://img.youtube.test/new1.jpg',
-                    ),
-                    [
-                        'id' => 'playlist-foreign',
-                        'snippet' => [
-                            'channelId' => 'UC9999999999999999999999',
-                            'title' => 'Чужой канал',
-                            'description' => '',
-                            'publishedAt' => '2026-09-30T08:00:00Z',
-                            'resourceId' => [
-                                'kind' => 'youtube#video',
-                                'videoId' => 'foreign001',
-                            ],
-                        ],
-                        'contentDetails' => [
-                            'videoId' => 'foreign001',
-                            'videoPublishedAt' => '2026-09-30T08:00:00Z',
-                        ],
-                        'status' => [
-                            'privacyStatus' => 'public',
-                        ],
-                    ],
                 ],
             ]);
         }
