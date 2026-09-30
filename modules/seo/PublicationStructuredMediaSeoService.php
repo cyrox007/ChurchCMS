@@ -198,6 +198,7 @@ final class PublicationStructuredMediaSeoService
     public function enrichMeta(
         Publication $publication,
         array $baseMeta,
+        bool $preferStructuredImage = true,
     ): array {
         $form = $this->formForPublication($publication);
         $image = $this->descriptor(
@@ -277,10 +278,7 @@ final class PublicationStructuredMediaSeoService
         if ($image !== null) {
             $article['image'] = self::imageObject($image);
 
-            if (
-                trim((string) ($baseMeta['image'] ?? ''))
-                === ''
-            ) {
+            if ($preferStructuredImage) {
                 $baseMeta['image'] =
                     SeoRenderer::absoluteUrl(
                         (string) $image['url']
@@ -395,20 +393,29 @@ final class PublicationStructuredMediaSeoService
         if (
             $contentUrl === ''
             || $thumbnailUrl === ''
-            || $createdAt === ''
+            || (
+                $publication->publishedAt === null
+                && $createdAt === ''
+            )
         ) {
             return null;
         }
 
         try {
-            $uploadDate = (new \DateTimeImmutable(
-                $createdAt,
-                new \DateTimeZone('UTC'),
-            ))
-                ->setTimezone(
-                    new \DateTimeZone('UTC')
-                )
-                ->format(DATE_ATOM);
+            $uploadDate = $publication->publishedAt !== null
+                ? $publication->publishedAt
+                    ->setTimezone(
+                        new \DateTimeZone('UTC')
+                    )
+                    ->format(DATE_ATOM)
+                : (new \DateTimeImmutable(
+                    $createdAt,
+                    new \DateTimeZone('UTC'),
+                ))
+                    ->setTimezone(
+                        new \DateTimeZone('UTC')
+                    )
+                    ->format(DATE_ATOM);
         } catch (\Throwable) {
             return null;
         }
