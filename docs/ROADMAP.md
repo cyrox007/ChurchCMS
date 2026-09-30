@@ -31,11 +31,11 @@ Status: in progress.
 - [ ] Публикации (основной процесс, public/admin/API/синдикация, категории/теги и отложенная публикация реализованы; остаются ревизии и связь с Media).
 - [x] Pages/content tree (schema, domain, public API, organization-scoped Admin Shell and public canonical HTML implemented).
 - [ ] Navigation/menu.
-- [ ] Media library (foundation, organization owner, visibility, federation, безопасный upload/storage, MIME sniffing, SHA-256, Admin upload, технические размеры, derivatives, usage references, локальная public/API выдача image/document blob, gallery schema/domain foundation и Admin Shell галерей реализованы; связь Documents с Media-файлом также реализована; остаются public/API галерей и HTTP Range/resumable слой для audio/video).
+- [ ] Media library (foundation, organization owner, visibility, federation, безопасный upload/storage, MIME sniffing, SHA-256, Admin upload, технические размеры, derivatives, usage references, локальная public/API выдача image/document blob и полный gallery vertical slice реализованы; связь Documents с Media-файлом также реализована; остаётся HTTP Range/resumable слой для audio/video).
 - [ ] People/clergy (основа схемы, доменного слоя и организационных связей назначений реализована; Admin Shell, публичная часть и API остаются).
 - [ ] Worship schedule (schema/domain foundation с обязательным organization owner реализован; Admin Shell, public/API, повторяющиеся правила и праздничные шаблоны остаются).
 - [ ] Events (schema/domain foundation с обязательным organization owner реализован; Admin Shell, публикация, public/API, календарные представления и повторяющиеся правила остаются).
-- [ ] Galleries (schema/domain foundation, organization owner, ordered image slots, lifecycle и Admin Shell реализованы; остаётся public/API).
+- [x] Galleries (schema/domain foundation, organization owner, ordered image slots, lifecycle, Admin Shell и public/API реализованы).
 - [ ] Documents (foundation карточки и organization owner, явная visibility и полный federation-путь source → worker → remote projection/tombstone → агрегированная API-лента реализованы; связь с Media-файлом через usage reference реализована; Admin Shell, обычный public/API и версии файла остаются).
 - [ ] Search.
 - [x] SEO foundation: metadata, canonical, OG/social cards, robots, sitemap, sharing.
