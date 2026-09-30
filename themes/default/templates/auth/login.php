@@ -39,5 +39,11 @@
 
             <button class="button button--primary" type="submit">Войти</button>
         </form>
+
+        <p>
+            <a href="<?= $theme->e($theme->route('admin_password_forgot')) ?>">
+                Забыли пароль?
+            </a>
+        </p>
     </div>
 </section>
