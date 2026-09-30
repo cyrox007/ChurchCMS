@@ -216,13 +216,31 @@ Withdraw возвращает `draft/private`. Archive переводит кар
 `archived/private` и снимает её usage references, поэтому изображения после
 этого снова можно архивировать.
 
-Admin Shell предоставляет отдельный раздел «Галереи» под `media.manage`: создание черновика, редактирование карточки, scoped-выбор доступных изображений, числовой порядок, publish/withdraw/archive. Сервер повторно проверяет organization scope и каждого выбранного Media asset. Публичный gallery API остаётся отдельным следующим инкрементом.
+Admin Shell предоставляет отдельный раздел «Галереи» под `media.manage`: создание черновика, редактирование карточки, scoped-выбор доступных изображений, числовой порядок, publish/withdraw/archive. Сервер повторно проверяет organization scope и каждого выбранного Media asset. Рядом с каждым изображением показывается его текущая Media visibility.
+
+## Публичные галереи
+
+Публичный vertical slice использует:
+
+- `GET /galleries` — HTML-список;
+- `GET /galleries/{public_id}` — HTML-карточка;
+- `GET /api/v1/galleries` — публичный API-список;
+- `GET /api/v1/galleries/{public_id}` — публичный API detail.
+
+В projection попадают только галереи `published/public` и только их
+неархивные Media asset типа `image` с `visibility=public`. Private и
+federated изображения не раскрываются ни в JSON, ни в HTML.
+
+Для отображения используются уже проверенные hash-versioned Media URLs:
+сначала `medium`, затем original, затем `thumbnail` как fallback.
+Derivative и original дополнительно проходят существующую
+`MediaPublicFileService` проверку blob/storage. Галерея без единого public
+изображения не попадает в публичный список и detail.
 
 ## Следующие инкременты
 
 Остаются:
 
-- public/API галерей;
 - подключение derivatives к редакторам и публичным шаблонам;
 - HTTP Range/resumable pipeline для audio/video;
 - binary/resumable outbound YouTube/Rutube.
