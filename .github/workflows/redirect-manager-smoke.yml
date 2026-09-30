@@ -1,0 +1,100 @@
+name: Проверка redirect manager
+
+on:
+  push:
+    branches:
+      - develop
+      - main
+    paths:
+      - 'core/Router.php'
+      - 'modules/redirects/**'
+      - 'themes/default/templates/admin/redirects.php'
+      - 'tools/redirect-manager-smoke.php'
+      - '.github/workflows/redirect-manager-smoke.yml'
+  pull_request:
+    branches:
+      - develop
+      - main
+    paths:
+      - 'core/Router.php'
+      - 'modules/redirects/**'
+      - 'themes/default/templates/admin/redirects.php'
+      - 'tools/redirect-manager-smoke.php'
+      - '.github/workflows/redirect-manager-smoke.yml'
+
+permissions:
+  contents: read
+
+jobs:
+  redirect-manager:
+    runs-on: ubuntu-latest
+
+    services:
+      postgres:
+        image: postgres:16
+        env:
+          POSTGRES_DB: churchcms
+          POSTGRES_USER: churchcms
+          POSTGRES_PASSWORD: churchcms
+        ports:
+          - 5432:5432
+        options: >-
+          --health-cmd pg_isready
+          --health-interval 10s
+          --health-timeout 5s
+          --health-retries 5
+
+    steps:
+      - name: Получить исходный код
+        uses: actions/checkout@v4
+
+      - name: Подготовить PHP 8.3
+        uses: shivammathur/setup-php@v2
+        with:
+          php-version: '8.3'
+          extensions: pdo, pdo_pgsql
+          coverage: none
+
+      - name: Проверить PHP
+        run: |
+          set -euo pipefail
+          php -l core/Router.php
+          php -l modules/redirects/RedirectRule.php
+          php -l modules/redirects/RedirectRepository.php
+          php -l modules/redirects/RedirectService.php
+          php -l modules/redirects/RedirectRequestInterceptor.php
+          php -l modules/redirects/RedirectAdminController.php
+          php -l modules/redirects/runtime.php
+          php -l modules/redirects/migrations/20260930_190000_create_redirect_rules.php
+          php -l themes/default/templates/admin/redirects.php
+          php -l tools/redirect-manager-smoke.php
+          php bin/migrate.php validate
+          php bin/theme-check.php
+
+      - name: Подготовить тестовую установку
+        run: |
+          set -euo pipefail
+          mkdir -p storage/cache storage/logs storage/sessions storage/rate-limits storage/uploads
+
+          cat > config/local.php <<'PHP'
+          <?php
+
+          declare(strict_types=1);
+
+          return [
+              'installation' => ['completed' => true],
+              'database' => [
+                  'driver' => 'pgsql',
+                  'host' => '127.0.0.1',
+                  'port' => 5432,
+                  'database' => 'churchcms',
+                  'username' => 'churchcms',
+                  'password' => 'churchcms',
+              ],
+          ];
+          PHP
+
+          php bin/migrate.php
+
+      - name: Проверить безопасность и Admin Shell
+        run: php tools/redirect-manager-smoke.php
