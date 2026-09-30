@@ -4,25 +4,124 @@ declare(strict_types=1);
 
 namespace ChurchCMS\Modules\Seo;
 
+use ChurchCMS\Core\DatabaseManager;
 use ChurchCMS\Modules\Publications\Publication;
+use Throwable;
 
 final class SeoCapability
 {
     /** @return array<string,mixed> */
-    public function metaForPublication(Publication $publication): array
-    {
-        return PublicationSeoRepository::fromDatabase()->metaFor($publication);
+    public function metaForPublication(
+        Publication $publication,
+    ): array {
+        $meta = PublicationSeoRepository::fromDatabase()
+            ->metaFor($publication);
+
+        try {
+            return (new PublicationStructuredMediaSeoService())
+                ->enrichMeta(
+                    $publication,
+                    $meta,
+                );
+        } catch (Throwable $error) {
+            error_log(
+                'ChurchCMS structured Media SEO: '
+                . $error->getMessage()
+            );
+
+            return $meta;
+        }
     }
 
     /** @return array<string,mixed> */
-    public function formForPublication(Publication $publication): array
-    {
-        return PublicationSeoRepository::fromDatabase()->formFor($publication);
+    public function formForPublication(
+        Publication $publication,
+    ): array {
+        $form = PublicationSeoRepository::fromDatabase()
+            ->formFor($publication);
+
+        try {
+            return array_replace(
+                $form,
+                (new PublicationStructuredMediaSeoService())
+                    ->formForPublication($publication),
+            );
+        } catch (Throwable) {
+            return $form + [
+                'seo_image_media_id' => '',
+                'seo_video_media_id' => '',
+                'seo_video_thumbnail_media_id' => '',
+            ];
+        }
     }
 
-    /** @param array<string,mixed> $input */
-    public function savePublication(Publication $publication, array $input): void
-    {
-        PublicationSeoRepository::fromDatabase()->save($publication, $input);
+    /**
+     * @param list<string>|null $ownerPublicIds
+     * @return array{
+     *     images:list<array<string,mixed>>,
+     *     videos:list<array<string,mixed>>
+     * }
+     */
+    public function structuredMediaOptions(
+        ?array $ownerPublicIds,
+        string $siteKey = 'default',
+    ): array {
+        try {
+            return (new PublicationStructuredMediaSeoService())
+                ->options(
+                    $ownerPublicIds,
+                    $siteKey,
+                );
+        } catch (Throwable) {
+            return [
+                'images' => [],
+                'videos' => [],
+            ];
+        }
+    }
+
+    /**
+     * @param array<string,mixed> $input
+     * @param list<string>|null $ownerPublicIds
+     */
+    public function savePublication(
+        Publication $publication,
+        array $input,
+        ?array $ownerPublicIds = null,
+    ): void {
+        $pdo = DatabaseManager::getInstance()->connection();
+        $ownsTransaction = !$pdo->inTransaction();
+
+        if ($ownsTransaction) {
+            $pdo->beginTransaction();
+        }
+
+        try {
+            (new PublicationSeoRepository($pdo))
+                ->save(
+                    $publication,
+                    $input,
+                );
+
+            (new PublicationStructuredMediaSeoService())
+                ->save(
+                    $publication,
+                    $input,
+                    $ownerPublicIds,
+                );
+
+            if ($ownsTransaction) {
+                $pdo->commit();
+            }
+        } catch (Throwable $error) {
+            if (
+                $ownsTransaction
+                && $pdo->inTransaction()
+            ) {
+                $pdo->rollBack();
+            }
+
+            throw $error;
+        }
     }
 }
