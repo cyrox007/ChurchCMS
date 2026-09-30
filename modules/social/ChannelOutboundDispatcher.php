@@ -5,6 +5,7 @@ declare(strict_types=1);
 namespace ChurchCMS\Modules\Social;
 
 use ChurchCMS\Core\Config;
+use ChurchCMS\Core\ModuleRuntimeLoader;
 use ChurchCMS\Core\SecretVault;
 use ChurchCMS\Modules\Publications\Publication;
 use ChurchCMS\Modules\Publications\PublicationRepository;
@@ -190,12 +191,36 @@ final class ChannelOutboundDispatcher
             $text = $publication->title;
         }
 
+        $media = [];
+        $mediaCapability = ModuleRuntimeLoader::capability(
+            'media',
+            'media.resumable-upload',
+        );
+
+        if (
+            $mediaCapability !== null
+            && method_exists(
+                $mediaCapability,
+                'publicationVideo',
+            )
+        ) {
+            $video = $mediaCapability->publicationVideo(
+                $publication->publicId,
+                $publication->siteKey,
+            );
+
+            if (is_array($video)) {
+                $media[] = $video;
+            }
+        }
+
         return new ChannelOutboundItem(
             sourceId: $publication->publicId,
             kind: $publication->type->value,
             title: $publication->title,
             text: $text,
             canonicalUrl: $canonicalUrl,
+            media: $media,
         );
     }
 
