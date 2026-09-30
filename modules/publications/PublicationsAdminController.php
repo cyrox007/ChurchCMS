@@ -89,14 +89,14 @@ final class PublicationsAdminController
             Response::text('403 Forbidden', 403);
         }
 
-        $this->validateSeoMedia(
-            $request,
-            $form,
-            'publications.create',
-            'default',
-        );
-
         try {
+            $this->validateSeoMedia(
+                $request,
+                $form,
+                'publications.create',
+                'default',
+            );
+
             $repository = PublicationRepository::fromDatabase();
             $publicId = PublicationService::fromDatabase()->createDraft(
                 title: $form['title'],
@@ -204,14 +204,14 @@ final class PublicationsAdminController
             Response::text('403 Forbidden', 403);
         }
 
-        $this->validateSeoMedia(
-            $request,
-            $form,
-            'publications.edit',
-            $publication->siteKey,
-        );
-
         try {
+            $this->validateSeoMedia(
+                $request,
+                $form,
+                'publications.edit',
+                $publication->siteKey,
+            );
+
             $externalSettings =
                 $this->validatedExternalSettings($request);
 
