@@ -194,8 +194,38 @@ HTTP byte ranges. Поддерживается один диапазон за з
 тела. `If-Range` с несовпавшим ETag переводит запрос на полный `200`.
 
 Это закрывает resumable download/streaming локальных public audio/video.
-Resumable binary **upload** во внешние видеоплатформы остаётся отдельной
-задачей outbound pipeline.
+
+## Resumable outbound video pipeline
+
+Для исходящей загрузки больших видео реализован отдельный внутренний pipeline,
+который не отдаёт адаптеру filesystem path и не читает весь файл в память.
+
+`MediaBinarySourceService`:
+
+- разрешает только активный локальный Media asset типа `video`;
+- повторно проверяет обычный файл внутри Media storage, размер и SHA-256;
+- читает данные с произвольного offset ограниченными чанками до 16 МиБ;
+- возвращает только `MediaBinaryChunk` с offset, next offset и total bytes.
+
+Состояние удалённой resumable-сессии хранится в
+`media_resumable_transfers`. Remote session URL/token шифруется через
+`SecretVault`; открытое значение в БД не сохраняется. Offset обновляется
+compare-and-set операцией, поэтому два worker не могут одновременно продвинуть
+один transfer. После ошибки transfer можно перезапустить новой удалённой
+сессией; завершённый transfer с тем же target key повторно не стартует.
+
+`media.resumable-upload` также разрешает выбранное для публикации
+`publication-seo/video` в безопасный descriptor
+`public_id + MIME + bytes + SHA-256`. `ChannelOutboundDispatcher` передаёт
+этот descriptor через `ChannelOutboundItem.media`; локальный путь туда не
+попадает.
+
+Dispatcher теперь допускает адаптер с единственной capability
+`publish.video`, но только когда outbound item действительно содержит
+валидный video descriptor.
+
+Provider-specific создание resumable upload session, отправка чанков и
+финализация остаются задачами самих YouTube/Rutube adapters.
 
 ## Usage references
 
