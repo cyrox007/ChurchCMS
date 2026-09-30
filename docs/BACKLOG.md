@@ -260,5 +260,5 @@ Priority is ordered within each section.
 - [ ] YouTube adapter;
 - [ ] Rutube adapter;
 - [ ] webhook receiver contract/signature validation;
-- [ ] loop prevention tests;
+- [x] loop prevention tests;
 - [x] retry/dead-letter UI.
