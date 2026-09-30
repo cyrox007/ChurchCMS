@@ -187,12 +187,37 @@ Audio/video намеренно пока не обслуживаются этим
 ссылок одного consumer выполняется атомарно и не позволяет сослаться на
 архивный или отсутствующий asset.
 
+## Галереи
+
+Gallery foundation хранит редакционную карточку отдельно от изображений:
+`media_galleries` содержит stable public ID, organization owner, статус,
+видимость, название и описание.
+
+Состав и порядок используют общий Media usage registry:
+
+```text
+consumer_type = gallery
+consumer_public_id = <public ID галереи>
+usage_key = item:000001, item:000002, ...
+```
+
+Разрешены только активные Media asset типа `image`; дубликаты запрещены.
+Порядок определяется номером slot. Одна галерея ограничена 200 изображениями.
+
+Новая галерея создаётся как `draft/private`. Публикация пустой галереи
+запрещена, а `public` видимость разрешается только опубликованной карточке.
+Withdraw возвращает `draft/private`. Archive переводит карточку в
+`archived/private` и снимает её usage references, поэтому изображения после
+этого снова можно архивировать.
+
+Foundation пока не добавляет операторский редактор и публичный gallery API:
+это отдельный следующий инкремент.
+
 ## Следующие инкременты
 
 Остаются:
 
-- galleries;
-- document catalog / связь Documents с Media;
-- обычный public/API для локальных blob и derivatives;
+- Admin/public UI галерей и управление порядком;
 - подключение derivatives к редакторам и публичным шаблонам;
-- binary/resumable pipeline для видео и outbound YouTube/Rutube.
+- HTTP Range/resumable pipeline для audio/video;
+- binary/resumable outbound YouTube/Rutube.
