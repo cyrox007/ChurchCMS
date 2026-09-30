@@ -13,6 +13,7 @@ use ChurchCMS\App\Services\AdminNavigationRegistry;
 use ChurchCMS\Core\ModuleRuntimeProvider;
 use ChurchCMS\Core\Router;
 use ChurchCMS\Modules\Media\MediaAdminController;
+use ChurchCMS\Modules\Media\MediaGalleryAdminController;
 use ChurchCMS\Modules\Media\MediaApiController;
 use ChurchCMS\Modules\Media\MediaPublicController;
 
@@ -46,6 +47,7 @@ foreach ([
     'MediaPublicFile.php',
     'MediaPublicFileService.php',
     'MediaPublicController.php',
+    'MediaGalleryAdminController.php',
     'MediaAdminController.php',
     'MediaApiController.php',
 ] as $file) {
@@ -79,6 +81,13 @@ return new class implements ModuleRuntimeProvider {
             permission: 'media.manage',
             priority: 35,
         );
+        AdminNavigationRegistry::register(
+            id: 'media-galleries',
+            label: 'Галереи',
+            route: 'admin_media_galleries',
+            permission: 'media.manage',
+            priority: 36,
+        );
 
         $router = Router::getInstance();
 
@@ -99,6 +108,69 @@ return new class implements ModuleRuntimeProvider {
                 CsrfMiddleware::class,
             ],
             'admin_media_upload',
+        );
+
+        $router->add(
+            'GET',
+            '/admin/media/galleries',
+            [MediaGalleryAdminController::class, 'index'],
+            [RequireAdminMiddleware::class],
+            'admin_media_galleries',
+        );
+
+        $router->add(
+            'POST',
+            '/admin/media/galleries',
+            [MediaGalleryAdminController::class, 'create'],
+            [
+                RequireAdminMiddleware::class,
+                CsrfMiddleware::class,
+            ],
+            'admin_media_galleries_create',
+        );
+
+        $router->add(
+            'POST',
+            '/admin/media/galleries/{publicId}',
+            [MediaGalleryAdminController::class, 'update'],
+            [
+                RequireAdminMiddleware::class,
+                CsrfMiddleware::class,
+            ],
+            'admin_media_galleries_update',
+        );
+
+        $router->add(
+            'POST',
+            '/admin/media/galleries/{publicId}/publish',
+            [MediaGalleryAdminController::class, 'publish'],
+            [
+                RequireAdminMiddleware::class,
+                CsrfMiddleware::class,
+            ],
+            'admin_media_galleries_publish',
+        );
+
+        $router->add(
+            'POST',
+            '/admin/media/galleries/{publicId}/withdraw',
+            [MediaGalleryAdminController::class, 'withdraw'],
+            [
+                RequireAdminMiddleware::class,
+                CsrfMiddleware::class,
+            ],
+            'admin_media_galleries_withdraw',
+        );
+
+        $router->add(
+            'POST',
+            '/admin/media/galleries/{publicId}/archive',
+            [MediaGalleryAdminController::class, 'archive'],
+            [
+                RequireAdminMiddleware::class,
+                CsrfMiddleware::class,
+            ],
+            'admin_media_galleries_archive',
         );
 
         $router->add(
