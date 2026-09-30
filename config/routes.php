@@ -4,6 +4,7 @@ declare(strict_types=1);
 
 use ChurchCMS\App\Controllers\HealthController;
 use ChurchCMS\App\Controllers\AdminAuthController;
+use ChurchCMS\App\Controllers\AdminPasswordResetController;
 use ChurchCMS\App\Controllers\AdminController;
 use ChurchCMS\App\Controllers\AdminAccountController;
 use ChurchCMS\App\Controllers\ThemeAssetController;
@@ -15,6 +16,7 @@ use ChurchCMS\App\Middlewares\ApiPublicRateLimitMiddleware;
 use ChurchCMS\App\Middlewares\PartnerApiMiddleware;
 use ChurchCMS\App\Middlewares\ApiPartnerRateLimitMiddleware;
 use ChurchCMS\App\Middlewares\AuthRateLimitMiddleware;
+use ChurchCMS\App\Middlewares\PasswordResetRateLimitMiddleware;
 use ChurchCMS\App\Middlewares\CsrfMiddleware;
 use ChurchCMS\App\Middlewares\RequireAdminMiddleware;
 use ChurchCMS\App\Middlewares\SecurityHeadersMiddleware;
@@ -42,6 +44,10 @@ $router->group('/api/v1')
 
 $router->group('/admin')
     ->add('GET', '/login', [AdminAuthController::class, 'login'], [], 'admin_login')
+    ->add('GET', '/password/forgot', [AdminPasswordResetController::class, 'forgot'], [], 'admin_password_forgot')
+    ->add('POST', '/password/forgot', [AdminPasswordResetController::class, 'request'], [PasswordResetRateLimitMiddleware::class, CsrfMiddleware::class], 'admin_password_forgot_submit')
+    ->add('GET', '/password/reset', [AdminPasswordResetController::class, 'reset'], [], 'admin_password_reset')
+    ->add('POST', '/password/reset', [AdminPasswordResetController::class, 'consume'], [PasswordResetRateLimitMiddleware::class, CsrfMiddleware::class], 'admin_password_reset_submit')
     ->add('POST', '/login', [AdminAuthController::class, 'authenticate'], [AuthRateLimitMiddleware::class, CsrfMiddleware::class], 'admin_login_submit')
     ->add('POST', '/logout', [AdminAuthController::class, 'logout'], [RequireAdminMiddleware::class, CsrfMiddleware::class], 'admin_logout')
     ->add('GET', '', [AdminController::class, 'dashboard'], [RequireAdminMiddleware::class], 'admin_dashboard')
