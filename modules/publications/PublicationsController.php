@@ -69,19 +69,33 @@ final class PublicationsController
             ->forPublication($publication->id);
 
         $commentsAvailable = false;
+        $commentsOpen = false;
         $comments = [];
 
-        if ($publication->commentsEnabled) {
-            $capability = ModuleRuntimeLoader::capability('comments', 'comments.publication');
-            if (
-                $capability !== null
-                && method_exists($capability, 'enabled')
-                && method_exists($capability, 'approvedForPublication')
-                && $capability->enabled() === true
-            ) {
-                $commentsAvailable = true;
-                $comments = $capability->approvedForPublication($publication->id);
-            }
+        $capability = ModuleRuntimeLoader::capability(
+            'comments',
+            'comments.publication',
+        );
+
+        if (
+            $capability !== null
+            && method_exists(
+                $capability,
+                'discussionForPublication',
+            )
+        ) {
+            $discussion = $capability->discussionForPublication(
+                $publication,
+            );
+            $commentsAvailable =
+                ($discussion['available'] ?? false) === true;
+            $commentsOpen =
+                ($discussion['open'] ?? false) === true;
+            $comments = is_array(
+                $discussion['comments'] ?? null,
+            )
+                ? $discussion['comments']
+                : [];
         }
 
         $commentState = trim((string) $request->get('comment', ''));
@@ -130,6 +144,7 @@ final class PublicationsController
             'categories' => $taxonomy['categories'],
             'tags' => $taxonomy['tags'],
             'commentsAvailable' => $commentsAvailable,
+            'commentsOpen' => $commentsOpen,
             'comments' => $comments,
             'commentFlash' => $commentFlash,
             'commentsMaxLength' => (int) Config::get('comments.max_length', 4000),
