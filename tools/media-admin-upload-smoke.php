@@ -9,7 +9,6 @@ use ChurchCMS\Modules\Media\MediaOrganizationAccessService;
 use ChurchCMS\Modules\Media\MediaRepository;
 use ChurchCMS\Modules\Media\MediaService;
 use ChurchCMS\Modules\Organizations\OrganizationRepository;
-use PDO;
 
 require dirname(__DIR__) . '/core.php';
 
@@ -205,7 +204,7 @@ foreach ([
     'enctype="multipart/form-data"',
     'name="media_file"',
     'name="owner_organization_public_id"',
-    'dangerous.php',
+    'Multipart smoke',
 ] as $expected) {
     if (!str_contains($html, $expected)) {
         fwrite(
