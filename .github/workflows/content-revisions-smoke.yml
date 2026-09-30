@@ -1,0 +1,124 @@
+name: Проверка content revisions
+
+on:
+  push:
+    branches:
+      - develop
+      - main
+    paths:
+      - 'database/migrations/20260930_130000_create_content_revisions.php'
+      - 'core/ContentRevision.php'
+      - 'core/ContentRevisionRepository.php'
+      - 'modules/pages/PageRevisionService.php'
+      - 'modules/pages/PageService.php'
+      - 'modules/pages/PagesAdminController.php'
+      - 'modules/pages/runtime.php'
+      - 'modules/publications/PublicationRevisionService.php'
+      - 'modules/publications/PublicationService.php'
+      - 'modules/publications/PublicationsAdminController.php'
+      - 'modules/publications/runtime.php'
+      - 'themes/default/templates/admin/pages/editor.php'
+      - 'themes/default/templates/admin/publications/editor.php'
+      - 'tools/content-revisions-smoke.php'
+      - '.github/workflows/content-revisions-smoke.yml'
+  pull_request:
+    branches:
+      - develop
+      - main
+    paths:
+      - 'database/migrations/20260930_130000_create_content_revisions.php'
+      - 'core/ContentRevision.php'
+      - 'core/ContentRevisionRepository.php'
+      - 'modules/pages/PageRevisionService.php'
+      - 'modules/pages/PageService.php'
+      - 'modules/pages/PagesAdminController.php'
+      - 'modules/pages/runtime.php'
+      - 'modules/publications/PublicationRevisionService.php'
+      - 'modules/publications/PublicationService.php'
+      - 'modules/publications/PublicationsAdminController.php'
+      - 'modules/publications/runtime.php'
+      - 'themes/default/templates/admin/pages/editor.php'
+      - 'themes/default/templates/admin/publications/editor.php'
+      - 'tools/content-revisions-smoke.php'
+      - '.github/workflows/content-revisions-smoke.yml'
+
+permissions:
+  contents: read
+
+jobs:
+  content-revisions:
+    runs-on: ubuntu-latest
+
+    services:
+      postgres:
+        image: postgres:16
+        env:
+          POSTGRES_DB: churchcms
+          POSTGRES_USER: churchcms
+          POSTGRES_PASSWORD: churchcms
+        ports:
+          - 5432:5432
+        options: >-
+          --health-cmd pg_isready
+          --health-interval 10s
+          --health-timeout 5s
+          --health-retries 5
+
+    steps:
+      - name: Получить исходный код
+        uses: actions/checkout@v4
+
+      - name: Подготовить PHP 8.3
+        uses: shivammathur/setup-php@v2
+        with:
+          php-version: '8.3'
+          extensions: pdo, pdo_pgsql, dom
+          coverage: none
+
+      - name: Проверить PHP
+        run: |
+          set -euo pipefail
+          php -l database/migrations/20260930_130000_create_content_revisions.php
+          php -l core/ContentRevision.php
+          php -l core/ContentRevisionRepository.php
+          php -l modules/pages/PageRevisionService.php
+          php -l modules/pages/PageService.php
+          php -l modules/pages/PagesAdminController.php
+          php -l modules/pages/runtime.php
+          php -l modules/publications/PublicationRevisionService.php
+          php -l modules/publications/PublicationService.php
+          php -l modules/publications/PublicationsAdminController.php
+          php -l modules/publications/runtime.php
+          php -l themes/default/templates/admin/pages/editor.php
+          php -l themes/default/templates/admin/publications/editor.php
+          php -l tools/content-revisions-smoke.php
+          php bin/migrate.php validate
+          php bin/theme-check.php
+
+      - name: Подготовить тестовую установку
+        run: |
+          set -euo pipefail
+          mkdir -p storage/cache storage/logs storage/sessions storage/rate-limits storage/uploads
+
+          cat > config/local.php <<'PHP'
+          <?php
+
+          declare(strict_types=1);
+
+          return [
+              'installation' => ['completed' => true],
+              'database' => [
+                  'driver' => 'pgsql',
+                  'host' => '127.0.0.1',
+                  'port' => 5432,
+                  'database' => 'churchcms',
+                  'username' => 'churchcms',
+                  'password' => 'churchcms',
+              ],
+          ];
+          PHP
+
+          php bin/migrate.php
+
+      - name: Проверить историю и восстановление Pages/Publications
+        run: php tools/content-revisions-smoke.php
