@@ -215,11 +215,13 @@ final class MigrationRunner
 
                 $rollbackErrors = [];
 
-                try {
-                    $migration->down($pdo, $driver);
-                } catch (Throwable $rollbackError) {
-                    $rollbackErrors[] =
-                        "{$id}: " . $rollbackError->getMessage();
+                if (!$transactional) {
+                    try {
+                        $migration->down($pdo, $driver);
+                    } catch (Throwable $rollbackError) {
+                        $rollbackErrors[] =
+                            "{$id}: " . $rollbackError->getMessage();
+                    }
                 }
 
                 if ($executed !== []) {
