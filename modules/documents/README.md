@@ -70,20 +70,32 @@ tombstone, чтобы новый принимающий узел не приме
 
 ## Файл документа
 
-Этот foundation намеренно **не хранит filesystem path и не считает файл
-загруженным**.
+Файл документа связан с Media через usage slot:
 
-Файловое вложение будет отдельной связью с Media после реализации безопасного
-upload/storage pipeline. Это позволяет не смешивать карточку документа,
-редакционный lifecycle и небезопасное прямое управление путями к файлам.
+```text
+consumer_type = document
+consumer_public_id = <public ID документа>
+usage_key = file
+```
+
+Карточка Documents по-прежнему не хранит filesystem path и не управляет blob
+напрямую. `DocumentMediaService` разрешает прикрепить только активный Media
+asset типа `document` в том же `site_key`.
+
+Фактический файл проходит стандартный `MediaUploadService` и
+`MediaBlobStorage`: MIME sniffing по содержимому, SHA-256 и безопасное
+content-addressed storage вне web-root.
+
+Активная usage reference защищает файл от архивации. При detach ссылка
+удаляется, после чего Media asset снова можно архивировать. Попытка заменить
+файл изображением или архивным asset отклоняется до изменения существующей
+ссылки.
 
 ## Следующие инкременты
 
 Остаются:
 
-- связь Document → Media asset;
-- безопасная загрузка через Media;
-- Admin Shell;
-- обычный public/API для локального документа;
+- Admin Shell для карточек Documents и выбора загруженного Media-файла;
+- обычный public/API локального документа и безопасная выдача файла;
 - категории/рубрики документов;
 - версии/замены файла.
