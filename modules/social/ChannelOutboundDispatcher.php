@@ -128,6 +128,11 @@ final class ChannelOutboundDispatcher
         $item = $this->outboundItem(
             $publication,
             $post,
+            in_array(
+                ChannelCapability::PUBLISH_VIDEO,
+                $adapter->capabilities(),
+                true,
+            ),
         );
 
         if (!self::canPublish(
@@ -165,6 +170,7 @@ final class ChannelOutboundDispatcher
     private function outboundItem(
         Publication $publication,
         SocialPost $post,
+        bool $includeVideo = false,
     ): ChannelOutboundItem {
         $baseUrl = rtrim(
             (string) Config::get(
@@ -186,25 +192,28 @@ final class ChannelOutboundDispatcher
         }
 
         $media = [];
-        $mediaCapability = ModuleRuntimeLoader::capability(
-            'media',
-            'media.resumable-upload',
-        );
 
-        if (
-            $mediaCapability !== null
-            && method_exists(
-                $mediaCapability,
-                'publicationVideo',
-            )
-        ) {
-            $video = $mediaCapability->publicationVideo(
-                $publication->publicId,
-                $publication->siteKey,
+        if ($includeVideo) {
+            $mediaCapability = ModuleRuntimeLoader::capability(
+                'media',
+                'media.resumable-upload',
             );
 
-            if (is_array($video)) {
-                $media[] = $video;
+            if (
+                $mediaCapability !== null
+                && method_exists(
+                    $mediaCapability,
+                    'publicationVideo',
+                )
+            ) {
+                $video = $mediaCapability->publicationVideo(
+                    $publication->publicId,
+                    $publication->siteKey,
+                );
+
+                if (is_array($video)) {
+                    $media[] = $video;
+                }
             }
         }
 
