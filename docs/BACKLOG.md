@@ -141,7 +141,7 @@ Priority is ordered within each section.
   - [x] public/admin/API vertical slice;
 - [x] publication categories/tags with site-scoped normalized storage, editor fields, public/API/syndication projections and PostgreSQL/MySQL smoke coverage;
 - [x] menus: primary navigation с ordered Page/system-route/HTTPS items, Admin Shell и глобальным theme provider;
-- content revisions;
+- [x] content revisions: общая история Pages/Publications, Admin restore с RBAC и audit;
 - [x] worker/cron отложенной публикации;
 - [x] canonical URL/SEO metadata foundation;
 - [x] Open Graph and Twitter/X social metadata;
