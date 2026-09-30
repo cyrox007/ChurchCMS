@@ -255,7 +255,7 @@ Priority is ordered within each section.
 - [x] per-publication external channel selector;
 - [x] per-channel custom post text;
 - [x] Telegram adapter;
-- [ ] VK adapter;
+- [x] VK adapter;
 - [ ] MAX adapter;
 - [ ] YouTube adapter;
 - [ ] Rutube adapter;
