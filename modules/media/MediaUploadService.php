@@ -68,8 +68,6 @@ final class MediaUploadService
             siteKey: $siteKey,
             title: $title,
             altText: $altText,
-            pixelWidth: $image?->width,
-            pixelHeight: $image?->height,
         );
     }
 
@@ -103,6 +101,8 @@ final class MediaUploadService
             siteKey: $siteKey,
             title: $title,
             altText: $altText,
+            pixelWidth: $image?->width,
+            pixelHeight: $image?->height,
         );
     }
 
