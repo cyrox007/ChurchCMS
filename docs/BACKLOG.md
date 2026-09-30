@@ -163,11 +163,12 @@ Priority is ordered within each section.
 - [x] usage references: атомарный реестр `asset → consumer/type/slot`, capability для модулей и защита от архивации используемого asset;
 - [x] derivatives;
 - [x] публичная выдача локальных image/document blob и detail API с hash-versioned URL;
-- [ ] HTTP Range/resumable слой для audio/video;
-- [ ] galleries;
+- [x] HTTP Range/streaming для public audio/video;
+- [ ] resumable binary upload pipeline для outbound YouTube/Rutube;
+- [x] galleries;
   - [x] schema/domain foundation + ordered image slots через Media usage references + draft/publish/public lifecycle;
   - [x] Admin Shell и управление порядком оператором;
-  - [ ] public/API;
+  - [x] public/API с фильтрацией только public Media и hash-versioned image URLs;
 - document catalog.
 
 ## P2 — Parish/Cathedral
