@@ -32,7 +32,9 @@ foreach ([
     'ChannelWebhookSignature.php',
     'ChannelWebhookException.php',
     'ChannelAdapterRegistry.php',
+    'ChannelHttpClient.php',
     'NativeHttpClient.php',
+    'TelegramChannelAdapter.php',
     'SocialConnectionRepository.php',
     'SocialConnectionService.php',
     'SocialPostRepository.php',
@@ -75,9 +77,11 @@ return new class implements ModuleRuntimeProvider {
     {
         $this->capability = new ExternalChannelsCapability();
 
-        // Конкретные провайдеры регистрируют адаптеры здесь или из другого модуля.
-        // Хранилище остаётся независимым от провайдера, поэтому новые сети
-        // и видеохостинги не требуют переработки ядра или схемы БД.
+        // Встроенные и сторонние провайдеры используют общий реестр.
+        // Хранилище остаётся независимым от конкретной платформы.
+        ChannelAdapterRegistry::register(
+            new TelegramChannelAdapter(),
+        );
 
         AdminNavigationRegistry::register(
             id: 'external-channels',
