@@ -30,6 +30,7 @@ foreach ([
     'ChannelAdapter.php',
     'ChannelConnectionTestResult.php',
     'ChannelConnectionTester.php',
+    'ChannelConnectionActivator.php',
     'ChannelWebhookRequest.php',
     'ChannelWebhookResult.php',
     'ChannelWebhookAdapter.php',
