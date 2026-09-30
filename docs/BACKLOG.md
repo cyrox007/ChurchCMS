@@ -261,4 +261,4 @@ Priority is ordered within each section.
 - [ ] Rutube adapter;
 - [ ] webhook receiver contract/signature validation;
 - [x] loop prevention tests;
-- [ ] retry/dead-letter UI.
+- [x] retry/dead-letter UI.
