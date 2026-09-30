@@ -14,6 +14,7 @@ use ChurchCMS\Core\ModuleRuntimeProvider;
 use ChurchCMS\Core\Router;
 use ChurchCMS\Modules\Media\MediaAdminController;
 use ChurchCMS\Modules\Media\MediaApiController;
+use ChurchCMS\Modules\Media\MediaPublicController;
 
 $moduleRoot = __DIR__;
 foreach ([
@@ -38,6 +39,9 @@ foreach ([
     'MediaPartnerTombstoneApiResource.php',
     'MediaService.php',
     'MediaUploadService.php',
+    'MediaPublicFile.php',
+    'MediaPublicFileService.php',
+    'MediaPublicController.php',
     'MediaAdminController.php',
     'MediaApiController.php',
 ] as $file) {
@@ -89,6 +93,34 @@ return new class implements ModuleRuntimeProvider {
                 CsrfMiddleware::class,
             ],
             'admin_media_upload',
+        );
+
+        $router->add(
+            'GET',
+            '/media/{publicId}/{sha256}/{variant}',
+            [MediaPublicController::class, 'file'],
+            [],
+            'public_media_file',
+        );
+
+        $router->add(
+            'HEAD',
+            '/media/{publicId}/{sha256}/{variant}',
+            [MediaPublicController::class, 'file'],
+            [],
+            'public_media_file_head',
+        );
+
+        $router->add(
+            'GET',
+            '/api/v1/media/{publicId}',
+            [MediaApiController::class, 'show'],
+            [
+                ApiEnabledMiddleware::class,
+                ApiCorsMiddleware::class,
+                ApiPublicRateLimitMiddleware::class,
+            ],
+            'api_v1_media_show',
         );
 
         $router->add(

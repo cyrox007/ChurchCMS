@@ -16,6 +16,9 @@ use PDO;
 
 final class FederatedMediaFeedService
 {
+    private ?MediaBlobStorage $storage = null;
+    private bool $storageUnavailable = false;
+
     public function __construct(private readonly PDO $pdo)
     {
     }
@@ -121,6 +124,10 @@ final class FederatedMediaFeedService
     /** @return array<string,mixed> */
     private function localItem(MediaAsset $asset): array
     {
+        $blobAvailable = $this->localBlobAvailable(
+            $asset,
+        );
+
         return [
             'id' => $asset->publicId,
             'type' => 'media',
@@ -132,9 +139,12 @@ final class FederatedMediaFeedService
             'pixel_height' => $asset->pixelHeight,
             'title' => $asset->title,
             'alt_text' => $asset->altText,
-            'blob_available' => false,
+            'blob_available' => $blobAvailable,
             'updated_at' => self::timestamp($asset->updatedAt),
-            'url' => null,
+            'url' => $blobAvailable
+                ? '/api/v1/media/'
+                    . rawurlencode($asset->publicId)
+                : null,
             'source' => [
                 'kind' => 'local',
                 'instance_id' => self::optionalString(
@@ -156,6 +166,43 @@ final class FederatedMediaFeedService
                 'canonical_url' => null,
             ],
         ];
+    }
+
+    private function localBlobAvailable(
+        MediaAsset $asset,
+    ): bool {
+        if (
+            !in_array(
+                $asset->mediaType,
+                ['image', 'document'],
+                true,
+            )
+            || $this->storageUnavailable
+        ) {
+            return false;
+        }
+
+        if ($this->storage === null) {
+            try {
+                $this->storage =
+                    MediaBlobStorage::fromConfig();
+            } catch (\Throwable) {
+                $this->storageUnavailable = true;
+
+                return false;
+            }
+        }
+
+        try {
+            return $this->storage->readablePath(
+                $asset->sha256,
+                $asset->bytes,
+            ) !== null;
+        } catch (\Throwable) {
+            $this->storageUnavailable = true;
+
+            return false;
+        }
     }
 
     /** @return array<string,mixed>|null */

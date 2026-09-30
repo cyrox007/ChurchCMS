@@ -13,6 +13,121 @@ use Exception;
 
 final class MediaApiController
 {
+    public function show(
+        Request $request,
+        string $publicId,
+    ): never {
+        $asset = MediaRepository::fromDatabase()
+            ->findByPublicId(
+                trim($publicId),
+                'default',
+            );
+
+        if (
+            $asset === null
+            || $asset->status === 'archived'
+            || $asset->visibility !== 'public'
+        ) {
+            ApiResponse::error(
+                'media_not_found',
+                'Медиаматериал не найден.',
+                404,
+            );
+        }
+
+        $blobUrl = null;
+        $derivatives = [];
+
+        try {
+            $storage = MediaBlobStorage::fromConfig();
+
+            if (
+                in_array(
+                    $asset->mediaType,
+                    ['image', 'document'],
+                    true,
+                )
+                && $storage->readablePath(
+                    $asset->sha256,
+                    $asset->bytes,
+                ) !== null
+            ) {
+                $blobUrl = MediaPublicFileService::url(
+                    $asset->publicId,
+                    $asset->sha256,
+                    'original',
+                );
+            }
+
+            if ($asset->mediaType === 'image') {
+                foreach (
+                    MediaDerivativeRepository::fromDatabase()
+                        ->forAsset($asset->publicId)
+                    as $derivative
+                ) {
+                    if (
+                        $storage->readablePath(
+                            $derivative->sha256,
+                            $derivative->bytes,
+                        ) === null
+                    ) {
+                        continue;
+                    }
+
+                    $derivatives[] = [
+                        'variant' => $derivative->variant,
+                        'mime_type' => $derivative->mimeType,
+                        'bytes' => $derivative->bytes,
+                        'sha256' => $derivative->sha256,
+                        'pixel_width' =>
+                            $derivative->pixelWidth,
+                        'pixel_height' =>
+                            $derivative->pixelHeight,
+                        'url' => MediaPublicFileService::url(
+                            $asset->publicId,
+                            $derivative->sha256,
+                            $derivative->variant,
+                        ),
+                    ];
+                }
+            }
+        } catch (\Throwable $error) {
+            error_log(
+                'ChurchCMS public Media metadata: '
+                . $error->getMessage()
+            );
+        }
+
+        ApiResponse::success(
+            [
+                'id' => $asset->publicId,
+                'type' => 'media',
+                'media_type' => $asset->mediaType,
+                'mime_type' => $asset->mimeType,
+                'bytes' => $asset->bytes,
+                'sha256' => $asset->sha256,
+                'pixel_width' => $asset->pixelWidth,
+                'pixel_height' => $asset->pixelHeight,
+                'title' => $asset->title,
+                'alt_text' => $asset->altText,
+                'organization_owner_id' =>
+                    $asset->ownerOrganizationPublicId,
+                'blob_available' => $blobUrl !== null,
+                'blob_url' => $blobUrl,
+                'derivatives' => $derivatives,
+                'updated_at' => (new DateTimeImmutable(
+                    $asset->updatedAt,
+                    new DateTimeZone('UTC'),
+                ))
+                    ->setTimezone(
+                        new DateTimeZone('UTC')
+                    )
+                    ->format(DATE_ATOM),
+            ],
+            cacheSeconds: 60,
+        );
+    }
+
     public function aggregated(Request $request): never
     {
         $limit = max(
@@ -35,7 +150,8 @@ final class MediaApiController
                     'limit' => $limit,
                     'local' => count($items) - $remote,
                     'remote' => $remote,
-                    'blob_available' => false,
+                    'local_blob_urls' => true,
+                    'remote_blob_available' => false,
                 ],
             ],
             cacheSeconds: 60,

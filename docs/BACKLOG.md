@@ -161,6 +161,8 @@ Priority is ordered within each section.
 - [x] image metadata: безопасные `pixel_width/pixel_height` из проверенного blob без сохранения EXIF/GPS;
 - [x] usage references: атомарный реестр `asset → consumer/type/slot`, capability для модулей и защита от архивации используемого asset;
 - [x] derivatives;
+- [x] публичная выдача локальных image/document blob и detail API с hash-versioned URL;
+- [ ] HTTP Range/resumable слой для audio/video;
 - galleries;
 - document catalog.
 

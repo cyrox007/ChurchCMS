@@ -49,6 +49,110 @@ final class Response
         exit;
     }
 
+    public static function notModified(
+        string $etag,
+        bool $immutable = false,
+    ): never {
+        self::assertEtag($etag);
+
+        http_response_code(304);
+        header('ETag: ' . $etag);
+        header(
+            'Cache-Control: public, max-age='
+            . ($immutable ? '31536000, immutable' : '300')
+        );
+        header('X-Content-Type-Options: nosniff');
+        exit;
+    }
+
+    public static function file(
+        string $path,
+        string $contentType,
+        int $bytes,
+        string $etag,
+        bool $sendBody = true,
+        bool $immutable = false,
+    ): never {
+        self::assertEtag($etag);
+
+        if (
+            $bytes < 0
+            || $contentType === ''
+            || str_contains($contentType, "\r")
+            || str_contains($contentType, "\n")
+            || !is_file($path)
+            || is_link($path)
+            || !is_readable($path)
+        ) {
+            throw new InvalidArgumentException(
+                'Invalid file response.'
+            );
+        }
+
+        $actualBytes = filesize($path);
+        if (
+            !is_int($actualBytes)
+            || $actualBytes !== $bytes
+        ) {
+            throw new InvalidArgumentException(
+                'File response size mismatch.'
+            );
+        }
+
+        http_response_code(200);
+        header('Content-Type: ' . $contentType);
+        header('Content-Length: ' . $bytes);
+        header('ETag: ' . $etag);
+        header(
+            'Cache-Control: public, max-age='
+            . ($immutable ? '31536000, immutable' : '300')
+        );
+        header('X-Content-Type-Options: nosniff');
+        header('Content-Disposition: inline');
+
+        if ($sendBody) {
+            $handle = fopen($path, 'rb');
+            if ($handle === false) {
+                throw new InvalidArgumentException(
+                    'Unable to open file response.'
+                );
+            }
+
+            try {
+                while (!feof($handle)) {
+                    $chunk = fread($handle, 1048576);
+                    if ($chunk === false) {
+                        throw new InvalidArgumentException(
+                            'Unable to read file response.'
+                        );
+                    }
+
+                    if ($chunk !== '') {
+                        echo $chunk;
+                    }
+                }
+            } finally {
+                fclose($handle);
+            }
+        }
+
+        exit;
+    }
+
+    private static function assertEtag(string $etag): void
+    {
+        if (
+            preg_match(
+                '/^"[a-f0-9]{64}"$/D',
+                $etag,
+            ) !== 1
+        ) {
+            throw new InvalidArgumentException(
+                'Invalid response ETag.'
+            );
+        }
+    }
+
     public static function redirectLocal(string $path, int $status = 303): never
     {
         if (
