@@ -127,6 +127,38 @@ $status = is_array($mediaStatus ?? null) ? $mediaStatus : null;
                                 · видимость: <?= $theme->e($asset->visibility) ?>
                             </small>
                         </div>
+
+                        <?php if ($asset->status !== 'archived'): ?>
+                            <form
+                                method="post"
+                                action="<?= $theme->e($theme->route(
+                                    'admin_media_visibility',
+                                    ['publicId' => $asset->publicId],
+                                )) ?>"
+                            >
+                                <?= $theme->csrfInput() ?>
+                                <label>
+                                    <span>Видимость</span>
+                                    <select name="visibility" required>
+                                        <?php foreach ([
+                                            'private' => 'Приватно',
+                                            'public' => 'Публично на сайте',
+                                            'federated' => 'Для федерации',
+                                        ] as $value => $label): ?>
+                                            <option
+                                                value="<?= $theme->e($value) ?>"
+                                                <?= $asset->visibility === $value ? 'selected' : '' ?>
+                                            >
+                                                <?= $theme->e($label) ?>
+                                            </option>
+                                        <?php endforeach; ?>
+                                    </select>
+                                </label>
+                                <button class="button button--quiet" type="submit">
+                                    Сохранить видимость
+                                </button>
+                            </form>
+                        <?php endif; ?>
                     </article>
                 <?php endforeach; ?>
             </div>
