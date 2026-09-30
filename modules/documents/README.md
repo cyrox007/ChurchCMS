@@ -91,11 +91,29 @@ content-addressed storage вне web-root.
 файл изображением или архивным asset отклоняется до изменения существующей
 ссылки.
 
+## Каталог документов
+
+Admin Shell использует отдельные permissions `documents.read/create/edit/publish`
+и organization-scoped RBAC. Оператор видит только карточки и Media-файлы из
+доступной ветки, а подменённый public ID файла повторно проверяется сервером.
+
+Доступны:
+
+- создание и редактирование карточки документа;
+- выбор organization owner;
+- выбор проверенного Media asset типа `document`;
+- publish / withdraw / archive;
+- публичный HTML-список `/documents`;
+- публичная карточка `/documents/{public_id}`;
+- public API `/api/v1/documents` и detail.
+
+Публичная projection включает файл только если связанный Media asset имеет
+`visibility=public` и его original blob проходит `MediaPublicFileService`.
+Filesystem path наружу не передаётся.
+
 ## Следующие инкременты
 
 Остаются:
 
-- Admin Shell для карточек Documents и выбора загруженного Media-файла;
-- обычный public/API локального документа и безопасная выдача файла;
 - категории/рубрики документов;
 - версии/замены файла.
