@@ -44,6 +44,55 @@ final class MediaGalleryRepository
     }
 
     /**
+     * @param list<string> $ownerOrganizationPublicIds
+     * @return list<MediaGallery>
+     */
+    public function adminList(
+        array $ownerOrganizationPublicIds,
+        string $siteKey = 'default',
+    ): array {
+        $owners = array_values(array_unique(array_filter(
+            array_map(
+                static fn(mixed $value): string =>
+                    is_string($value) ? trim($value) : '',
+                $ownerOrganizationPublicIds,
+            ),
+            static fn(string $value): bool => $value !== '',
+        )));
+
+        if ($owners === []) {
+            return [];
+        }
+
+        $placeholders = [];
+        $params = [
+            'site_key' => $siteKey,
+        ];
+
+        foreach ($owners as $index => $ownerPublicId) {
+            $key = 'owner_' . $index;
+            $placeholders[] = ':' . $key;
+            $params[$key] = $ownerPublicId;
+        }
+
+        $statement = $this->pdo->prepare(
+            'SELECT *
+             FROM media_galleries
+             WHERE site_key = :site_key
+               AND owner_organization_public_id IN ('
+                . implode(', ', $placeholders)
+                . ')
+             ORDER BY updated_at DESC, public_id DESC'
+        );
+        $statement->execute($params);
+
+        return array_map(
+            self::hydrate(...),
+            $statement->fetchAll(),
+        );
+    }
+
+    /**
      * @return list<MediaGallery>
      */
     public function publicPublished(

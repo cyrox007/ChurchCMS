@@ -40,6 +40,8 @@
     "admin.account_password": "admin/account-password",
     "admin.organizations.index": "admin/organizations/index",
     "admin.organizations.editor": "admin/organizations/editor",
-    "admin.federation.index": "admin/federation/index"
+    "admin.federation.index": "admin/federation/index",
+    "admin.media.index": "admin/media/index",
+    "admin.media.galleries": "admin/media/galleries"
   }
 }

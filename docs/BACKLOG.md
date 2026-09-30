@@ -165,7 +165,8 @@ Priority is ordered within each section.
 - [ ] HTTP Range/resumable слой для audio/video;
 - [ ] galleries;
   - [x] schema/domain foundation + ordered image slots через Media usage references + draft/publish/public lifecycle;
-  - [ ] Admin Shell, public/API и управление порядком оператором;
+  - [x] Admin Shell и управление порядком оператором;
+  - [ ] public/API;
 - document catalog.
 
 ## P2 — Parish/Cathedral
