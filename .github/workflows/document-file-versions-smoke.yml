@@ -1,0 +1,95 @@
+name: Проверка версий файлов документов
+
+on:
+  push:
+    branches:
+      - develop
+      - main
+    paths:
+      - 'modules/documents/**'
+      - 'modules/media/MediaUsageService.php'
+      - 'modules/media/MediaUsageCapability.php'
+      - 'tools/document-file-versions-smoke.php'
+      - '.github/workflows/document-file-versions-smoke.yml'
+  pull_request:
+    branches:
+      - develop
+      - main
+    paths:
+      - 'modules/documents/**'
+      - 'modules/media/MediaUsageService.php'
+      - 'modules/media/MediaUsageCapability.php'
+      - 'tools/document-file-versions-smoke.php'
+      - '.github/workflows/document-file-versions-smoke.yml'
+
+permissions:
+  contents: read
+
+jobs:
+  document-file-versions:
+    runs-on: ubuntu-latest
+
+    services:
+      postgres:
+        image: postgres:16
+        env:
+          POSTGRES_DB: churchcms
+          POSTGRES_USER: churchcms
+          POSTGRES_PASSWORD: churchcms
+        ports:
+          - 5432:5432
+        options: >-
+          --health-cmd pg_isready
+          --health-interval 10s
+          --health-timeout 5s
+          --health-retries 5
+
+    steps:
+      - name: Получить исходный код
+        uses: actions/checkout@v4
+
+      - name: Подготовить PHP 8.3
+        uses: shivammathur/setup-php@v2
+        with:
+          php-version: '8.3'
+          extensions: pdo, pdo_pgsql, fileinfo
+          coverage: none
+
+      - name: Проверить PHP и миграции
+        run: |
+          set -euo pipefail
+          php -l modules/documents/DocumentFileVersion.php
+          php -l modules/documents/DocumentFileVersionRepository.php
+          php -l modules/documents/DocumentFileVersionService.php
+          php -l modules/documents/migrations/20260930_220000_create_document_file_versions.php
+          php -l modules/documents/runtime.php
+          php -l tools/document-file-versions-smoke.php
+          php bin/migrate.php validate
+
+      - name: Подготовить тестовую установку
+        run: |
+          set -euo pipefail
+          mkdir -p storage/cache storage/logs storage/sessions storage/rate-limits storage/uploads
+
+          cat > config/local.php <<'PHP'
+          <?php
+
+          declare(strict_types=1);
+
+          return [
+              'installation' => ['completed' => true],
+              'database' => [
+                  'driver' => 'pgsql',
+                  'host' => '127.0.0.1',
+                  'port' => 5432,
+                  'database' => 'churchcms',
+                  'username' => 'churchcms',
+                  'password' => 'churchcms',
+              ],
+          ];
+          PHP
+
+          php bin/migrate.php
+
+      - name: Проверить историю и защиту файлов
+        run: php tools/document-file-versions-smoke.php
