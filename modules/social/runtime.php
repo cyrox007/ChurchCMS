@@ -11,6 +11,7 @@ use ChurchCMS\Core\Router;
 use ChurchCMS\Modules\Social\ChannelAdapterRegistry;
 use ChurchCMS\Modules\Social\ExternalChannelsCapability;
 use ChurchCMS\Modules\Social\TelegramChannelAdapter;
+use ChurchCMS\Modules\Social\VkChannelAdapter;
 use ChurchCMS\Modules\Social\SocialAdminController;
 use ChurchCMS\Modules\Social\SocialAdminTaskProvider;
 use ChurchCMS\Modules\Social\SocialWebhookController;
@@ -37,6 +38,7 @@ foreach ([
     'ChannelHttpClient.php',
     'NativeHttpClient.php',
     'TelegramChannelAdapter.php',
+    'VkChannelAdapter.php',
     'SocialConnectionRepository.php',
     'SocialConnectionService.php',
     'SocialPostRepository.php',
@@ -83,6 +85,9 @@ return new class implements ModuleRuntimeProvider {
         // Хранилище остаётся независимым от конкретной платформы.
         ChannelAdapterRegistry::register(
             new TelegramChannelAdapter(),
+        );
+        ChannelAdapterRegistry::register(
+            new VkChannelAdapter(),
         );
 
         AdminNavigationRegistry::register(
