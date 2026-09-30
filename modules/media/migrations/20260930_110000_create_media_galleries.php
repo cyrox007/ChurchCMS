@@ -3,16 +3,13 @@
 declare(strict_types=1);
 
 use ChurchCMS\Core\ReversibleMigration;
-use PDO;
-use RuntimeException;
-
 return new class implements ReversibleMigration {
     public function id(): string
     {
         return '20260930_110000_create_media_galleries';
     }
 
-    public function up(PDO $pdo, string $driver): void
+    public function up(\PDO $pdo, string $driver): void
     {
         $sql = match ($driver) {
             'pgsql' => <<<'SQL'
@@ -69,7 +66,7 @@ CREATE TABLE media_galleries (
         ON DELETE RESTRICT
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci
 SQL,
-            default => throw new RuntimeException(
+            default => throw new \RuntimeException(
                 "Неподдерживаемый драйвер миграции: {$driver}"
             ),
         };
@@ -89,10 +86,10 @@ SQL,
         }
     }
 
-    public function down(PDO $pdo, string $driver): void
+    public function down(\PDO $pdo, string $driver): void
     {
         if (!in_array($driver, ['pgsql', 'mysql'], true)) {
-            throw new RuntimeException(
+            throw new \RuntimeException(
                 "Неподдерживаемый драйвер миграции: {$driver}"
             );
         }
