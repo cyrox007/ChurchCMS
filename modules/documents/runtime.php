@@ -20,6 +20,7 @@ foreach ([
     'DocumentPartnerTombstoneRepository.php',
     'DocumentPartnerTombstoneApiResource.php',
     'DocumentService.php',
+    'DocumentMediaService.php',
     'DocumentsApiController.php',
 ] as $file) {
     require_once $moduleRoot . '/' . $file;
