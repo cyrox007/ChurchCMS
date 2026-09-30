@@ -318,6 +318,16 @@ final class PublicationStructuredMediaSeoService
 
             if ($videoObject !== null) {
                 $article['video'] = $videoObject;
+                $baseMeta['structured_media_video'] = [
+                    'content_url' =>
+                        (string) $videoObject['contentUrl'],
+                    'thumbnail_url' =>
+                        (string) ($videoObject['thumbnailUrl'][0] ?? ''),
+                    'mime_type' =>
+                        (string) ($video['mime_type'] ?? 'video/mp4'),
+                    'title' =>
+                        (string) ($videoObject['name'] ?? $publication->title),
+                ];
             }
         }
 
