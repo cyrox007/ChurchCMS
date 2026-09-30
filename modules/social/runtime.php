@@ -13,6 +13,7 @@ use ChurchCMS\Modules\Social\ExternalChannelsCapability;
 use ChurchCMS\Modules\Social\TelegramChannelAdapter;
 use ChurchCMS\Modules\Social\VkChannelAdapter;
 use ChurchCMS\Modules\Social\MaxChannelAdapter;
+use ChurchCMS\Modules\Social\YoutubeChannelAdapter;
 use ChurchCMS\Modules\Social\SocialAdminController;
 use ChurchCMS\Modules\Social\SocialAdminTaskProvider;
 use ChurchCMS\Modules\Social\SocialWebhookController;
@@ -42,6 +43,7 @@ foreach ([
     'TelegramChannelAdapter.php',
     'VkChannelAdapter.php',
     'MaxChannelAdapter.php',
+    'YoutubeChannelAdapter.php',
     'SocialConnectionRepository.php',
     'SocialConnectionService.php',
     'SocialPostRepository.php',
@@ -94,6 +96,9 @@ return new class implements ModuleRuntimeProvider {
         );
         ChannelAdapterRegistry::register(
             new MaxChannelAdapter(),
+        );
+        ChannelAdapterRegistry::register(
+            new YoutubeChannelAdapter(),
         );
 
         AdminNavigationRegistry::register(
