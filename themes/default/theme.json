@@ -44,6 +44,8 @@
     "admin.media.index": "admin/media/index",
     "admin.media.galleries": "admin/media/galleries",
     "gallery.index": "galleries/index",
-    "gallery.show": "galleries/show"
+    "gallery.show": "galleries/show",
+    "auth.password_forgot": "auth/password-forgot",
+    "auth.password_reset": "auth/password-reset"
   }
 }
