@@ -61,6 +61,32 @@ $shareLinks = \ChurchCMS\Core\Config::get('sharing.enabled', true) === true
         <?php endif; ?>
     </header>
 
+    <?php
+    $structuredVideo = is_array($seo['structured_media_video'] ?? null)
+        ? $seo['structured_media_video']
+        : null;
+    ?>
+    <?php if (
+        $structuredVideo !== null
+        && !empty($structuredVideo['content_url'])
+        && !empty($structuredVideo['thumbnail_url'])
+    ): ?>
+        <figure class="publication__video">
+            <video
+                controls
+                preload="metadata"
+                poster="<?= $theme->e((string) $structuredVideo['thumbnail_url']) ?>"
+                aria-label="<?= $theme->e((string) ($structuredVideo['title'] ?? 'Видео публикации')) ?>"
+            >
+                <source
+                    src="<?= $theme->e((string) $structuredVideo['content_url']) ?>"
+                    type="<?= $theme->e((string) ($structuredVideo['mime_type'] ?? 'video/mp4')) ?>"
+                >
+                Ваш браузер не поддерживает встроенное видео.
+            </video>
+        </figure>
+    <?php endif; ?>
+
     <div class="publication__body prose" itemprop="articleBody">
         <?= $publication->bodyHtml ?>
     </div>

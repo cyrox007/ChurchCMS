@@ -73,4 +73,33 @@ final class MediaUsageCapability
             $siteKey,
         );
     }
+
+    /**
+     * @param list<string>|null $ownerPublicIds
+     * @return list<array<string,mixed>>
+     */
+    public function structuredSeoAssets(
+        ?array $ownerPublicIds,
+        string $siteKey = 'default',
+    ): array {
+        return MediaStructuredSeoService::fromDatabase()
+            ->availableAssets(
+                $ownerPublicIds,
+                $siteKey,
+            );
+    }
+
+    /**
+     * @return array<string,mixed>|null
+     */
+    public function structuredSeoDescriptor(
+        string $mediaPublicId,
+        string $siteKey = 'default',
+    ): ?array {
+        return MediaStructuredSeoService::fromDatabase()
+            ->descriptor(
+                $mediaPublicId,
+                $siteKey,
+            );
+    }
 }

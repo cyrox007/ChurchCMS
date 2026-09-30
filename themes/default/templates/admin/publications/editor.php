@@ -27,6 +27,15 @@ $formAction = $isEdit
 $revisions = is_array($revisions ?? null)
     ? $revisions
     : [];
+$seoMediaOptions = is_array($seoMediaOptions ?? null)
+    ? $seoMediaOptions
+    : [];
+$seoImages = is_array($seoMediaOptions['images'] ?? null)
+    ? $seoMediaOptions['images']
+    : [];
+$seoVideos = is_array($seoMediaOptions['videos'] ?? null)
+    ? $seoMediaOptions['videos']
+    : [];
 ?>
 <section class="admin-shell">
     <header class="admin-heading">
@@ -271,6 +280,68 @@ $revisions = is_array($revisions ?? null)
                     <span>Описание карточки</span>
                     <textarea name="social_description" rows="3" maxlength="500"><?= $theme->e($form['social_description'] ?? '') ?></textarea>
                 </label>
+
+                <div class="seo-editor__divider"></div>
+
+                <h3>Структурированные изображения и видео</h3>
+                <p class="editor-card__hint">
+                    Используются для JSON-LD Article/VideoObject. В списках доступны только публичные Media в пределах ваших полномочий.
+                </p>
+
+                <label class="field">
+                    <span>Основное SEO-изображение <small>необязательно</small></span>
+                    <select name="seo_image_media_id">
+                        <option value="">Без отдельного Media-изображения</option>
+                        <?php foreach ($seoImages as $asset): ?>
+                            <?php $assetId = (string) ($asset['public_id'] ?? ''); ?>
+                            <option
+                                value="<?= $theme->e($assetId) ?>"
+                                <?= ($form['seo_image_media_id'] ?? '') === $assetId ? 'selected' : '' ?>
+                            >
+                                <?= $theme->e((string) ($asset['title'] ?? $assetId)) ?>
+                                <?php if (!empty($asset['width']) && !empty($asset['height'])): ?>
+                                    · <?= $theme->e((string) $asset['width']) ?>×<?= $theme->e((string) $asset['height']) ?>
+                                <?php endif; ?>
+                            </option>
+                        <?php endforeach; ?>
+                    </select>
+                    <small>ChurchCMS использует вариант medium, если он доступен, иначе проверенный оригинал.</small>
+                </label>
+
+                <div class="editor-grid">
+                    <label class="field">
+                        <span>SEO-видео <small>необязательно</small></span>
+                        <select name="seo_video_media_id">
+                            <option value="">Без VideoObject</option>
+                            <?php foreach ($seoVideos as $asset): ?>
+                                <?php $assetId = (string) ($asset['public_id'] ?? ''); ?>
+                                <option
+                                    value="<?= $theme->e($assetId) ?>"
+                                    <?= ($form['seo_video_media_id'] ?? '') === $assetId ? 'selected' : '' ?>
+                                >
+                                    <?= $theme->e((string) ($asset['title'] ?? $assetId)) ?>
+                                </option>
+                            <?php endforeach; ?>
+                        </select>
+                    </label>
+
+                    <label class="field">
+                        <span>Превью SEO-видео</span>
+                        <select name="seo_video_thumbnail_media_id">
+                            <option value="">Выберите публичное изображение</option>
+                            <?php foreach ($seoImages as $asset): ?>
+                                <?php $assetId = (string) ($asset['public_id'] ?? ''); ?>
+                                <option
+                                    value="<?= $theme->e($assetId) ?>"
+                                    <?= ($form['seo_video_thumbnail_media_id'] ?? '') === $assetId ? 'selected' : '' ?>
+                                >
+                                    <?= $theme->e((string) ($asset['title'] ?? $assetId)) ?>
+                                </option>
+                            <?php endforeach; ?>
+                        </select>
+                        <small>Для VideoObject превью обязательно.</small>
+                    </label>
+                </div>
 
                 <div class="seo-switches">
                     <label class="choice">

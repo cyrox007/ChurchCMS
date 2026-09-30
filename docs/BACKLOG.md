@@ -147,7 +147,7 @@ Priority is ordered within each section.
 - [x] Open Graph and Twitter/X social metadata;
 - [x] XML sitemap and robots endpoints;
 - [x] lightweight social share buttons;
-- structured image/video SEO when Media is implemented;
+- [x] structured image/video SEO: Article/NewsArticle + ImageObject + gated VideoObject через public Media usage slots;
 - redirect manager.
 
 ## P1 — Media

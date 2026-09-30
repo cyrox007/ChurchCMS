@@ -1,0 +1,124 @@
+name: Проверка structured image/video SEO
+
+on:
+  push:
+    branches:
+      - develop
+      - main
+    paths:
+      - 'core/SeoRenderer.php'
+      - 'modules/media/MediaStructuredSeoService.php'
+      - 'modules/media/MediaUsageCapability.php'
+      - 'modules/media/runtime.php'
+      - 'modules/seo/PublicationStructuredMediaSeoService.php'
+      - 'modules/seo/SeoCapability.php'
+      - 'modules/seo/runtime.php'
+      - 'modules/publications/PublicationsAdminController.php'
+      - 'themes/default/templates/admin/publications/editor.php'
+      - 'tools/structured-media-seo-smoke.php'
+      - '.github/workflows/structured-media-seo-smoke.yml'
+  pull_request:
+    branches:
+      - develop
+      - main
+    paths:
+      - 'core/SeoRenderer.php'
+      - 'modules/media/MediaStructuredSeoService.php'
+      - 'modules/media/MediaUsageCapability.php'
+      - 'modules/media/runtime.php'
+      - 'modules/seo/PublicationStructuredMediaSeoService.php'
+      - 'modules/seo/SeoCapability.php'
+      - 'modules/seo/runtime.php'
+      - 'modules/publications/PublicationsAdminController.php'
+      - 'themes/default/templates/admin/publications/editor.php'
+      - 'tools/structured-media-seo-smoke.php'
+      - '.github/workflows/structured-media-seo-smoke.yml'
+
+permissions:
+  contents: read
+
+jobs:
+  structured-media-seo:
+    runs-on: ubuntu-latest
+
+    services:
+      postgres:
+        image: postgres:16
+        env:
+          POSTGRES_DB: churchcms
+          POSTGRES_USER: churchcms
+          POSTGRES_PASSWORD: churchcms
+        ports:
+          - 5432:5432
+        options: >-
+          --health-cmd pg_isready
+          --health-interval 10s
+          --health-timeout 5s
+          --health-retries 5
+
+    steps:
+      - name: Получить исходный код
+        uses: actions/checkout@v4
+
+      - name: Подготовить PHP 8.3
+        uses: shivammathur/setup-php@v2
+        with:
+          php-version: '8.3'
+          extensions: pdo, pdo_pgsql, fileinfo, gd, dom
+          coverage: none
+
+      - name: Проверить PHP
+        run: |
+          set -euo pipefail
+          php -l core/SeoRenderer.php
+          php -l modules/media/MediaStructuredSeoService.php
+          php -l modules/media/MediaUsageCapability.php
+          php -l modules/media/runtime.php
+          php -l modules/seo/PublicationStructuredMediaSeoService.php
+          php -l modules/seo/SeoCapability.php
+          php -l modules/seo/runtime.php
+          php -l modules/publications/PublicationsAdminController.php
+          php -l themes/default/templates/admin/publications/editor.php
+          php -l tools/structured-media-seo-smoke.php
+          php bin/migrate.php validate
+          php bin/theme-check.php
+
+      - name: Подготовить тестовую установку
+        run: |
+          set -euo pipefail
+          mkdir -p storage/cache storage/logs storage/sessions storage/rate-limits storage/uploads
+          MEDIA_STORAGE="${RUNNER_TEMP}/churchcms-structured-seo"
+          mkdir -p "${MEDIA_STORAGE}"
+
+          cat > config/local.php <<PHP
+          <?php
+
+          declare(strict_types=1);
+
+          return [
+              'installation' => ['completed' => true],
+              'app' => [
+                  'url' => 'https://church.example.test',
+              ],
+              'site' => [
+                  'name' => 'Тестовый приход',
+              ],
+              'database' => [
+                  'driver' => 'pgsql',
+                  'host' => '127.0.0.1',
+                  'port' => 5432,
+                  'database' => 'churchcms',
+                  'username' => 'churchcms',
+                  'password' => 'churchcms',
+              ],
+              'media' => [
+                  'storage_path' => '${MEDIA_STORAGE}',
+                  'max_upload_bytes' => 10485760,
+              ],
+          ];
+          PHP
+
+          php bin/migrate.php
+
+      - name: Проверить Article/VideoObject, RBAC и rollback
+        run: php tools/structured-media-seo-smoke.php
