@@ -159,7 +159,7 @@ Priority is ordered within each section.
 - [x] MIME sniffing по содержимому через Fileinfo;
 - [x] SHA-256 checksums фактического blob;
 - [x] image metadata: безопасные `pixel_width/pixel_height` из проверенного blob без сохранения EXIF/GPS;
-- usage references;
+- [x] usage references: атомарный реестр `asset → consumer/type/slot`, capability для модулей и защита от архивации используемого asset;
 - derivatives;
 - galleries;
 - document catalog.
