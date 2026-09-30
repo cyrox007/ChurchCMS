@@ -46,6 +46,30 @@ final class MediaRepository
             : null;
     }
 
+    public function findByPublicIdForUpdate(
+        string $publicId,
+        string $siteKey = 'default',
+    ): ?MediaAsset {
+        $statement = $this->pdo->prepare(
+            'SELECT *
+             FROM media_assets
+             WHERE public_id = :public_id
+               AND site_key = :site_key
+             LIMIT 1
+             FOR UPDATE'
+        );
+        $statement->execute([
+            'public_id' => $publicId,
+            'site_key' => $siteKey,
+        ]);
+
+        $row = $statement->fetch();
+
+        return is_array($row)
+            ? self::hydrate($row)
+            : null;
+    }
+
     /**
      * @return list<MediaAsset>
      */
