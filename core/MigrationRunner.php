@@ -85,6 +85,175 @@ final class MigrationRunner
     }
 
     /**
+     * @return list<string> идентификаторы уже применённых миграций
+     */
+    public function appliedIds(): array
+    {
+        $pdo = $this->database->connection();
+        $driver = (string) $pdo->getAttribute(PDO::ATTR_DRIVER_NAME);
+        $this->ensureTable($pdo, $driver);
+
+        return array_keys($this->applied($pdo));
+    }
+
+    /**
+     * @return list<string> идентификаторы ожидающих миграций
+     */
+    public function pendingIds(): array
+    {
+        $applied = array_fill_keys($this->appliedIds(), true);
+        $pending = [];
+
+        foreach ($this->discover() as $migration) {
+            if (!isset($applied[$migration->id()])) {
+                $pending[] = $migration->id();
+            }
+        }
+
+        return $pending;
+    }
+
+    /**
+     * Применяет только явно перечисленные обратимые миграции.
+     *
+     * Весь набор проверяется до первого изменения БД. При сбое текущая
+     * миграция получает down() даже если запись о ней ещё не попала в
+     * churchcms_migrations. Уже завершённые миграции откатываются в
+     * обратном порядке.
+     *
+     * @param list<string> $migrationIds
+     * @return list<string> идентификаторы в фактическом порядке применения
+     */
+    public function applyReversible(array $migrationIds): array
+    {
+        if ($migrationIds === []) {
+            return [];
+        }
+
+        $pdo = $this->database->connection();
+        $driver = (string) $pdo->getAttribute(PDO::ATTR_DRIVER_NAME);
+        $this->ensureTable($pdo, $driver);
+
+        $available = [];
+        foreach ($this->discover() as $migration) {
+            $available[$migration->id()] = $migration;
+        }
+
+        $applied = $this->applied($pdo);
+        $selected = [];
+
+        foreach ($migrationIds as $id) {
+            if (!is_string($id) || $id === '') {
+                throw new RuntimeException(
+                    'Список применения содержит некорректный идентификатор миграции.'
+                );
+            }
+
+            if (isset($selected[$id])) {
+                continue;
+            }
+
+            $migration = $available[$id] ?? null;
+            if (!$migration instanceof Migration) {
+                throw new RuntimeException(
+                    "Миграция для применения не найдена: {$id}"
+                );
+            }
+
+            if (isset($applied[$id])) {
+                throw new RuntimeException(
+                    "Миграция уже применена: {$id}"
+                );
+            }
+
+            if (!$migration instanceof ReversibleMigration) {
+                throw new RuntimeException(
+                    "Миграция не поддерживает безопасный откат: {$id}"
+                );
+            }
+
+            $selected[$id] = $migration;
+        }
+
+        uksort(
+            $selected,
+            static fn(string $left, string $right): int =>
+                strcmp($left, $right),
+        );
+
+        $executed = [];
+
+        foreach ($selected as $id => $migration) {
+            $transactional = $driver !== 'mysql';
+
+            try {
+                if ($transactional) {
+                    $pdo->beginTransaction();
+                }
+
+                $migration->up($pdo, $driver);
+
+                $statement = $pdo->prepare(
+                    'INSERT INTO churchcms_migrations '
+                    . '(migration_id, applied_at) '
+                    . 'VALUES (:id, :applied_at)'
+                );
+                $statement->execute([
+                    'id' => $id,
+                    'applied_at' => gmdate('Y-m-d H:i:s'),
+                ]);
+
+                if ($transactional) {
+                    $pdo->commit();
+                }
+
+                $executed[] = $id;
+            } catch (Throwable $error) {
+                if ($pdo->inTransaction()) {
+                    $pdo->rollBack();
+                }
+
+                $rollbackErrors = [];
+
+                try {
+                    $migration->down($pdo, $driver);
+                } catch (Throwable $rollbackError) {
+                    $rollbackErrors[] =
+                        "{$id}: " . $rollbackError->getMessage();
+                }
+
+                if ($executed !== []) {
+                    try {
+                        $this->rollback($executed);
+                    } catch (Throwable $rollbackError) {
+                        $rollbackErrors[] =
+                            $rollbackError->getMessage();
+                    }
+                }
+
+                if ($rollbackErrors !== []) {
+                    throw new RuntimeException(
+                        'Миграция завершилась ошибкой, а автоматический '
+                        . 'возврат схемы выполнен не полностью: '
+                        . implode('; ', $rollbackErrors),
+                        0,
+                        $error,
+                    );
+                }
+
+                throw new RuntimeException(
+                    "Не удалось применить обратимую миграцию: {$id}. "
+                    . 'Схема возвращена в исходное состояние.',
+                    0,
+                    $error,
+                );
+            }
+        }
+
+        return $executed;
+    }
+
+    /**
      * Откатывает только явно перечисленные применённые обратимые миграции.
      *
      * Перед первым изменением БД весь набор проверяется целиком: миграции должны
