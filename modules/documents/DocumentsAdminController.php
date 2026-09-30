@@ -42,6 +42,7 @@ final class DocumentsAdminController
         );
 
         $media = DocumentMediaService::fromDatabase();
+        $categories = DocumentCategoryService::fromDatabase();
         $documentRows = [];
 
         foreach (
@@ -55,6 +56,12 @@ final class DocumentsAdminController
                     $media->fileMediaPublicId(
                         $document->publicId,
                         $document->siteKey,
+                    ),
+                'category_names' =>
+                    DocumentCategoryService::names(
+                        $categories->forDocument(
+                            $document->id,
+                        ),
                     ),
             ];
         }
@@ -147,6 +154,13 @@ final class DocumentsAdminController
                         'summary',
                         '',
                     ),
+                    categoryNames:
+                        DocumentCategoryService::fromInput(
+                            (string) $request->post(
+                                'categories',
+                                '',
+                            ),
+                        ),
                 );
 
             $this->saveFile(
@@ -234,6 +248,12 @@ final class DocumentsAdminController
                 ),
                 (string) $request->post('summary', ''),
                 $document->siteKey,
+                DocumentCategoryService::fromInput(
+                    (string) $request->post(
+                        'categories',
+                        '',
+                    ),
+                ),
             );
 
             $owner = $access->assignableOwner(
