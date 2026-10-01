@@ -94,6 +94,53 @@ final class PeopleService
         return $publicId;
     }
 
+    public function updatePerson(
+        string $personPublicId,
+        string $displayName,
+        ?string $firstName = null,
+        ?string $middleName = null,
+        ?string $lastName = null,
+        string $biographyHtml = '',
+        string $siteKey = 'default',
+    ): void {
+        $person = $this->people->findPersonByPublicId(
+            trim($personPublicId),
+            $siteKey,
+        );
+
+        if ($person === null || $person->status !== 'active') {
+            throw new InvalidArgumentException(
+                'Карточка человека недоступна для редактирования.'
+            );
+        }
+
+        $statement = $this->pdo->prepare(
+            'UPDATE people
+             SET display_name = :display_name,
+                 first_name = :first_name,
+                 middle_name = :middle_name,
+                 last_name = :last_name,
+                 biography_html = :biography_html,
+                 updated_at = :updated_at
+             WHERE public_id = :public_id
+               AND site_key = :site_key'
+        );
+        $statement->execute([
+            'display_name' => self::requiredText(
+                $displayName,
+                255,
+                'Отображаемое имя человека обязательно.',
+            ),
+            'first_name' => self::optionalText($firstName, 120),
+            'middle_name' => self::optionalText($middleName, 120),
+            'last_name' => self::optionalText($lastName, 120),
+            'biography_html' => trim($biographyHtml),
+            'updated_at' => gmdate('Y-m-d H:i:s'),
+            'public_id' => $person->publicId,
+            'site_key' => $siteKey,
+        ]);
+    }
+
     public function assignOrganizationOwner(
         string $personPublicId,
         string $organizationPublicId,
