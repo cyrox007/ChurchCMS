@@ -4,6 +4,7 @@ declare(strict_types=1);
 
 use ChurchCMS\Core\DatabaseManager;
 use ChurchCMS\Modules\Organizations\OrganizationService;
+use ChurchCMS\Modules\People\PeopleCatalogService;
 use ChurchCMS\Modules\People\PeopleRepository;
 use ChurchCMS\Modules\People\PeopleService;
 
@@ -112,6 +113,59 @@ if (
     fwrite(
         STDERR,
         "Репозиторий не вернул назначение человека.\n",
+    );
+    exit(1);
+}
+
+$people->updatePerson(
+    $personId,
+    'протоиерей Иоанн Обновлённый',
+    firstName: 'Иоанн',
+    lastName: 'Обновлённый',
+    biographyHtml: 'Краткая биография.',
+    siteKey: 'people-smoke',
+);
+
+$adminList = $repository->adminList(
+    [$departmentId],
+    'people-smoke',
+);
+if (
+    count($adminList) !== 1
+    || $adminList[0]->publicId !== $personId
+    || $adminList[0]->displayName
+        !== 'протоиерей Иоанн Обновлённый'
+) {
+    fwrite(
+        STDERR,
+        "Admin-список People или обновление карточки работают некорректно.\n",
+    );
+    exit(1);
+}
+
+if ($repository->adminList([], 'people-smoke') !== []) {
+    fwrite(
+        STDERR,
+        "Пустой organization scope People не должен видеть карточки.\n",
+    );
+    exit(1);
+}
+
+$publicList = PeopleCatalogService::fromDatabase()
+    ->index('people-smoke');
+$publicDetail = PeopleCatalogService::fromDatabase()
+    ->detail($personId, 'people-smoke');
+
+if (
+    count($publicList) !== 1
+    || $publicDetail === null
+    || ($publicDetail['display_name'] ?? '')
+        !== 'протоиерей Иоанн Обновлённый'
+    || count($publicDetail['appointments'] ?? []) !== 1
+) {
+    fwrite(
+        STDERR,
+        "Публичная projection People сформирована некорректно.\n",
     );
     exit(1);
 }
