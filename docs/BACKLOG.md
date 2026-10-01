@@ -170,7 +170,7 @@ Priority is ordered within each section.
   - [x] Admin Shell и управление порядком оператором;
   - [x] public/API с фильтрацией только public Media и hash-versioned image URLs;
 - [x] document catalog: organization-scoped RBAC, Admin Shell, public HTML/API и безопасная связь с Media-файлом;
-- [ ] document categories/rubrics;
+- [x] document categories/rubrics;
 - [ ] document file versions/replacements.
 
 ## P2 — Parish/Cathedral
