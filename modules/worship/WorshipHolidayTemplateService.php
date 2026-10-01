@@ -122,8 +122,10 @@ final class WorshipHolidayTemplateService
             );
         }
 
-        $statement = $this->pdo->prepare(
-            'INSERT INTO worship_holiday_template_items (
+        $driver = (string) $this->pdo->getAttribute(
+            PDO::ATTR_DRIVER_NAME,
+        );
+        $sql = 'INSERT INTO worship_holiday_template_items (
                 template_id,
                 sort_order,
                 title,
@@ -143,8 +145,13 @@ final class WorshipHolidayTemplateService
                 :duration_minutes,
                 :location_name,
                 :description_html
-             )'
-        );
+             )';
+
+        if ($driver === 'pgsql') {
+            $sql .= ' RETURNING id';
+        }
+
+        $statement = $this->pdo->prepare($sql);
         $statement->execute([
             'template_id' => (int) $template['id'],
             'sort_order' => $sortOrder,
@@ -156,6 +163,10 @@ final class WorshipHolidayTemplateService
             'location_name' => $locationName,
             'description_html' => trim($descriptionHtml),
         ]);
+
+        if ($driver === 'pgsql') {
+            return (int) $statement->fetchColumn();
+        }
 
         return (int) $this->pdo->lastInsertId();
     }
