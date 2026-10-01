@@ -10,6 +10,7 @@ foreach ([
     'PersonAppointment.php',
     'PeopleRepository.php',
     'PeopleService.php',
+    'PeopleOrganizationAccessService.php',
 ] as $file) {
     require_once $moduleRoot . '/' . $file;
 }
