@@ -133,6 +133,89 @@ final class WorshipScheduleService
         return $publicId;
     }
 
+    public function update(
+        string $worshipPublicId,
+        string $title,
+        string $startsAt,
+        string $serviceType = 'service',
+        ?string $endsAt = null,
+        ?string $locationName = null,
+        string $descriptionHtml = '',
+        string $siteKey = 'default',
+    ): void {
+        $siteKey = self::siteKey($siteKey);
+        $service = $this->serviceOrFail(
+            trim($worshipPublicId),
+            $siteKey,
+        );
+
+        if ($service->status === 'withdrawn') {
+            throw new InvalidArgumentException(
+                'Снятое богослужение недоступно для редактирования.'
+            );
+        }
+
+        $title = self::requiredText(
+            $title,
+            255,
+            'Название богослужения обязательно.',
+        );
+        $serviceType = self::machineKey(
+            $serviceType,
+            'Некорректный тип богослужения.',
+        );
+        $startsAt = self::timestamp(
+            $startsAt,
+            'Некорректное время начала богослужения.',
+        );
+        $endsAt = self::optionalTimestamp(
+            $endsAt,
+            'Некорректное время окончания богослужения.',
+        );
+        $locationName = self::optionalText(
+            $locationName,
+            255,
+            'Название места проведения слишком длинное.',
+        );
+
+        if (
+            $endsAt !== null
+            && new DateTimeImmutable($endsAt, new DateTimeZone('UTC'))
+                < new DateTimeImmutable(
+                    $startsAt,
+                    new DateTimeZone('UTC'),
+                )
+        ) {
+            throw new InvalidArgumentException(
+                'Окончание богослужения не может быть раньше начала.'
+            );
+        }
+
+        $statement = $this->pdo->prepare(
+            'UPDATE worship_services
+             SET title = :title,
+                 service_type = :service_type,
+                 starts_at = :starts_at,
+                 ends_at = :ends_at,
+                 location_name = :location_name,
+                 description_html = :description_html,
+                 updated_at = :updated_at
+             WHERE public_id = :public_id
+               AND site_key = :site_key'
+        );
+        $statement->execute([
+            'title' => $title,
+            'service_type' => $serviceType,
+            'starts_at' => $startsAt,
+            'ends_at' => $endsAt,
+            'location_name' => $locationName,
+            'description_html' => trim($descriptionHtml),
+            'updated_at' => gmdate('Y-m-d H:i:s'),
+            'public_id' => $service->publicId,
+            'site_key' => $service->siteKey,
+        ]);
+    }
+
     public function assignOrganizationOwner(
         string $worshipPublicId,
         string $organizationPublicId,
