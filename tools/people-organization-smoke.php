@@ -4,11 +4,13 @@ declare(strict_types=1);
 
 use ChurchCMS\Core\DatabaseManager;
 use ChurchCMS\Modules\Media\MediaService;
+use ChurchCMS\Modules\Media\MediaService;
 use ChurchCMS\Modules\Organizations\OrganizationService;
 use ChurchCMS\Modules\People\PeopleCatalogService;
 use ChurchCMS\Modules\People\PeopleRepository;
 use ChurchCMS\Modules\People\PersonMediaService;
 use ChurchCMS\Modules\People\PeopleService;
+use ChurchCMS\Modules\People\PersonMediaService;
 
 require dirname(__DIR__) . '/core.php';
 
@@ -241,6 +243,74 @@ try {
     );
     exit(1);
 } catch (InvalidArgumentException) {
+}
+
+$media = MediaService::fromDatabase();
+$portraitId = $media->registerMetadata(
+    mediaType: 'image',
+    originalName: 'portrait.jpg',
+    mimeType: 'image/jpeg',
+    bytes: 128,
+    sha256: str_repeat('a', 64),
+    ownerOrganizationPublicId: $departmentId,
+    siteKey: 'people-smoke',
+    title: 'Портрет тестового человека',
+);
+
+$personMedia = new PersonMediaService();
+$personMedia->attachPortrait(
+    $personId,
+    $portraitId,
+    'people-smoke',
+);
+
+if (
+    $personMedia->portraitMediaPublicId(
+        $personId,
+        'people-smoke',
+    ) !== $portraitId
+) {
+    fwrite(
+        STDERR,
+        "Media usage-reference портрета People не сохранился.\n",
+    );
+    exit(1);
+}
+
+$privateProjection = PeopleCatalogService::fromDatabase()
+    ->detail($personId, 'people-smoke');
+
+if (
+    $privateProjection === null
+    || ($privateProjection['portrait'] ?? null) !== null
+) {
+    fwrite(
+        STDERR,
+        "Private Media asset не должен попадать в public People projection.\n",
+    );
+    exit(1);
+}
+
+$media->setVisibility(
+    $portraitId,
+    'public',
+    'people-smoke',
+);
+
+$publicProjection = PeopleCatalogService::fromDatabase()
+    ->detail($personId, 'people-smoke');
+
+if (
+    $publicProjection === null
+    || !is_array($publicProjection['portrait'] ?? null)
+    || ($publicProjection['portrait']['public_id'] ?? '')
+        !== $portraitId
+) {
+    fwrite(
+        STDERR,
+        "Public Media portrait не появился в People projection.\n",
+    );
+    exit(1);
 }
 
 $foreignRoot = $organizations->ensureSiteRoot(
