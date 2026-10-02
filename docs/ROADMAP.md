@@ -33,7 +33,7 @@ Status: in progress.
 - [x] Navigation/menu (primary menu, ordered Page/system-route/HTTPS items, Admin Shell и автоматическая передача navigation в публичную тему).
 - [x] Media library (foundation, organization owner, visibility, federation, безопасный upload/storage, MIME sniffing, SHA-256, Admin upload, технические размеры, derivatives, usage references, public image/document/audio/video blob, HTTP Range streaming и полный gallery vertical slice реализованы; связь Documents с Media-файлом также реализована).
 - [ ] People/clergy (основа схемы, доменного слоя и организационных связей назначений реализована; Admin Shell, публичная часть и API остаются).
-- [ ] Worship schedule (schema/domain foundation с обязательным organization owner реализован; Admin Shell, public/API, повторяющиеся правила и праздничные шаблоны остаются).
+- [x] Worship schedule (organization-scoped Admin Shell, public/API, federation, ежедневные/еженедельные повторяющиеся правила и идемпотентные праздничные шаблоны реализованы).
 - [ ] Events (schema/domain foundation с обязательным organization owner реализован; Admin Shell, публикация, public/API, календарные представления и повторяющиеся правила остаются).
 - [x] Galleries (schema/domain foundation, organization owner, ordered image slots, lifecycle, Admin Shell и public/API реализованы).
 - [ ] Documents (foundation, organization owner, visibility, federation, связь с Media-файлом, рубрики, organization-scoped Admin Shell и обычный public HTML/API реализованы; остаются версии/замены файла).
