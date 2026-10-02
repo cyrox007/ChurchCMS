@@ -4,6 +4,7 @@ declare(strict_types=1);
 
 use ChurchCMS\Core\DatabaseManager;
 use ChurchCMS\Modules\Organizations\OrganizationService;
+use ChurchCMS\Modules\Worship\WorshipCatalogService;
 use ChurchCMS\Modules\Worship\WorshipRepository;
 use ChurchCMS\Modules\Worship\WorshipScheduleService;
 
