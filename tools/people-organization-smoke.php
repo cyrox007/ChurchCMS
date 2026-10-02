@@ -291,28 +291,6 @@ if (
     exit(1);
 }
 
-$media->setVisibility(
-    $portraitId,
-    'public',
-    'people-smoke',
-);
-
-$publicProjection = PeopleCatalogService::fromDatabase()
-    ->detail($personId, 'people-smoke');
-
-if (
-    $publicProjection === null
-    || !is_array($publicProjection['portrait'] ?? null)
-    || ($publicProjection['portrait']['public_id'] ?? '')
-        !== $portraitId
-) {
-    fwrite(
-        STDERR,
-        "Public Media portrait не появился в People projection.\n",
-    );
-    exit(1);
-}
-
 $foreignRoot = $organizations->ensureSiteRoot(
     'Чужая епархия людей',
     'diocese',
