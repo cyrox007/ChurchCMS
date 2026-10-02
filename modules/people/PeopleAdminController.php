@@ -27,6 +27,7 @@ final class PeopleAdminController
             'people.read',
         );
         $repository = PeopleRepository::fromDatabase();
+        $media = new PersonMediaService();
         $rows = [];
 
         foreach ($repository->adminList($ownerIds) as $person) {
@@ -34,6 +35,11 @@ final class PeopleAdminController
                 'person' => $person,
                 'appointments' =>
                     $repository->appointmentsForPerson(
+                        $person->publicId,
+                        $person->siteKey,
+                    ),
+                'portrait_media_public_id' =>
+                    $media->portraitMediaPublicId(
                         $person->publicId,
                         $person->siteKey,
                     ),
@@ -74,6 +80,22 @@ final class PeopleAdminController
                         $userId,
                         'people.create',
                     ),
+                'createPortraits' => $canCreate
+                    ? $media->availablePortraits(
+                        $access->visibleOwnerPublicIds(
+                            $userId,
+                            'people.create',
+                        ),
+                    )
+                    : [],
+                'editPortraits' => $canEdit
+                    ? $media->availablePortraits(
+                        $access->visibleOwnerPublicIds(
+                            $userId,
+                            'people.edit',
+                        ),
+                    )
+                    : [],
             ],
             'people',
         );
@@ -120,6 +142,15 @@ final class PeopleAdminController
                 biographyHtml: (string) $request->post(
                     'biography',
                     '',
+                ),
+            );
+
+            $this->savePortrait(
+                $request,
+                $publicId,
+                $access->visibleOwnerPublicIds(
+                    $userId,
+                    'people.create',
                 ),
             );
 
@@ -221,6 +252,17 @@ final class PeopleAdminController
                     $person->siteKey,
                 );
             }
+
+            $this->savePortrait(
+                $request,
+                $person->publicId,
+                $access->visibleOwnerPublicIds(
+                    $userId,
+                    'people.edit',
+                    $person->siteKey,
+                ),
+                $person->siteKey,
+            );
 
             AuditLog::emit(
                 eventType: 'person.updated',
@@ -333,6 +375,55 @@ final class PeopleAdminController
                 '/admin/people?status=invalid',
             );
         }
+    }
+
+    /**
+     * @param list<string>|null $visibleOwners
+     */
+    private function savePortrait(
+        Request $request,
+        string $personPublicId,
+        ?array $visibleOwners,
+        string $siteKey = 'default',
+    ): void {
+        $mediaPublicId = trim((string) $request->post(
+            'portrait_media_public_id',
+            '',
+        ));
+        $media = new PersonMediaService();
+
+        if ($mediaPublicId === '') {
+            $media->detachPortrait(
+                $personPublicId,
+                $siteKey,
+            );
+            return;
+        }
+
+        $allowed = [];
+        foreach (
+            $media->availablePortraits(
+                $visibleOwners,
+                $siteKey,
+            ) as $portrait
+        ) {
+            $id = (string) ($portrait['public_id'] ?? '');
+            if ($id !== '') {
+                $allowed[$id] = true;
+            }
+        }
+
+        if (!isset($allowed[$mediaPublicId])) {
+            throw new InvalidArgumentException(
+                'Выбранная фотография недоступна.'
+            );
+        }
+
+        $media->attachPortrait(
+            $personPublicId,
+            $mediaPublicId,
+            $siteKey,
+        );
     }
 
     private static function userId(Request $request): int
