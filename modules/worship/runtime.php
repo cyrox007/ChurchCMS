@@ -29,6 +29,8 @@ foreach ([
     'WorshipRecurrenceRule.php',
     'WorshipRecurrenceRepository.php',
     'WorshipRecurrenceService.php',
+    'WorshipHolidayTemplateRepository.php',
+    'WorshipHolidayTemplateService.php',
     'WorshipCatalogService.php',
     'WorshipAdminController.php',
     'WorshipPublicController.php',
