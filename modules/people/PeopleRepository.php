@@ -43,6 +43,85 @@ final class PeopleRepository
             : null;
     }
 
+    /**
+     * null означает глобальный доступ без фильтра владельцев.
+     *
+     * @param list<string>|null $ownerPublicIds
+     * @return list<Person>
+     */
+    public function adminList(
+        ?array $ownerPublicIds,
+        string $siteKey = 'default',
+        int $limit = 200,
+    ): array {
+        $limit = max(1, min(500, $limit));
+
+        if ($ownerPublicIds === []) {
+            return [];
+        }
+
+        $where = ['site_key = :site_key'];
+        $params = ['site_key' => $siteKey];
+
+        if ($ownerPublicIds !== null) {
+            $placeholders = [];
+            foreach (
+                array_values(array_unique($ownerPublicIds))
+                as $index => $publicId
+            ) {
+                $name = 'owner_' . $index;
+                $placeholders[] = ':' . $name;
+                $params[$name] = $publicId;
+            }
+
+            $where[] = 'owner_organization_public_id IN ('
+                . implode(', ', $placeholders)
+                . ')';
+        }
+
+        $statement = $this->pdo->prepare(
+            'SELECT *
+             FROM people
+             WHERE ' . implode(' AND ', $where) . '
+             ORDER BY display_name ASC, id ASC
+             LIMIT ' . $limit
+        );
+        $statement->execute($params);
+
+        return array_map(
+            self::hydratePerson(...),
+            $statement->fetchAll(),
+        );
+    }
+
+    /**
+     * @return list<Person>
+     */
+    public function activePublic(
+        string $siteKey = 'default',
+        int $limit = 200,
+    ): array {
+        $limit = max(1, min(500, $limit));
+
+        $statement = $this->pdo->prepare(
+            'SELECT *
+             FROM people
+             WHERE site_key = :site_key
+               AND status = :status
+             ORDER BY display_name ASC, id ASC
+             LIMIT ' . $limit
+        );
+        $statement->execute([
+            'site_key' => $siteKey,
+            'status' => 'active',
+        ]);
+
+        return array_map(
+            self::hydratePerson(...),
+            $statement->fetchAll(),
+        );
+    }
+
     public function findAppointmentByPublicId(
         string $publicId,
         string $siteKey = 'default',
