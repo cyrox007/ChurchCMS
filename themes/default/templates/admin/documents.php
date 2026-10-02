@@ -175,6 +175,9 @@ $status = is_array($documentStatus ?? null)
                     $categoryNames = (string) (
                         $row['category_names'] ?? ''
                     );
+                    $fileVersions = is_array(
+                        $row['file_versions'] ?? null
+                    ) ? $row['file_versions'] : [];
                     ?>
                     <article class="admin-operations-row" role="listitem">
                         <div class="admin-operations-row__body">
@@ -303,10 +306,46 @@ $status = is_array($documentStatus ?? null)
                                     </select>
                                 </label>
 
+                                <label>
+                                    <span>Примечание к новой версии <small>необязательно</small></span>
+                                    <input
+                                        type="text"
+                                        name="file_version_note"
+                                        maxlength="500"
+                                        placeholder="Например: исправлена дата в приложении"
+                                    >
+                                    <small>Новая версия создаётся только если выбран другой файл.</small>
+                                </label>
+
                                 <button class="button button--primary" type="submit">
                                     Сохранить
                                 </button>
                             </form>
+                        <?php endif; ?>
+
+                        <?php if ($fileVersions !== []): ?>
+                            <details class="editor-card editor-advanced">
+                                <summary>
+                                    История файлов
+                                    <small>версий: <?= $theme->e(count($fileVersions)) ?></small>
+                                </summary>
+                                <div class="admin-operations-list" role="list">
+                                    <?php foreach ($fileVersions as $version): ?>
+                                        <article class="admin-operations-row" role="listitem">
+                                            <div class="admin-operations-row__body">
+                                                <strong>Версия №<?= $theme->e($version->versionNumber) ?></strong>
+                                                <span><?= $theme->e($version->createdAt) ?> UTC</span>
+                                                <small>
+                                                    Media ID: <?= $theme->e($version->mediaPublicId) ?>
+                                                    <?php if ($version->note !== null): ?>
+                                                        · <?= $theme->e($version->note) ?>
+                                                    <?php endif; ?>
+                                                </small>
+                                            </div>
+                                        </article>
+                                    <?php endforeach; ?>
+                                </div>
+                            </details>
                         <?php endif; ?>
 
                         <div class="admin-actions">

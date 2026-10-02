@@ -43,6 +43,7 @@ final class DocumentsAdminController
 
         $media = DocumentMediaService::fromDatabase();
         $categories = DocumentCategoryService::fromDatabase();
+        $versions = DocumentFileVersionService::fromDatabase();
         $documentRows = [];
 
         foreach (
@@ -62,6 +63,12 @@ final class DocumentsAdminController
                         $categories->forDocument(
                             $document->id,
                         ),
+                    ),
+                'file_versions' =>
+                    $versions->forDocument(
+                        $document->publicId,
+                        $document->siteKey,
+                        50,
                     ),
             ];
         }
@@ -447,6 +454,11 @@ final class DocumentsAdminController
         ));
         $media = DocumentMediaService::fromDatabase();
 
+        $currentMediaPublicId = $media->fileMediaPublicId(
+            $documentPublicId,
+            $siteKey,
+        );
+
         if ($mediaPublicId === '') {
             $media->detachFile(
                 $documentPublicId,
@@ -473,6 +485,19 @@ final class DocumentsAdminController
                 'Выбранный файл документа недоступен.'
             );
         }
+
+        if ($currentMediaPublicId === $mediaPublicId) {
+            return;
+        }
+
+        DocumentFileVersionService::fromDatabase()->record(
+            $documentPublicId,
+            $mediaPublicId,
+            self::nullable(
+                $request->post('file_version_note', null),
+            ),
+            $siteKey,
+        );
 
         $media->attachFile(
             $documentPublicId,
