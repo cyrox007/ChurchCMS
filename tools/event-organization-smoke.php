@@ -190,7 +190,7 @@ try {
 }
 
 $events->update(
-    $eventId,
+    $rootEventId,
     'Приходской праздник',
     '2026-10-15 10:00:00',
     '2026-10-15 13:00:00',
@@ -198,17 +198,17 @@ $events->update(
     'Приходской дом',
     'Краткое описание',
     'Полное описание',
-    'events-smoke',
+    $siteKey,
 );
 
 $events->publish(
-    $eventId,
-    'events-smoke',
+    $rootEventId,
+    $siteKey,
 );
 
 $updated = $repository->findByPublicId(
-    $eventId,
-    'events-smoke',
+    $rootEventId,
+    $siteKey,
 );
 
 if (
@@ -226,12 +226,18 @@ if (
 
 $adminList = $repository->adminList(
     [$updated->ownerOrganizationPublicId],
-    'events-smoke',
+    $siteKey,
 );
 
 if (
-    count($adminList) !== 1
-    || $adminList[0]->publicId !== $eventId
+    !in_array(
+        $rootEventId,
+        array_map(
+            static fn($event): string => $event->publicId,
+            $adminList,
+        ),
+        true,
+    )
 ) {
     fwrite(
         STDERR,
@@ -242,12 +248,12 @@ if (
 
 $catalog = EventCatalogService::fromDatabase();
 $detail = $catalog->detail(
-    $eventId,
-    'events-smoke',
+    $rootEventId,
+    $siteKey,
 );
 $calendar = $catalog->month(
     '2026-10',
-    'events-smoke',
+    $siteKey,
 );
 
 if (
