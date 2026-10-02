@@ -3,9 +3,11 @@
 declare(strict_types=1);
 
 use ChurchCMS\Core\DatabaseManager;
+use ChurchCMS\Modules\Media\MediaService;
 use ChurchCMS\Modules\Organizations\OrganizationService;
 use ChurchCMS\Modules\People\PeopleCatalogService;
 use ChurchCMS\Modules\People\PeopleRepository;
+use ChurchCMS\Modules\People\PersonMediaService;
 use ChurchCMS\Modules\People\PeopleService;
 
 require dirname(__DIR__) . '/core.php';
@@ -170,6 +172,77 @@ if (
     exit(1);
 }
 
+$media = MediaService::fromDatabase();
+$portraits = new PersonMediaService();
+
+$portraitId = $media->registerMetadata(
+    mediaType: 'image',
+    originalName: 'portrait.jpg',
+    mimeType: 'image/jpeg',
+    bytes: 128,
+    sha256: str_repeat('a', 64),
+    ownerOrganizationPublicId: $departmentId,
+    siteKey: 'people-smoke',
+    title: 'Портрет протоиерея Иоанна',
+);
+
+$portraits->attachPortrait(
+    $personId,
+    $portraitId,
+    'people-smoke',
+);
+
+if (
+    $portraits->portraitMediaPublicId(
+        $personId,
+        'people-smoke',
+    ) !== $portraitId
+) {
+    fwrite(
+        STDERR,
+        "Портрет People не сохранён через Media usage reference.\n",
+    );
+    exit(1);
+}
+
+$privatePortraitDetail = PeopleCatalogService::fromDatabase()
+    ->detail($personId, 'people-smoke');
+
+if (
+    $privatePortraitDetail === null
+    || ($privatePortraitDetail['portrait'] ?? null) !== null
+) {
+    fwrite(
+        STDERR,
+        "Private Media-портрет попал в публичную карточку People.\n",
+    );
+    exit(1);
+}
+
+$documentAssetId = $media->registerMetadata(
+    mediaType: 'document',
+    originalName: 'not-portrait.pdf',
+    mimeType: 'application/pdf',
+    bytes: 64,
+    sha256: str_repeat('b', 64),
+    ownerOrganizationPublicId: $departmentId,
+    siteKey: 'people-smoke',
+);
+
+try {
+    $portraits->attachPortrait(
+        $personId,
+        $documentAssetId,
+        'people-smoke',
+    );
+    fwrite(
+        STDERR,
+        "People разрешил использовать документ вместо портрета.\n",
+    );
+    exit(1);
+} catch (InvalidArgumentException) {
+}
+
 $foreignRoot = $organizations->ensureSiteRoot(
     'Чужая епархия людей',
     'diocese',
@@ -265,4 +338,4 @@ try {
 } catch (PDOException) {
 }
 
-echo "People organization foundation smoke OK\n";
+echo "People organization/Admin/public/Media smoke OK\n";
