@@ -4,11 +4,9 @@ declare(strict_types=1);
 
 use ChurchCMS\Core\DatabaseManager;
 use ChurchCMS\Modules\Media\MediaService;
-use ChurchCMS\Modules\Media\MediaService;
 use ChurchCMS\Modules\Organizations\OrganizationService;
 use ChurchCMS\Modules\People\PeopleCatalogService;
 use ChurchCMS\Modules\People\PeopleRepository;
-use ChurchCMS\Modules\People\PersonMediaService;
 use ChurchCMS\Modules\People\PeopleService;
 use ChurchCMS\Modules\People\PersonMediaService;
 
