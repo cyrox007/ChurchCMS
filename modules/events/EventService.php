@@ -138,6 +138,93 @@ final class EventService
         return $publicId;
     }
 
+    public function update(
+        string $eventPublicId,
+        string $title,
+        string $startsAt,
+        ?string $endsAt = null,
+        bool $allDay = false,
+        ?string $locationName = null,
+        string $excerpt = '',
+        string $descriptionHtml = '',
+        string $siteKey = 'default',
+    ): void {
+        $siteKey = self::siteKey($siteKey);
+        $event = $this->eventOrFail(
+            trim($eventPublicId),
+            $siteKey,
+        );
+
+        if (in_array($event->status, ['withdrawn', 'cancelled'], true)) {
+            throw new InvalidArgumentException(
+                'Снятое или отменённое событие недоступно для редактирования.'
+            );
+        }
+
+        $title = self::requiredText(
+            $title,
+            255,
+            'Название события обязательно.',
+        );
+        $startsAt = self::timestamp(
+            $startsAt,
+            'Некорректное время начала события.',
+        );
+        $endsAt = self::optionalTimestamp(
+            $endsAt,
+            'Некорректное время окончания события.',
+        );
+        $locationName = self::optionalText(
+            $locationName,
+            255,
+            'Название места события слишком длинное.',
+        );
+        $excerpt = self::text(
+            $excerpt,
+            2000,
+            'Краткое описание события слишком длинное.',
+        );
+
+        if (
+            $endsAt !== null
+            && new DateTimeImmutable($endsAt, new DateTimeZone('UTC'))
+                < new DateTimeImmutable(
+                    $startsAt,
+                    new DateTimeZone('UTC'),
+                )
+        ) {
+            throw new InvalidArgumentException(
+                'Окончание события не может быть раньше начала.'
+            );
+        }
+
+        $statement = $this->pdo->prepare(
+            'UPDATE events
+             SET title = :title,
+                 starts_at = :starts_at,
+                 ends_at = :ends_at,
+                 all_day = :all_day,
+                 location_name = :location_name,
+                 excerpt = :excerpt,
+                 description_html = :description_html,
+                 updated_at = :updated_at
+             WHERE public_id = :public_id
+               AND site_key = :site_key'
+        );
+        $statement->execute([
+            'title' => $title,
+            'starts_at' => $startsAt,
+            'ends_at' => $endsAt,
+            'all_day' => $allDay ? 1 : 0,
+            'location_name' => $locationName,
+            'excerpt' => $excerpt,
+            'description_html' => trim($descriptionHtml),
+            'updated_at' => gmdate('Y-m-d H:i:s'),
+            'public_id' => $event->publicId,
+            'site_key' => $event->siteKey,
+        ]);
+    }
+
     public function assignOrganizationOwner(
         string $eventPublicId,
         string $organizationPublicId,
