@@ -197,6 +197,49 @@ final class EventRepository
     /**
      * @return list<Event>
      */
+    public function publishedBetween(
+        DateTimeImmutable $from,
+        DateTimeImmutable $until,
+        string $siteKey = 'default',
+        int $limit = 500,
+    ): array {
+        $limit = max(1, min(500, $limit));
+        $from = $from->setTimezone(new DateTimeZone('UTC'));
+        $until = $until->setTimezone(new DateTimeZone('UTC'));
+
+        $statement = $this->pdo->prepare(
+            'SELECT *
+             FROM events
+             WHERE site_key = :site_key
+               AND status = :status
+               AND starts_at >= :starts_at
+               AND starts_at < :until
+             ORDER BY starts_at ASC, public_id ASC
+             LIMIT :limit'
+        );
+        $statement->bindValue(':site_key', $siteKey);
+        $statement->bindValue(':status', 'published');
+        $statement->bindValue(
+            ':starts_at',
+            $from->format('Y-m-d H:i:s'),
+        );
+        $statement->bindValue(
+            ':until',
+            $until->format('Y-m-d H:i:s'),
+        );
+        $statement->bindValue(':limit', $limit, PDO::PARAM_INT);
+        $statement->execute();
+
+        return array_map(
+            self::hydrate(...),
+            $statement->fetchAll(),
+        );
+    }
+
+
+    /**
+     * @return list<Event>
+     */
     public function publishedUpcoming(
         string $siteKey = 'default',
         int $limit = 100,
