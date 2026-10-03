@@ -1,7 +1,7 @@
 {
   "id": "default",
   "name": "ChurchCMS Default",
-  "version": "0.8.16",
+  "version": "0.8.17",
   "profiles": [
     "small-parish",
     "parish",
@@ -60,6 +60,7 @@
     "worship.show": "worship/show",
     "admin.events": "admin/events",
     "events.index": "events/index",
-    "events.show": "events/show"
+    "events.show": "events/show",
+    "search.index": "search/index"
   }
 }
