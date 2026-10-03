@@ -44,17 +44,12 @@ $defaultOwnerPublicId = (string) ($defaultOwnerPublicId ?? '');
                 <label><span>Отчество</span><input name="middle_name" maxlength="120"></label>
                 <label><span>Фамилия</span><input name="last_name" maxlength="120"></label>
                 <label><span>Краткая биография</span><textarea name="biography" rows="4"></textarea></label>
-                <label>
-                    <span>Фотография</span>
-                    <select name="portrait_media_public_id">
-                        <option value="">Без фотографии</option>
-                        <?php foreach ($createPortraits as $portrait): ?>
-                            <option value="<?= $theme->e((string) ($portrait['public_id'] ?? '')) ?>">
-                                <?= $theme->e((string) ($portrait['title'] ?? 'Изображение')) ?>
-                            </option>
-                        <?php endforeach; ?>
-                    </select>
-                </label>
+                <label><span>Фотография</span><select name="portrait_media_public_id">
+                    <option value="">Без фотографии</option>
+                    <?php foreach ($createPortraits as $portrait): ?>
+                        <option value="<?= $theme->e((string) ($portrait['public_id'] ?? '')) ?>"><?= $theme->e((string) ($portrait['title'] ?? 'Изображение')) ?></option>
+                    <?php endforeach; ?>
+                </select></label>
                 <button class="button button--primary" type="submit">Создать карточку</button>
             </form>
         </section>
@@ -74,15 +69,14 @@ $defaultOwnerPublicId = (string) ($defaultOwnerPublicId ?? '');
                     <?php
                     $person = $row['person'];
                     $appointments = $row['appointments'] ?? [];
-                    $portraitMediaPublicId = (string) (
-                        $row['portrait_media_public_id'] ?? ''
-                    );
+                    $portraitMediaPublicId = (string) ($row['portrait_media_public_id'] ?? '');
                     ?>
                     <article class="admin-operations-row" role="listitem">
                         <div class="admin-operations-row__body">
                             <strong><?= $theme->e($person->displayName) ?></strong>
                             <small>владелец: <?= $theme->e($person->ownerOrganizationPublicId) ?> · назначений: <?= $theme->e(count($appointments)) ?></small>
                         </div>
+
                         <?php if ($canEdit): ?>
                             <form class="admin-update-apply" method="post" action="<?= $theme->e($theme->route('admin_people_update', ['publicId' => $person->publicId])) ?>">
                                 <?= $theme->csrfInput() ?>
@@ -96,21 +90,13 @@ $defaultOwnerPublicId = (string) ($defaultOwnerPublicId ?? '');
                                 <label><span>Отчество</span><input name="middle_name" maxlength="120" value="<?= $theme->e($person->middleName ?? '') ?>"></label>
                                 <label><span>Фамилия</span><input name="last_name" maxlength="120" value="<?= $theme->e($person->lastName ?? '') ?>"></label>
                                 <label><span>Краткая биография</span><textarea name="biography" rows="4"><?= $theme->e($person->biographyHtml) ?></textarea></label>
-                                <label>
-                                    <span>Фотография</span>
-                                    <select name="portrait_media_public_id">
-                                        <option value="">Без фотографии</option>
-                                        <?php foreach ($editPortraits as $portrait): ?>
-                                            <?php $portraitId = (string) ($portrait['public_id'] ?? ''); ?>
-                                            <option
-                                                value="<?= $theme->e($portraitId) ?>"
-                                                <?= $portraitId === $portraitMediaPublicId ? 'selected' : '' ?>
-                                            >
-                                                <?= $theme->e((string) ($portrait['title'] ?? 'Изображение')) ?>
-                                            </option>
-                                        <?php endforeach; ?>
-                                    </select>
-                                </label>
+                                <label><span>Фотография</span><select name="portrait_media_public_id">
+                                    <option value="">Без фотографии</option>
+                                    <?php foreach ($editPortraits as $portrait): ?>
+                                        <?php $portraitId = (string) ($portrait['public_id'] ?? ''); ?>
+                                        <option value="<?= $theme->e($portraitId) ?>" <?= $portraitId === $portraitMediaPublicId ? 'selected' : '' ?>><?= $theme->e((string) ($portrait['title'] ?? 'Изображение')) ?></option>
+                                    <?php endforeach; ?>
+                                </select></label>
                                 <button class="button button--primary" type="submit">Сохранить</button>
                             </form>
 
@@ -132,11 +118,47 @@ $defaultOwnerPublicId = (string) ($defaultOwnerPublicId ?? '');
                         <?php endif; ?>
 
                         <?php if ($appointments !== []): ?>
-                            <div>
+                            <section>
+                                <h3>Назначения</h3>
                                 <?php foreach ($appointments as $appointment): ?>
-                                    <p><strong><?= $theme->e($appointment->title) ?></strong> · <?= $theme->e($appointment->organizationPublicId) ?></p>
+                                    <article class="admin-operations-row">
+                                        <div class="admin-operations-row__body">
+                                            <strong><?= $theme->e($appointment->title) ?></strong>
+                                            <small><?= $theme->e($appointment->organizationPublicId) ?> · <?= $theme->e($appointment->status) ?></small>
+                                        </div>
+
+                                        <?php if ($canEdit): ?>
+                                            <form class="admin-update-apply" method="post" action="<?= $theme->e($theme->route('admin_people_appointment_update', ['appointmentPublicId' => $appointment->publicId])) ?>">
+                                                <?= $theme->csrfInput() ?>
+                                                <label><span>Организация</span><select name="organization_public_id" required>
+                                                    <?php foreach ($editOrganizationUnits as $unit): ?>
+                                                        <option value="<?= $theme->e($unit->publicId) ?>" <?= $unit->publicId === $appointment->organizationPublicId ? 'selected' : '' ?>><?= $theme->e($unit->name) ?></option>
+                                                    <?php endforeach; ?>
+                                                </select></label>
+                                                <label><span>Должность или служение</span><input name="title" maxlength="255" required value="<?= $theme->e($appointment->title) ?>"></label>
+                                                <label><span>Тип</span><input name="appointment_type" maxlength="64" required value="<?= $theme->e($appointment->type) ?>"></label>
+                                                <label><span>Начало</span><input type="date" name="started_on" value="<?= $theme->e($appointment->startedOn ?? '') ?>"></label>
+                                                <label><span>Окончание</span><input type="date" name="ended_on" value="<?= $theme->e($appointment->endedOn ?? '') ?>"></label>
+                                                <label><span>Порядок</span><input type="number" name="sort_order" value="<?= $theme->e($appointment->sortOrder) ?>"></label>
+                                                <button class="button button--quiet" type="submit">Сохранить назначение</button>
+                                            </form>
+
+                                            <?php if ($appointment->status === 'active'): ?>
+                                                <form method="post" action="<?= $theme->e($theme->route('admin_people_appointment_end', ['appointmentPublicId' => $appointment->publicId])) ?>">
+                                                    <?= $theme->csrfInput() ?>
+                                                    <label><span>Дата завершения</span><input type="date" name="ended_on" value="<?= $theme->e($appointment->endedOn ?? '') ?>"></label>
+                                                    <button class="button button--quiet" type="submit">Завершить назначение</button>
+                                                </form>
+                                            <?php else: ?>
+                                                <form method="post" action="<?= $theme->e($theme->route('admin_people_appointment_reactivate', ['appointmentPublicId' => $appointment->publicId])) ?>">
+                                                    <?= $theme->csrfInput() ?>
+                                                    <button class="button button--quiet" type="submit">Вернуть назначение</button>
+                                                </form>
+                                            <?php endif; ?>
+                                        <?php endif; ?>
+                                    </article>
                                 <?php endforeach; ?>
-                            </div>
+                            </section>
                         <?php endif; ?>
                     </article>
                 <?php endforeach; ?>
