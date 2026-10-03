@@ -1,0 +1,128 @@
+name: Проверка performance release-gate
+
+on:
+  push:
+    branches:
+      - develop
+      - main
+    paths:
+      - 'tools/performance/release-gate.php'
+      - 'docs/PERFORMANCE_RELEASE_GATE.md'
+      - '.github/workflows/performance-release-gate-smoke.yml'
+  pull_request:
+    branches:
+      - develop
+      - main
+    paths:
+      - 'tools/performance/release-gate.php'
+      - 'docs/PERFORMANCE_RELEASE_GATE.md'
+      - '.github/workflows/performance-release-gate-smoke.yml'
+
+permissions:
+  contents: read
+
+jobs:
+  release-gate-smoke:
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Получить исходный код
+        uses: actions/checkout@v4
+
+      - name: Подготовить PHP 8.3
+        uses: shivammathur/setup-php@v2
+        with:
+          php-version: '8.3'
+          coverage: none
+
+      - name: Проверить синтаксис
+        run: php -l tools/performance/release-gate.php
+
+      - name: Проверить успешный и блокирующий профили
+        run: |
+          set -euo pipefail
+
+          cat > /tmp/http-load.json <<'JSON'
+          {
+            "requests": 1000,
+            "concurrency": 20,
+            "errors": 0,
+            "error_rate": 0,
+            "requests_per_second": 125.5,
+            "latency": {
+              "p50_ms": 24.0,
+              "p95_ms": 70.0,
+              "p99_ms": 95.0
+            },
+            "scenarios": {
+              "publication_detail_cache_miss": {
+                "p50_ms": 40.0,
+                "p95_ms": 90.0,
+                "p99_ms": 120.0
+              }
+            }
+          }
+          JSON
+
+          cat > /tmp/thresholds-pass.json <<'JSON'
+          {
+            "profile": "ci-smoke-only",
+            "reference_hardware": {
+              "cpu": "CI smoke",
+              "memory_mb": 4096,
+              "storage": "temporary SSD",
+              "web_server": "Nginx smoke",
+              "php": "PHP 8.3",
+              "database": "PostgreSQL smoke"
+            },
+            "limits": {
+              "max_errors": 0,
+              "max_error_rate": 0,
+              "min_requests_per_second": 100,
+              "max_latency_p50_ms": 30,
+              "max_latency_p95_ms": 80,
+              "max_latency_p99_ms": 100,
+              "scenarios": {
+                "publication_detail_cache_miss": {
+                  "max_p95_ms": 100,
+                  "max_p99_ms": 130
+                }
+              }
+            }
+          }
+          JSON
+
+          php tools/performance/release-gate.php \
+            --result=/tmp/http-load.json \
+            --thresholds=/tmp/thresholds-pass.json \
+            > /tmp/gate-pass.json
+
+          cat > /tmp/thresholds-fail.json <<'JSON'
+          {
+            "profile": "ci-smoke-block",
+            "reference_hardware": {
+              "cpu": "CI smoke",
+              "memory_mb": 4096,
+              "storage": "temporary SSD",
+              "web_server": "Nginx smoke",
+              "php": "PHP 8.3",
+              "database": "PostgreSQL smoke"
+            },
+            "limits": {
+              "max_errors": 0,
+              "max_error_rate": 0,
+              "min_requests_per_second": 200,
+              "max_latency_p50_ms": 20,
+              "max_latency_p95_ms": 60,
+              "max_latency_p99_ms": 80,
+              "scenarios": {}
+            }
+          }
+          JSON
+
+          if php tools/performance/release-gate.php \
+            --result=/tmp/http-load.json \
+            --thresholds=/tmp/thresholds-fail.json; then
+            echo 'Release-gate ошибочно пропустил нарушенные пороги.' >&2
+            exit 1
+          fi
