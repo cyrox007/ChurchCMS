@@ -164,18 +164,22 @@ final class MediaResumableTransferService
         MediaResumableTransfer $transfer,
         int $maxBytes,
     ): MediaBinaryChunk {
-        if ($transfer->status !== 'active') {
+        $current = $this->requiredByPublicId(
+            $transfer->publicId,
+        );
+
+        if ($current->status !== 'active') {
             throw new InvalidArgumentException(
                 'Resumable transfer не находится в активном состоянии.'
             );
         }
 
         $source = $this->source(
-            $transfer->mediaPublicId,
-            $transfer->siteKey,
+            $current->mediaPublicId,
+            $current->siteKey,
         );
 
-        if ($source->bytes !== $transfer->totalBytes) {
+        if ($source->bytes !== $current->totalBytes) {
             throw new RuntimeException(
                 'Размер Media source изменился после начала transfer.'
             );
@@ -183,7 +187,7 @@ final class MediaResumableTransferService
 
         return $this->binary->readChunk(
             $source,
-            $transfer->uploadedBytes,
+            $current->uploadedBytes,
             $maxBytes,
         );
     }
@@ -192,10 +196,14 @@ final class MediaResumableTransferService
         MediaResumableTransfer $transfer,
         MediaBinaryChunk $chunk,
     ): MediaResumableTransfer {
+        $current = $this->requiredByPublicId(
+            $transfer->publicId,
+        );
+
         if (
-            $transfer->status !== 'active'
-            || $chunk->offset !== $transfer->uploadedBytes
-            || $chunk->totalBytes !== $transfer->totalBytes
+            $current->status !== 'active'
+            || $chunk->offset !== $current->uploadedBytes
+            || $chunk->totalBytes !== $current->totalBytes
             || $chunk->nextOffset <= $chunk->offset
         ) {
             throw new InvalidArgumentException(
@@ -205,8 +213,8 @@ final class MediaResumableTransferService
 
         if (
             !$this->transfers->advance(
-                $transfer->id,
-                $transfer->uploadedBytes,
+                $current->id,
+                $current->uploadedBytes,
                 $chunk->nextOffset,
             )
         ) {
@@ -216,16 +224,20 @@ final class MediaResumableTransferService
         }
 
         return $this->requiredByPublicId(
-            $transfer->publicId,
+            $current->publicId,
         );
     }
 
     public function complete(
         MediaResumableTransfer $transfer,
     ): MediaResumableTransfer {
+        $current = $this->requiredByPublicId(
+            $transfer->publicId,
+        );
+
         if (
-            $transfer->status !== 'active'
-            || $transfer->uploadedBytes !== $transfer->totalBytes
+            $current->status !== 'active'
+            || $current->uploadedBytes !== $current->totalBytes
         ) {
             throw new InvalidArgumentException(
                 'Нельзя завершить transfer до отправки всех байтов.'
@@ -234,9 +246,9 @@ final class MediaResumableTransferService
 
         if (
             !$this->transfers->complete(
-                $transfer->id,
-                $transfer->uploadedBytes,
-                $transfer->totalBytes,
+                $current->id,
+                $current->uploadedBytes,
+                $current->totalBytes,
             )
         ) {
             throw new RuntimeException(
@@ -245,7 +257,7 @@ final class MediaResumableTransferService
         }
 
         return $this->requiredByPublicId(
-            $transfer->publicId,
+            $current->publicId,
         );
     }
 
@@ -253,10 +265,13 @@ final class MediaResumableTransferService
         MediaResumableTransfer $transfer,
         string $error,
     ): MediaResumableTransfer {
+        $current = $this->requiredByPublicId(
+            $transfer->publicId,
+        );
         $error = self::safeError($error);
 
         $this->transfers->update(
-            $transfer->id,
+            $current->id,
             [
                 'status' => 'failed',
                 'last_error' => $error,
@@ -265,7 +280,7 @@ final class MediaResumableTransferService
         );
 
         return $this->requiredByPublicId(
-            $transfer->publicId,
+            $current->publicId,
         );
     }
 
