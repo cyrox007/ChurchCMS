@@ -25,6 +25,7 @@ final class MediaResumableUploadCapability
      * @return array{
      *     type:string,
      *     public_id:string,
+     *     site_key:string,
      *     mime_type:string,
      *     bytes:int,
      *     sha256:string
@@ -62,6 +63,7 @@ final class MediaResumableUploadCapability
         return [
             'type' => 'video',
             'public_id' => $source->mediaPublicId,
+            'site_key' => $source->siteKey,
             'mime_type' => $source->mimeType,
             'bytes' => $source->bytes,
             'sha256' => $source->sha256,
