@@ -58,6 +58,9 @@
     "admin.worship": "admin/worship",
     "worship.index": "worship/index",
     "worship.show": "worship/show",
+    "admin.events": "admin/events",
+    "events.index": "events/index",
+    "events.show": "events/show",
     "search.index": "search/index"
   }
 }
