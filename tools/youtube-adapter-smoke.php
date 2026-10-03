@@ -6,50 +6,52 @@ use ChurchCMS\Modules\Social\ChannelAdapterRegistry;
 use ChurchCMS\Modules\Social\ChannelCapability;
 use ChurchCMS\Modules\Social\ChannelHttpClient;
 use ChurchCMS\Modules\Social\ChannelOutboundItem;
+use ChurchCMS\Modules\Social\ChannelTransferHttpClient;
 use ChurchCMS\Modules\Social\SocialConnection;
 use ChurchCMS\Modules\Social\SocialConnectionService;
-use ChurchCMS\Modules\Social\YoutubeChannelAdapter;
+use ChurchCMS\Modules\Social\YoutubePublishingChannelAdapter;
 
 require dirname(__DIR__) . '/core.php';
 
 final class YoutubeSmokeHttpClient implements ChannelHttpClient
 {
+    public const CHANNEL_ID = 'UC1234567890123456789012';
+
     /** @var list<array<string,mixed>> */
     public array $calls = [];
-
-    private const CHANNEL_ID = 'UC1234567890123456789012';
 
     public function getJson(
         string $url,
         array $query = [],
         array $headers = [],
     ): array {
-        $this->calls[] = [
-            'url' => $url,
-            'query' => $query,
-            'headers' => $headers,
-        ];
-
-        if (($query['key'] ?? null) !== 'youtube-api-key-smoke') {
-            throw new \RuntimeException(
-                'YouTube API key не передан в запрос.'
-            );
-        }
+        $this->calls[] = compact('url', 'query', 'headers');
 
         if (
-            $url
-                === 'https://www.googleapis.com/youtube/v3/channels'
+            $url === 'https://www.googleapis.com/youtube/v3/channels'
+            && ($query['mine'] ?? null) === 'true'
         ) {
             if (
-                ($query['id'] ?? null) !== self::CHANNEL_ID
-                || ($query['part'] ?? null)
-                    !== 'id,snippet,contentDetails'
+                ($headers['Authorization'] ?? null)
+                    !== 'Bearer refreshed-access-token'
             ) {
-                throw new \RuntimeException(
-                    'YouTube channels.list получил неверные параметры.'
+                throw new RuntimeException(
+                    'OAuth access token не передан в channels.list.'
                 );
             }
 
+            return self::ok([
+                'items' => [[
+                    'id' => self::CHANNEL_ID,
+                ]],
+            ]);
+        }
+
+        if (
+            $url === 'https://www.googleapis.com/youtube/v3/channels'
+            && ($query['id'] ?? null) === self::CHANNEL_ID
+            && ($query['key'] ?? null) === 'youtube-api-key-smoke'
+        ) {
             return self::ok([
                 'items' => [[
                     'id' => self::CHANNEL_ID,
@@ -66,87 +68,37 @@ final class YoutubeSmokeHttpClient implements ChannelHttpClient
         }
 
         if (
-            $url
-                === 'https://www.googleapis.com/youtube/v3/playlistItems'
+            $url === 'https://www.googleapis.com/youtube/v3/playlistItems'
+            && ($query['playlistId'] ?? null)
+                === 'UU1234567890123456789012'
+            && ($query['key'] ?? null) === 'youtube-api-key-smoke'
         ) {
-            if (
-                ($query['playlistId'] ?? null)
-                    !== 'UU1234567890123456789012'
-                || ($query['maxResults'] ?? null) !== 50
-                || ($query['part'] ?? null)
-                    !== 'snippet,contentDetails,status'
-            ) {
-                throw new \RuntimeException(
-                    'YouTube playlistItems.list получил неверные параметры.'
-                );
-            }
-
-            if (!isset($query['pageToken'])) {
-                return self::ok([
-                    'items' => [
-                        self::item(
-                            id: 'playlist-new-2',
-                            videoId: 'newvideo002',
-                            publishedAt: '2026-09-30T07:00:00Z',
-                            title: 'Новое видео 2',
-                            description: 'Описание 2',
-                            thumbnail: 'https://img.youtube.test/new2.jpg',
-                        ),
-                        [
-                            'id' => 'playlist-foreign',
-                            'snippet' => [
-                                'channelId' => 'UC9999999999999999999999',
-                                'title' => 'Чужой канал',
-                                'description' => '',
-                                'publishedAt' => '2026-09-30T08:00:00Z',
-                                'resourceId' => [
-                                    'kind' => 'youtube#video',
-                                    'videoId' => 'foreign001',
-                                ],
-                            ],
-                            'contentDetails' => [
-                                'videoId' => 'foreign001',
-                                'videoPublishedAt' => '2026-09-30T08:00:00Z',
-                            ],
-                            'status' => [
-                                'privacyStatus' => 'public',
-                            ],
+            return self::ok([
+                'items' => [[
+                    'id' => 'playlist-video-1',
+                    'snippet' => [
+                        'channelId' => self::CHANNEL_ID,
+                        'title' => 'Новое видео',
+                        'description' => 'Описание видео',
+                        'publishedAt' => '2026-10-03T10:00:00Z',
+                        'resourceId' => [
+                            'kind' => 'youtube#video',
+                            'videoId' => 'video123456',
                         ],
                     ],
-                    'nextPageToken' => 'page-2',
-                ]);
-            }
-
-            if (($query['pageToken'] ?? null) !== 'page-2') {
-                throw new \RuntimeException(
-                    'YouTube playlistItems.list получил неверный pageToken.'
-                );
-            }
-
-            return self::ok([
-                'items' => [
-                    self::item(
-                        id: 'playlist-new-1',
-                        videoId: 'newvideo001',
-                        publishedAt: '2026-09-30T06:00:00Z',
-                        title: 'Новое видео 1',
-                        description: 'Описание 1',
-                        thumbnail: 'https://img.youtube.test/new1.jpg',
-                    ),
-                    self::item(
-                        id: 'playlist-old',
-                        videoId: 'oldvideo001',
-                        publishedAt: '2026-09-30T05:00:00Z',
-                        title: 'Старое видео',
-                        description: 'Старое описание',
-                        thumbnail: 'https://img.youtube.test/old.jpg',
-                    ),
-                ],
+                    'contentDetails' => [
+                        'videoId' => 'video123456',
+                        'videoPublishedAt' => '2026-10-03T10:00:00Z',
+                    ],
+                    'status' => [
+                        'privacyStatus' => 'public',
+                    ],
+                ]],
             ]);
         }
 
-        throw new \RuntimeException(
-            'Неожиданный YouTube URL: ' . $url
+        throw new RuntimeException(
+            'Неожиданный YouTube GET: ' . $url
         );
     }
 
@@ -155,8 +107,8 @@ final class YoutubeSmokeHttpClient implements ChannelHttpClient
         array $payload,
         array $headers = [],
     ): array {
-        throw new \RuntimeException(
-            'Inbound YouTube adapter не должен использовать POST.'
+        throw new RuntimeException(
+            'YouTube smoke не ожидает JSON POST через ChannelHttpClient.'
         );
     }
 
@@ -165,55 +117,25 @@ final class YoutubeSmokeHttpClient implements ChannelHttpClient
         array $payload,
         array $headers = [],
     ): array {
-        throw new \RuntimeException(
-            'Inbound YouTube adapter не должен использовать form POST.'
-        );
-    }
+        $this->calls[] = compact('url', 'payload', 'headers');
 
-    /**
-     * @return array<string,mixed>
-     */
-    private static function item(
-        string $id,
-        string $videoId,
-        string $publishedAt,
-        string $title,
-        string $description,
-        string $thumbnail,
-    ): array {
-        return [
-            'id' => $id,
-            'snippet' => [
-                'channelId' => self::CHANNEL_ID,
-                'title' => $title,
-                'description' => $description,
-                'publishedAt' => $publishedAt,
-                'position' => 0,
-                'resourceId' => [
-                    'kind' => 'youtube#video',
-                    'videoId' => $videoId,
-                ],
-                'thumbnails' => [
-                    'default' => [
-                        'url' => $thumbnail . '?small=1',
-                        'width' => 120,
-                        'height' => 90,
-                    ],
-                    'high' => [
-                        'url' => $thumbnail,
-                        'width' => 480,
-                        'height' => 360,
-                    ],
-                ],
-            ],
-            'contentDetails' => [
-                'videoId' => $videoId,
-                'videoPublishedAt' => $publishedAt,
-            ],
-            'status' => [
-                'privacyStatus' => 'public',
-            ],
-        ];
+        if (
+            $url !== 'https://oauth2.googleapis.com/token'
+            || ($payload['grant_type'] ?? null) !== 'refresh_token'
+            || ($payload['refresh_token'] ?? null) !== 'refresh-token-smoke'
+            || ($payload['client_id'] ?? null) !== 'client-id-smoke'
+            || ($payload['client_secret'] ?? null) !== 'client-secret-smoke'
+        ) {
+            throw new RuntimeException(
+                'Google OAuth получил неверный refresh-запрос.'
+            );
+        }
+
+        return self::ok([
+            'access_token' => 'refreshed-access-token',
+            'expires_in' => 3600,
+            'token_type' => 'Bearer',
+        ]);
     }
 
     /**
@@ -235,30 +157,309 @@ final class YoutubeSmokeHttpClient implements ChannelHttpClient
     }
 }
 
-$registered = ChannelAdapterRegistry::get('youtube');
-if (!$registered instanceof YoutubeChannelAdapter) {
-    fwrite(STDERR, "YouTube adapter не зарегистрирован runtime.\n");
-    exit(1);
+final class YoutubeSmokeTransferHttpClient implements ChannelTransferHttpClient
+{
+    /** @var list<array<string,mixed>> */
+    public array $calls = [];
+
+    private int $putNumber = 0;
+
+    public function request(
+        string $method,
+        string $url,
+        ?string $body = null,
+        array $headers = [],
+    ): array {
+        $this->calls[] = compact(
+            'method',
+            'url',
+            'body',
+            'headers',
+        );
+
+        if (
+            $method === 'POST'
+            && str_starts_with(
+                $url,
+                'https://www.googleapis.com/upload/youtube/v3/videos',
+            )
+        ) {
+            if (
+                ($headers['Authorization'] ?? null)
+                    !== 'Bearer refreshed-access-token'
+                || ($headers['X-Upload-Content-Length'] ?? null)
+                    !== '10'
+                || ($headers['X-Upload-Content-Type'] ?? null)
+                    !== 'video/mp4'
+            ) {
+                throw new RuntimeException(
+                    'YouTube init upload получил неверные заголовки.'
+                );
+            }
+
+            return self::response(
+                200,
+                [],
+                [
+                    'location' =>
+                        'https://upload.googleapis.com/upload/youtube/v3/videos?upload_id=smoke',
+                ],
+            );
+        }
+
+        if (
+            $method !== 'PUT'
+            || !str_starts_with(
+                $url,
+                'https://upload.googleapis.com/',
+            )
+        ) {
+            throw new RuntimeException(
+                'Неожиданный запрос resumable upload.'
+            );
+        }
+
+        $this->putNumber++;
+
+        if ($this->putNumber === 1) {
+            if (
+                $body !== 'abcdef'
+                || ($headers['Content-Range'] ?? null)
+                    !== 'bytes 0-5/10'
+            ) {
+                throw new RuntimeException(
+                    'Первый YouTube chunk сформирован неверно.'
+                );
+            }
+
+            return self::response(
+                308,
+                [],
+                ['range' => 'bytes=0-5'],
+            );
+        }
+
+        if ($this->putNumber === 2) {
+            if (
+                $body !== 'ghij'
+                || ($headers['Content-Range'] ?? null)
+                    !== 'bytes 6-9/10'
+            ) {
+                throw new RuntimeException(
+                    'Второй YouTube chunk сформирован неверно.'
+                );
+            }
+
+            return self::response(
+                200,
+                ['id' => 'published123'],
+            );
+        }
+
+        throw new RuntimeException(
+            'YouTube smoke отправил лишний chunk.'
+        );
+    }
+
+    /**
+     * @param array<string,mixed> $json
+     * @param array<string,string> $headers
+     * @return array{
+     *     status:int,
+     *     body:string,
+     *     json:array<string,mixed>|null,
+     *     headers:array<string,string>
+     * }
+     */
+    private static function response(
+        int $status,
+        array $json,
+        array $headers = [],
+    ): array {
+        return [
+            'status' => $status,
+            'body' => $json === []
+                ? ''
+                : json_encode(
+                    $json,
+                    JSON_THROW_ON_ERROR,
+                ),
+            'json' => $json === [] ? null : $json,
+            'headers' => $headers,
+        ];
+    }
 }
 
-if (
-    $registered->capabilities()
-        !== [
-            ChannelCapability::IMPORT_VIDEO,
-            ChannelCapability::POLLING,
-        ]
-) {
+final class YoutubeSmokeMediaCapability
+{
+    public YoutubeSmokeMediaService $transfer;
+
+    public function __construct()
+    {
+        $this->transfer = new YoutubeSmokeMediaService();
+    }
+
+    public function service(): YoutubeSmokeMediaService
+    {
+        return $this->transfer;
+    }
+
+    public function source(
+        string $mediaPublicId,
+        string $siteKey = 'default',
+    ): object {
+        if (
+            $mediaPublicId !== 'media-video-smoke'
+            || $siteKey !== 'parish-smoke'
+        ) {
+            throw new RuntimeException(
+                'YouTube запросил неверный Media source.'
+            );
+        }
+
+        return (object) [
+            'mediaPublicId' => $mediaPublicId,
+            'siteKey' => $siteKey,
+            'mimeType' => 'video/mp4',
+            'bytes' => 10,
+            'sha256' => hash('sha256', 'abcdefghij'),
+        ];
+    }
+}
+
+final class YoutubeSmokeMediaService
+{
+    private ?object $transfer = null;
+
+    public function find(
+        string $mediaPublicId,
+        string $providerId,
+        string $targetKey,
+        string $siteKey = 'default',
+    ): ?object {
+        return $this->transfer;
+    }
+
+    public function begin(
+        object $source,
+        string $providerId,
+        string $targetKey,
+        string $session,
+        mixed $expiresAt = null,
+    ): object {
+        if (
+            $providerId !== 'youtube'
+            || !str_starts_with($targetKey, 'upload:')
+            || !str_starts_with(
+                $session,
+                'https://upload.googleapis.com/',
+            )
+        ) {
+            throw new RuntimeException(
+                'YouTube создал некорректную resumable transfer.'
+            );
+        }
+
+        $this->transfer = (object) [
+            'status' => 'active',
+            'uploadedBytes' => 0,
+            'totalBytes' => 10,
+            'mediaPublicId' => $source->mediaPublicId,
+            'siteKey' => $source->siteKey,
+            'session' => $session,
+        ];
+
+        return $this->transfer;
+    }
+
+    public function session(object $transfer): string
+    {
+        return (string) $transfer->session;
+    }
+
+    public function readNext(
+        object $transfer,
+        int $maxBytes,
+    ): object {
+        $offset = (int) $transfer->uploadedBytes;
+        $data = $offset === 0 ? 'abcdef' : 'ghij';
+        $remaining = 10 - $offset;
+        $data = substr($data, 0, min(strlen($data), $remaining));
+
+        return (object) [
+            'offset' => $offset,
+            'data' => $data,
+            'nextOffset' => $offset + strlen($data),
+            'totalBytes' => 10,
+        ];
+    }
+
+    public function advance(
+        object $transfer,
+        object $chunk,
+    ): object {
+        $transfer->uploadedBytes = (int) $chunk->nextOffset;
+        $this->transfer = $transfer;
+
+        return $transfer;
+    }
+
+    public function complete(object $transfer): object
+    {
+        if ((int) $transfer->uploadedBytes !== 10) {
+            throw new RuntimeException(
+                'YouTube transfer завершён не на последнем байте.'
+            );
+        }
+
+        $transfer->status = 'completed';
+        $this->transfer = $transfer;
+
+        return $transfer;
+    }
+
+    public function fail(object $transfer, string $error): object
+    {
+        $transfer->status = 'failed';
+        $this->transfer = $transfer;
+
+        return $transfer;
+    }
+
+    public function completed(): bool
+    {
+        return ($this->transfer->status ?? null) === 'completed';
+    }
+}
+
+$registered = ChannelAdapterRegistry::get('youtube');
+if (!$registered instanceof YoutubePublishingChannelAdapter) {
     fwrite(
         STDERR,
-        "YouTube adapter объявил неожиданные capabilities.\n",
+        "YouTube publishing adapter не зарегистрирован runtime.\n",
     );
     exit(1);
 }
 
-$service = SocialConnectionService::fromDatabase();
-$metadata = null;
+if (
+    $registered->capabilities() !== [
+        ChannelCapability::PUBLISH_VIDEO,
+        ChannelCapability::IMPORT_VIDEO,
+        ChannelCapability::POLLING,
+    ]
+) {
+    fwrite(
+        STDERR,
+        "YouTube adapter объявил неверные возможности.\n",
+    );
+    exit(1);
+}
 
-foreach ($service->availableAdapters() as $adapter) {
+$metadata = null;
+foreach (
+    SocialConnectionService::fromDatabase()->availableAdapters()
+    as $adapter
+) {
     if (($adapter['id'] ?? null) === 'youtube') {
         $metadata = $adapter;
         break;
@@ -267,131 +468,127 @@ foreach ($service->availableAdapters() as $adapter) {
 
 if (
     !is_array($metadata)
-    || ($metadata['can_publish'] ?? true) !== false
+    || ($metadata['can_publish'] ?? false) !== true
     || ($metadata['can_import'] ?? false) !== true
 ) {
     fwrite(
         STDERR,
-        "Мастер не распознал YouTube как inbound-only адаптер.\n",
+        "Мастер подключений не распознал двусторонний YouTube.\n",
     );
     exit(1);
 }
 
 $http = new YoutubeSmokeHttpClient();
-$adapter = new YoutubeChannelAdapter($http);
-$channelId = 'UC1234567890123456789012';
+$transferHttp = new YoutubeSmokeTransferHttpClient();
+$media = new YoutubeSmokeMediaCapability();
+$adapter = new YoutubePublishingChannelAdapter(
+    $http,
+    $transferHttp,
+    $media,
+);
 
-$test = $adapter->testConnection(
-    $channelId,
+$inboundTest = $adapter->testConnection(
+    YoutubeSmokeHttpClient::CHANNEL_ID,
     'youtube-api-key-smoke',
 );
-if (!$test->success) {
+if (!$inboundTest->success) {
     fwrite(
         STDERR,
-        "YouTube testConnection не прошёл: "
-        . (string) $test->message
-        . "\n",
+        "Старый API key больше не проходит inbound-проверку YouTube.\n",
     );
     exit(1);
 }
 
-$invalid = $adapter->testConnection(
-    'not-a-channel',
-    'youtube-api-key-smoke',
-);
-if ($invalid->success) {
-    fwrite(
-        STDERR,
-        "YouTube testConnection принял неверный channel ID.\n",
-    );
-    exit(1);
-}
-
-$now = new \DateTimeImmutable('2026-09-30 00:00:00 UTC');
 $connection = new SocialConnection(
     id: 4,
     publicId: 'youtube-smoke-connection',
     provider: 'youtube',
     name: 'YouTube smoke',
-    targetRef: $channelId,
+    targetRef: YoutubeSmokeHttpClient::CHANNEL_ID,
     tokenEncrypted: '',
     settings: [],
     enabled: true,
-    outboundEnabled: false,
+    outboundEnabled: true,
     inboundEnabled: true,
     inboundPolicy: 'review',
     connectionKind: 'video',
-    createdAt: $now,
-    updatedAt: $now,
+    createdAt: new DateTimeImmutable('2026-10-03 00:00:00 UTC'),
+    updatedAt: new DateTimeImmutable('2026-10-03 00:00:00 UTC'),
 );
-
-$cursor = (new \DateTimeImmutable(
-    '2026-09-30T05:00:00Z',
-))->getTimestamp() . '|oldvideo001';
 
 $batch = $adapter->pull(
     $connection,
     'youtube-api-key-smoke',
-    $cursor,
-    2,
+    null,
+    1,
+);
+if (
+    count($batch->items) !== 1
+    || $batch->items[0]->remoteId !== 'video123456'
+) {
+    fwrite(
+        STDERR,
+        "Inbound YouTube polling сломан после добавления upload.\n",
+    );
+    exit(1);
+}
+
+$credentials = json_encode(
+    [
+        'api_key' => 'youtube-api-key-smoke',
+        'refresh_token' => 'refresh-token-smoke',
+        'client_id' => 'client-id-smoke',
+        'client_secret' => 'client-secret-smoke',
+    ],
+    JSON_THROW_ON_ERROR,
 );
 
-if (
-    count($batch->items) !== 2
-    || $batch->items[0]->remoteId !== 'newvideo001'
-    || $batch->items[1]->remoteId !== 'newvideo002'
-    || $batch->nextCursor
-        !== (
-            new \DateTimeImmutable(
-                '2026-09-30T07:00:00Z',
-            )
-        )->getTimestamp()
-        . '|newvideo002'
-) {
+$outboundTest = $adapter->testConnection(
+    YoutubeSmokeHttpClient::CHANNEL_ID,
+    $credentials,
+);
+if (!$outboundTest->success) {
     fwrite(
         STDERR,
-        "YouTube polling неверно обработал cursor или порядок видео.\n",
+        "OAuth-проверка исходящего YouTube не прошла.\n",
     );
     exit(1);
 }
 
-$first = $batch->items[0];
-
-if (
-    $first->kind !== 'video'
-    || $first->title !== 'Новое видео 1'
-    || $first->text !== 'Описание 1'
-    || $first->canonicalUrl
-        !== 'https://www.youtube.com/watch?v=newvideo001'
-    || count($first->media) !== 1
-    || ($first->media[0]['thumbnail_url'] ?? null)
-        !== 'https://img.youtube.test/new1.jpg'
-) {
-    fwrite(
-        STDERR,
-        "YouTube video нормализовано некорректно.\n",
-    );
-    exit(1);
-}
-
-$publish = $adapter->publish(
+$result = $adapter->publish(
     $connection,
-    'youtube-api-key-smoke',
+    $credentials,
     new ChannelOutboundItem(
-        sourceId: 'source',
+        sourceId: 'publication-smoke',
         kind: 'video',
-        title: 'Видео',
-        text: '',
-        canonicalUrl: '',
+        title: 'Видео прихода',
+        text: 'Описание публикации',
+        canonicalUrl: 'https://church.example/publications/video-smoke',
+        media: [[
+            'type' => 'video',
+            'public_id' => 'media-video-smoke',
+            'site_key' => 'parish-smoke',
+            'mime_type' => 'video/mp4',
+            'bytes' => 10,
+            'sha256' => hash('sha256', 'abcdefghij'),
+        ]],
     ),
 );
 
-if ($publish->success) {
+if (
+    !$result->success
+    || $result->remoteId !== 'published123'
+    || $result->remoteUrl
+        !== 'https://www.youtube.com/watch?v=published123'
+    || !$media->transfer->completed()
+) {
     fwrite(
         STDERR,
-        "Inbound-only YouTube adapter ошибочно подтвердил outbound.\n",
+        "YouTube resumable upload не завершён корректно: "
+        . (string) $result->error
+        . "\n",
     );
     exit(1);
 }
 
-echo "YouTube inbound adapter smoke OK\n";
+echo "YouTube inbound/outbound adapter smoke OK\n";

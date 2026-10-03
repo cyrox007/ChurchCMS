@@ -7,8 +7,12 @@ on:
       - main
     paths:
       - 'modules/social/YoutubeChannelAdapter.php'
+      - 'modules/social/YoutubePublishingChannelAdapter.php'
+      - 'modules/social/ChannelTransferHttpClient.php'
+      - 'modules/social/NativeTransferHttpClient.php'
       - 'modules/social/runtime.php'
       - 'modules/social/SocialConnectionService.php'
+      - 'modules/media/MediaResumableUploadCapability.php'
       - 'tools/youtube-adapter-smoke.php'
       - '.github/workflows/youtube-adapter-smoke.yml'
   pull_request:
@@ -17,8 +21,12 @@ on:
       - main
     paths:
       - 'modules/social/YoutubeChannelAdapter.php'
+      - 'modules/social/YoutubePublishingChannelAdapter.php'
+      - 'modules/social/ChannelTransferHttpClient.php'
+      - 'modules/social/NativeTransferHttpClient.php'
       - 'modules/social/runtime.php'
       - 'modules/social/SocialConnectionService.php'
+      - 'modules/media/MediaResumableUploadCapability.php'
       - 'tools/youtube-adapter-smoke.php'
       - '.github/workflows/youtube-adapter-smoke.yml'
 
@@ -59,8 +67,12 @@ jobs:
         run: |
           set -euo pipefail
           php -l modules/social/YoutubeChannelAdapter.php
+          php -l modules/social/YoutubePublishingChannelAdapter.php
+          php -l modules/social/ChannelTransferHttpClient.php
+          php -l modules/social/NativeTransferHttpClient.php
           php -l modules/social/runtime.php
           php -l modules/social/SocialConnectionService.php
+          php -l modules/media/MediaResumableUploadCapability.php
           php -l tools/youtube-adapter-smoke.php
           php bin/migrate.php validate
 
@@ -95,5 +107,5 @@ jobs:
 
           php bin/migrate.php
 
-      - name: Проверить inbound YouTube без внешней сети
+      - name: Проверить YouTube без внешней сети
         run: php tools/youtube-adapter-smoke.php

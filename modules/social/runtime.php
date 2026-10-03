@@ -13,7 +13,7 @@ use ChurchCMS\Modules\Social\ExternalChannelsCapability;
 use ChurchCMS\Modules\Social\TelegramChannelAdapter;
 use ChurchCMS\Modules\Social\VkChannelAdapter;
 use ChurchCMS\Modules\Social\MaxChannelAdapter;
-use ChurchCMS\Modules\Social\YoutubeChannelAdapter;
+use ChurchCMS\Modules\Social\YoutubePublishingChannelAdapter;
 use ChurchCMS\Modules\Social\RutubeChannelAdapter;
 use ChurchCMS\Modules\Social\SocialAdminController;
 use ChurchCMS\Modules\Social\SocialAdminTaskProvider;
@@ -42,10 +42,13 @@ foreach ([
     'ChannelAdapterRegistry.php',
     'ChannelHttpClient.php',
     'NativeHttpClient.php',
+    'ChannelTransferHttpClient.php',
+    'NativeTransferHttpClient.php',
     'TelegramChannelAdapter.php',
     'VkChannelAdapter.php',
     'MaxChannelAdapter.php',
     'YoutubeChannelAdapter.php',
+    'YoutubePublishingChannelAdapter.php',
     'RutubeChannelAdapter.php',
     'SocialConnectionRepository.php',
     'SocialConnectionService.php',
@@ -101,7 +104,7 @@ return new class implements ModuleRuntimeProvider {
             new MaxChannelAdapter(),
         );
         ChannelAdapterRegistry::register(
-            new YoutubeChannelAdapter(),
+            new YoutubePublishingChannelAdapter(),
         );
         ChannelAdapterRegistry::register(
             new RutubeChannelAdapter(),
