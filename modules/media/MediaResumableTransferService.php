@@ -200,9 +200,20 @@ final class MediaResumableTransferService
             $transfer->publicId,
         );
 
+        if ($chunk->offset !== $current->uploadedBytes) {
+            if ($transfer->uploadedBytes !== $current->uploadedBytes) {
+                throw new RuntimeException(
+                    'Resumable transfer уже изменён другим worker.'
+                );
+            }
+
+            throw new InvalidArgumentException(
+                'Media chunk не соответствует текущему resumable transfer.'
+            );
+        }
+
         if (
             $current->status !== 'active'
-            || $chunk->offset !== $current->uploadedBytes
             || $chunk->totalBytes !== $current->totalBytes
             || $chunk->nextOffset <= $chunk->offset
         ) {
