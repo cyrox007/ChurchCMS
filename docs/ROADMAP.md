@@ -107,5 +107,6 @@ Status: in progress.
 - [x] Outbound worker and retry/dead-letter processing.
 - [x] Inbound review/import workflow.
 - [x] Built-in Telegram/VK/MAX adapters.
-- [ ] Built-in YouTube/Rutube adapters.
+- [x] Built-in YouTube adapter: inbound Data API sync + OAuth resumable video upload через Media pipeline.
+- [ ] Built-in Rutube adapter: inbound sync реализован; outbound upload ожидает подтверждённый официальный API загрузки.
 - [x] Adapter SDK documentation for other/future platforms.
