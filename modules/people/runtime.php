@@ -11,6 +11,7 @@ use ChurchCMS\App\Services\AdminNavigationRegistry;
 use ChurchCMS\Core\ModuleRuntimeProvider;
 use ChurchCMS\Core\Router;
 use ChurchCMS\Modules\People\PeopleAdminController;
+use ChurchCMS\Modules\People\PeopleAppointmentAdminController;
 use ChurchCMS\Modules\People\PeoplePublicApiController;
 use ChurchCMS\Modules\People\PeoplePublicController;
 
@@ -22,8 +23,10 @@ foreach ([
     'PeopleService.php',
     'PeopleOrganizationAccessService.php',
     'PersonMediaService.php',
+    'PersonAppointmentLifecycleService.php',
     'PeopleCatalogService.php',
     'PeopleAdminController.php',
+    'PeopleAppointmentAdminController.php',
     'PeoplePublicController.php',
     'PeoplePublicApiController.php',
 ] as $file) {
@@ -89,6 +92,36 @@ return new class implements ModuleRuntimeProvider {
                 CsrfMiddleware::class,
             ],
             'admin_people_appointment_create',
+        );
+        $router->add(
+            'POST',
+            '/admin/people/appointments/{appointmentPublicId}',
+            [PeopleAppointmentAdminController::class, 'update'],
+            [
+                RequireAdminMiddleware::class,
+                CsrfMiddleware::class,
+            ],
+            'admin_people_appointment_update',
+        );
+        $router->add(
+            'POST',
+            '/admin/people/appointments/{appointmentPublicId}/end',
+            [PeopleAppointmentAdminController::class, 'end'],
+            [
+                RequireAdminMiddleware::class,
+                CsrfMiddleware::class,
+            ],
+            'admin_people_appointment_end',
+        );
+        $router->add(
+            'POST',
+            '/admin/people/appointments/{appointmentPublicId}/reactivate',
+            [PeopleAppointmentAdminController::class, 'reactivate'],
+            [
+                RequireAdminMiddleware::class,
+                CsrfMiddleware::class,
+            ],
+            'admin_people_appointment_reactivate',
         );
 
         $router->add(
