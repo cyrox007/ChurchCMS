@@ -21,6 +21,7 @@ foreach ([
     'PeopleRepository.php',
     'PeopleService.php',
     'PeopleOrganizationAccessService.php',
+    'PersonMediaService.php',
     'PeopleCatalogService.php',
     'PeopleAdminController.php',
     'PeoplePublicController.php',

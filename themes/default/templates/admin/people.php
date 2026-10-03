@@ -9,6 +9,12 @@ $createOrganizationUnits = is_array($createOrganizationUnits ?? null)
 $editOrganizationUnits = is_array($editOrganizationUnits ?? null)
     ? $editOrganizationUnits
     : [];
+$createPortraits = is_array($createPortraits ?? null)
+    ? $createPortraits
+    : [];
+$editPortraits = is_array($editPortraits ?? null)
+    ? $editPortraits
+    : [];
 $canCreate = ($canCreate ?? false) === true;
 $canEdit = ($canEdit ?? false) === true;
 $defaultOwnerPublicId = (string) ($defaultOwnerPublicId ?? '');
@@ -38,6 +44,17 @@ $defaultOwnerPublicId = (string) ($defaultOwnerPublicId ?? '');
                 <label><span>Отчество</span><input name="middle_name" maxlength="120"></label>
                 <label><span>Фамилия</span><input name="last_name" maxlength="120"></label>
                 <label><span>Краткая биография</span><textarea name="biography" rows="4"></textarea></label>
+                <label>
+                    <span>Фотография</span>
+                    <select name="portrait_media_public_id">
+                        <option value="">Без фотографии</option>
+                        <?php foreach ($createPortraits as $portrait): ?>
+                            <option value="<?= $theme->e((string) ($portrait['public_id'] ?? '')) ?>">
+                                <?= $theme->e((string) ($portrait['title'] ?? 'Изображение')) ?>
+                            </option>
+                        <?php endforeach; ?>
+                    </select>
+                </label>
                 <button class="button button--primary" type="submit">Создать карточку</button>
             </form>
         </section>
@@ -54,7 +71,13 @@ $defaultOwnerPublicId = (string) ($defaultOwnerPublicId ?? '');
         <?php else: ?>
             <div class="admin-operations-list" role="list">
                 <?php foreach ($peopleRows as $row): ?>
-                    <?php $person = $row['person']; $appointments = $row['appointments'] ?? []; ?>
+                    <?php
+                    $person = $row['person'];
+                    $appointments = $row['appointments'] ?? [];
+                    $portraitMediaPublicId = (string) (
+                        $row['portrait_media_public_id'] ?? ''
+                    );
+                    ?>
                     <article class="admin-operations-row" role="listitem">
                         <div class="admin-operations-row__body">
                             <strong><?= $theme->e($person->displayName) ?></strong>
@@ -73,6 +96,21 @@ $defaultOwnerPublicId = (string) ($defaultOwnerPublicId ?? '');
                                 <label><span>Отчество</span><input name="middle_name" maxlength="120" value="<?= $theme->e($person->middleName ?? '') ?>"></label>
                                 <label><span>Фамилия</span><input name="last_name" maxlength="120" value="<?= $theme->e($person->lastName ?? '') ?>"></label>
                                 <label><span>Краткая биография</span><textarea name="biography" rows="4"><?= $theme->e($person->biographyHtml) ?></textarea></label>
+                                <label>
+                                    <span>Фотография</span>
+                                    <select name="portrait_media_public_id">
+                                        <option value="">Без фотографии</option>
+                                        <?php foreach ($editPortraits as $portrait): ?>
+                                            <?php $portraitId = (string) ($portrait['public_id'] ?? ''); ?>
+                                            <option
+                                                value="<?= $theme->e($portraitId) ?>"
+                                                <?= $portraitId === $portraitMediaPublicId ? 'selected' : '' ?>
+                                            >
+                                                <?= $theme->e((string) ($portrait['title'] ?? 'Изображение')) ?>
+                                            </option>
+                                        <?php endforeach; ?>
+                                    </select>
+                                </label>
                                 <button class="button button--primary" type="submit">Сохранить</button>
                             </form>
 

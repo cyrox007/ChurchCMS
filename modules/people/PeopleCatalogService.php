@@ -8,6 +8,7 @@ final class PeopleCatalogService
 {
     public function __construct(
         private readonly PeopleRepository $people,
+        private readonly PersonMediaService $media,
     ) {
     }
 
@@ -15,6 +16,7 @@ final class PeopleCatalogService
     {
         return new self(
             PeopleRepository::fromDatabase(),
+            new PersonMediaService(),
         );
     }
 
@@ -74,6 +76,10 @@ final class PeopleCatalogService
             'middle_name' => $person->middleName,
             'last_name' => $person->lastName,
             'biography' => $person->biographyHtml,
+            'portrait' => $this->media->publicPortraitDescriptor(
+                $person->publicId,
+                $person->siteKey,
+            ),
             'organization_owner_id' =>
                 $person->ownerOrganizationPublicId,
             'appointments' => array_map(
