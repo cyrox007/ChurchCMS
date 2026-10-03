@@ -47,6 +47,58 @@ final class EventRepository
     }
 
     /**
+     * null означает глобальный доступ.
+     *
+     * @param list<string>|null $ownerPublicIds
+     * @return list<Event>
+     */
+    public function adminList(
+        ?array $ownerPublicIds,
+        string $siteKey = 'default',
+        int $limit = 300,
+    ): array {
+        $limit = max(1, min(500, $limit));
+
+        if ($ownerPublicIds === []) {
+            return [];
+        }
+
+        $where = ['site_key = :site_key'];
+        $params = ['site_key' => $siteKey];
+
+        if ($ownerPublicIds !== null) {
+            $placeholders = [];
+
+            foreach (
+                array_values(array_unique($ownerPublicIds))
+                as $index => $publicId
+            ) {
+                $name = 'owner_' . $index;
+                $placeholders[] = ':' . $name;
+                $params[$name] = $publicId;
+            }
+
+            $where[] = 'owner_organization_public_id IN ('
+                . implode(', ', $placeholders)
+                . ')';
+        }
+
+        $statement = $this->pdo->prepare(
+            'SELECT *
+             FROM events
+             WHERE ' . implode(' AND ', $where) . '
+             ORDER BY starts_at DESC, id DESC
+             LIMIT ' . $limit
+        );
+        $statement->execute($params);
+
+        return array_map(
+            self::hydrate(...),
+            $statement->fetchAll(),
+        );
+    }
+
+    /**
      * @return list<Event>
      */
     public function forOrganization(
@@ -132,6 +184,49 @@ final class EventRepository
                 $afterPublicId,
             );
         }
+        $statement->bindValue(':limit', $limit, PDO::PARAM_INT);
+        $statement->execute();
+
+        return array_map(
+            self::hydrate(...),
+            $statement->fetchAll(),
+        );
+    }
+
+
+    /**
+     * @return list<Event>
+     */
+    public function publishedBetween(
+        DateTimeImmutable $from,
+        DateTimeImmutable $until,
+        string $siteKey = 'default',
+        int $limit = 500,
+    ): array {
+        $limit = max(1, min(500, $limit));
+        $from = $from->setTimezone(new DateTimeZone('UTC'));
+        $until = $until->setTimezone(new DateTimeZone('UTC'));
+
+        $statement = $this->pdo->prepare(
+            'SELECT *
+             FROM events
+             WHERE site_key = :site_key
+               AND status = :status
+               AND starts_at >= :starts_at
+               AND starts_at < :until
+             ORDER BY starts_at ASC, public_id ASC
+             LIMIT :limit'
+        );
+        $statement->bindValue(':site_key', $siteKey);
+        $statement->bindValue(':status', 'published');
+        $statement->bindValue(
+            ':starts_at',
+            $from->format('Y-m-d H:i:s'),
+        );
+        $statement->bindValue(
+            ':until',
+            $until->format('Y-m-d H:i:s'),
+        );
         $statement->bindValue(':limit', $limit, PDO::PARAM_INT);
         $statement->execute();
 

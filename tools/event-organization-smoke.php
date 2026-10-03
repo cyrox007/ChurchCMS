@@ -3,6 +3,7 @@
 declare(strict_types=1);
 
 use ChurchCMS\Core\DatabaseManager;
+use ChurchCMS\Modules\Events\EventCatalogService;
 use ChurchCMS\Modules\Events\EventRepository;
 use ChurchCMS\Modules\Events\EventService;
 use ChurchCMS\Modules\Organizations\OrganizationService;
@@ -188,4 +189,83 @@ try {
 } catch (PDOException) {
 }
 
-echo "Events organization foundation smoke OK\n";
+$events->update(
+    $rootEventId,
+    'Приходской праздник',
+    '2026-10-15 10:00:00',
+    '2026-10-15 13:00:00',
+    false,
+    'Приходской дом',
+    'Краткое описание',
+    'Полное описание',
+    $siteKey,
+);
+
+$events->publish(
+    $rootEventId,
+    $siteKey,
+);
+
+$updated = $repository->findByPublicId(
+    $rootEventId,
+    $siteKey,
+);
+
+if (
+    $updated === null
+    || $updated->title !== 'Приходской праздник'
+    || $updated->locationName !== 'Приходской дом'
+    || $updated->status !== 'published'
+) {
+    fwrite(
+        STDERR,
+        "Редактирование или публикация Events работает некорректно.\n",
+    );
+    exit(1);
+}
+
+$adminList = $repository->adminList(
+    [$updated->ownerOrganizationPublicId],
+    $siteKey,
+);
+
+if (
+    !in_array(
+        $rootEventId,
+        array_map(
+            static fn($event): string => $event->publicId,
+            $adminList,
+        ),
+        true,
+    )
+) {
+    fwrite(
+        STDERR,
+        "Organization-scoped Admin-список Events работает некорректно.\n",
+    );
+    exit(1);
+}
+
+$catalog = EventCatalogService::fromDatabase();
+$detail = $catalog->detail(
+    $rootEventId,
+    $siteKey,
+);
+$calendar = $catalog->month(
+    '2026-10',
+    $siteKey,
+);
+
+if (
+    $detail === null
+    || ($detail['title'] ?? '') !== 'Приходской праздник'
+    || empty($calendar['days']['2026-10-15'])
+) {
+    fwrite(
+        STDERR,
+        "Public/calendar projection Events сформирована некорректно.\n",
+    );
+    exit(1);
+}
+
+echo "Events organization/Admin/public/calendar smoke OK\n";
