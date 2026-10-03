@@ -171,20 +171,20 @@ Priority is ordered within each section.
   - [x] public/API с фильтрацией только public Media и hash-versioned image URLs;
 - [x] document catalog: organization-scoped RBAC, Admin Shell, public HTML/API и безопасная связь с Media-файлом;
 - [x] document categories/rubrics;
-- [ ] document file versions/replacements.
+- [x] document file versions/replacements: последовательная история Media-файлов, примечания и просмотр истории в Admin Shell.
 
 ## P2 — Parish/Cathedral
 
-- people/clergy;
-- worship;
-- events;
-- ministries;
-- shrines;
-- saints;
-- Sunday school;
-- library;
-- donations adapter;
-- prayer request adapter.
+- [x] people/clergy: Admin/public/API, Media-портреты и lifecycle назначений;
+- [x] worship: Admin/public/API, повторяющиеся правила и праздничные шаблоны;
+- [x] events: Admin/public/API, календарь, publish/withdraw/cancel и повторяющиеся правила;
+- [ ] ministries;
+- [ ] shrines;
+- [ ] saints;
+- [ ] Sunday school;
+- [ ] library;
+- [ ] donations adapter;
+- [ ] prayer request adapter.
 
 ## P2 — External distribution
 
