@@ -18,6 +18,7 @@ use ChurchCMS\Modules\Social\RutubeChannelAdapter;
 use ChurchCMS\Modules\Social\SocialAdminController;
 use ChurchCMS\Modules\Social\SocialAdminTaskProvider;
 use ChurchCMS\Modules\Social\SocialWebhookController;
+use ChurchCMS\Modules\Social\YoutubeAdminController;
 
 $moduleRoot = __DIR__;
 foreach ([
@@ -49,9 +50,11 @@ foreach ([
     'MaxChannelAdapter.php',
     'YoutubeChannelAdapter.php',
     'YoutubePublishingChannelAdapter.php',
+    'YoutubeConnectionConfiguration.php',
     'RutubeChannelAdapter.php',
     'SocialConnectionRepository.php',
     'SocialConnectionService.php',
+    'YoutubeAdminConnectionCreator.php',
     'SocialPostRepository.php',
     'SocialPublicationChannelService.php',
     'ExternalChannelItem.php',
@@ -64,6 +67,7 @@ foreach ([
     'ExternalChannelsCapability.php',
     'SocialAdminTaskProvider.php',
     'SocialAdminController.php',
+    'YoutubeAdminController.php',
     'SocialWebhookController.php',
 ] as $file) {
     require_once $moduleRoot . '/' . $file;
@@ -117,6 +121,13 @@ return new class implements ModuleRuntimeProvider {
             permission: 'social.manage',
             priority: 50,
         );
+        AdminNavigationRegistry::register(
+            id: 'youtube-channel',
+            label: 'YouTube',
+            route: 'admin_external_channels_youtube',
+            permission: 'social.manage',
+            priority: 51,
+        );
 
         AdminTaskRegistry::register(
             new SocialAdminTaskProvider(),
@@ -146,6 +157,22 @@ return new class implements ModuleRuntimeProvider {
             [SocialAdminController::class, 'create'],
             [RequireAdminMiddleware::class, CsrfMiddleware::class],
             'admin_external_channels_create',
+        );
+
+        $router->add(
+            'GET',
+            '/admin/external-channels/youtube',
+            [YoutubeAdminController::class, 'index'],
+            [RequireAdminMiddleware::class],
+            'admin_external_channels_youtube',
+        );
+
+        $router->add(
+            'POST',
+            '/admin/external-channels/youtube',
+            [YoutubeAdminController::class, 'create'],
+            [RequireAdminMiddleware::class, CsrfMiddleware::class],
+            'admin_external_channels_youtube_create',
         );
 
         $router->add(
