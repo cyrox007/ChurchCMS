@@ -8,12 +8,18 @@ on:
     paths:
       - 'modules/social/YoutubeChannelAdapter.php'
       - 'modules/social/YoutubePublishingChannelAdapter.php'
+      - 'modules/social/YoutubeConnectionConfiguration.php'
+      - 'modules/social/YoutubeAdminConnectionCreator.php'
+      - 'modules/social/YoutubeAdminController.php'
       - 'modules/social/ChannelTransferHttpClient.php'
       - 'modules/social/NativeTransferHttpClient.php'
       - 'modules/social/runtime.php'
       - 'modules/social/SocialConnectionService.php'
       - 'modules/media/MediaResumableUploadCapability.php'
+      - 'themes/default/templates/admin/youtube-channel.php'
+      - 'themes/default/theme.json'
       - 'tools/youtube-adapter-smoke.php'
+      - 'tools/youtube-admin-settings-smoke.php'
       - '.github/workflows/youtube-adapter-smoke.yml'
   pull_request:
     branches:
@@ -22,12 +28,18 @@ on:
     paths:
       - 'modules/social/YoutubeChannelAdapter.php'
       - 'modules/social/YoutubePublishingChannelAdapter.php'
+      - 'modules/social/YoutubeConnectionConfiguration.php'
+      - 'modules/social/YoutubeAdminConnectionCreator.php'
+      - 'modules/social/YoutubeAdminController.php'
       - 'modules/social/ChannelTransferHttpClient.php'
       - 'modules/social/NativeTransferHttpClient.php'
       - 'modules/social/runtime.php'
       - 'modules/social/SocialConnectionService.php'
       - 'modules/media/MediaResumableUploadCapability.php'
+      - 'themes/default/templates/admin/youtube-channel.php'
+      - 'themes/default/theme.json'
       - 'tools/youtube-adapter-smoke.php'
+      - 'tools/youtube-admin-settings-smoke.php'
       - '.github/workflows/youtube-adapter-smoke.yml'
 
 permissions:
@@ -68,12 +80,17 @@ jobs:
           set -euo pipefail
           php -l modules/social/YoutubeChannelAdapter.php
           php -l modules/social/YoutubePublishingChannelAdapter.php
+          php -l modules/social/YoutubeConnectionConfiguration.php
+          php -l modules/social/YoutubeAdminConnectionCreator.php
+          php -l modules/social/YoutubeAdminController.php
           php -l modules/social/ChannelTransferHttpClient.php
           php -l modules/social/NativeTransferHttpClient.php
           php -l modules/social/runtime.php
           php -l modules/social/SocialConnectionService.php
           php -l modules/media/MediaResumableUploadCapability.php
+          php -l themes/default/templates/admin/youtube-channel.php
           php -l tools/youtube-adapter-smoke.php
+          php -l tools/youtube-admin-settings-smoke.php
           php bin/migrate.php validate
 
       - name: Подготовить тестовую установку
@@ -108,4 +125,7 @@ jobs:
           php bin/migrate.php
 
       - name: Проверить YouTube без внешней сети
-        run: php tools/youtube-adapter-smoke.php
+        run: |
+          set -euo pipefail
+          php tools/youtube-adapter-smoke.php
+          php tools/youtube-admin-settings-smoke.php
