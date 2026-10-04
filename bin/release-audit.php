@@ -5,19 +5,12 @@ declare(strict_types=1);
 
 $root = dirname(__DIR__);
 $failures = [];
-$checks = [];
 
 $record = static function (
     string $name,
     bool $success,
     string $message,
-) use (&$checks, &$failures): void {
-    $checks[] = [
-        'name' => $name,
-        'success' => $success,
-        'message' => $message,
-    ];
-
+) use (&$failures): void {
     $prefix = $success ? '[OK]' : '[ОШИБКА]';
     echo $prefix . ' ' . $name . ': ' . $message . PHP_EOL;
 
@@ -170,7 +163,7 @@ $record(
 );
 
 $performanceResult = null;
-$performanceProfile = null;
+$performanceThresholds = null;
 foreach (array_slice($argv, 1) as $argument) {
     if (str_starts_with($argument, '--performance-result=')) {
         $performanceResult = substr(
@@ -180,28 +173,28 @@ foreach (array_slice($argv, 1) as $argument) {
         continue;
     }
 
-    if (str_starts_with($argument, '--performance-profile=')) {
-        $performanceProfile = substr(
+    if (str_starts_with($argument, '--performance-thresholds=')) {
+        $performanceThresholds = substr(
             $argument,
-            strlen('--performance-profile='),
+            strlen('--performance-thresholds='),
         );
     }
 }
 
-if ($performanceResult !== null || $performanceProfile !== null) {
-    if ($performanceResult === null || $performanceProfile === null) {
+if ($performanceResult !== null || $performanceThresholds !== null) {
+    if ($performanceResult === null || $performanceThresholds === null) {
         $record(
             'Performance release-gate',
             false,
-            'Параметры --performance-result и --performance-profile должны передаваться вместе.',
+            'Параметры --performance-result и --performance-thresholds должны передаваться вместе.',
         );
     } else {
         $performance = $run(
             [
                 PHP_BINARY,
                 'tools/performance/release-gate.php',
-                $performanceResult,
-                $performanceProfile,
+                '--result=' . $performanceResult,
+                '--thresholds=' . $performanceThresholds,
             ],
             $root,
         );
@@ -216,7 +209,7 @@ if ($performanceResult !== null || $performanceProfile !== null) {
 } else {
     echo '[ИНФО] Performance release-gate: пропущен. '
         . 'Перед релизом 1.0 запустите аудит на эталонном стенде '
-        . 'с реальными result/profile файлами.'
+        . 'с реальными result/thresholds файлами.'
         . PHP_EOL;
 }
 
