@@ -1,0 +1,94 @@
+name: Проверка предрелизного аудита
+
+on:
+  push:
+    branches:
+      - develop
+      - main
+    paths:
+      - 'bin/release-audit.php'
+      - 'bin/migrate.php'
+      - 'bin/theme-check.php'
+      - 'tools/performance/release-gate.php'
+      - 'docs/RELEASE_AUDIT.md'
+      - '.github/workflows/release-audit-smoke.yml'
+  pull_request:
+    branches:
+      - develop
+      - main
+    paths:
+      - 'bin/release-audit.php'
+      - 'bin/migrate.php'
+      - 'bin/theme-check.php'
+      - 'tools/performance/release-gate.php'
+      - 'docs/RELEASE_AUDIT.md'
+      - '.github/workflows/release-audit-smoke.yml'
+
+permissions:
+  contents: read
+
+jobs:
+  release-audit:
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Получить исходный код
+        uses: actions/checkout@v4
+
+      - name: Подготовить PHP 8.3
+        uses: shivammathur/setup-php@v2
+        with:
+          php-version: '8.3'
+          extensions: pdo, mbstring, openssl
+          coverage: none
+
+      - name: Проверить синтаксис аудита
+        run: php -l bin/release-audit.php
+
+      - name: Выполнить базовый предрелизный аудит
+        run: php bin/release-audit.php
+
+      - name: Проверить связку с performance release-gate
+        run: |
+          set -euo pipefail
+
+          cat > /tmp/churchcms-load.json <<'JSON'
+          {
+            "errors": 0,
+            "error_rate": 0,
+            "requests_per_second": 100,
+            "latency": {
+              "p50_ms": 20,
+              "p95_ms": 50,
+              "p99_ms": 80
+            },
+            "scenarios": {}
+          }
+          JSON
+
+          cat > /tmp/churchcms-thresholds.json <<'JSON'
+          {
+            "profile": "ci-smoke",
+            "reference_hardware": {
+              "cpu": "CI smoke only",
+              "memory_mb": 1024,
+              "storage": "ephemeral",
+              "web_server": "CI smoke",
+              "php": "8.3",
+              "database": "not used"
+            },
+            "limits": {
+              "max_errors": 0,
+              "max_error_rate": 0,
+              "min_requests_per_second": 1,
+              "max_latency_p50_ms": 1000,
+              "max_latency_p95_ms": 1000,
+              "max_latency_p99_ms": 1000,
+              "scenarios": {}
+            }
+          }
+          JSON
+
+          php bin/release-audit.php \
+            --performance-result=/tmp/churchcms-load.json \
+            --performance-thresholds=/tmp/churchcms-thresholds.json
