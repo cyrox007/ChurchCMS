@@ -1,59 +1,109 @@
 # ChurchCMS
 
-Modern CMS platform for Orthodox parishes, cathedrals, monasteries and theological schools.
+ChurchCMS — самостоятельная CMS на PHP 8.3+ для сайтов православных приходов, соборов, монастырей, благочиний, епархий, митрополий и духовных учебных заведений.
 
-## Project status
+Проект не требует обязательного Composer/vendor runtime и рассчитан как на обычный VPS, так и на ограниченный виртуальный хостинг при выполнении системных требований.
 
-Project initialization / legacy audit.
+## Текущее состояние
 
-### Reference targets
+Основной приходской функционал версии 1.0 реализован. В `develop` доступны:
 
-- Legacy VPDS CMS dump — former Voronezh Theological Seminary CMS, later adapted for a parish/cathedral site.
-- Vladimir Icon of the Mother of God Cathedral site — parish profile pilot candidate.
-- Tambov Theological Seminary — education profile reference/pilot candidate.
-- Annunciation Cathedral of Voronezh — parish/cathedral reference.
+- единая административная панель для нетехнического оператора;
+- публикации, страницы и меню;
+- медиатека, галереи и безопасная выдача файлов;
+- духовенство и назначения;
+- расписание богослужений и повторяющиеся правила;
+- события, календарь и повторяющиеся правила;
+- документы, рубрики и история версий файлов;
+- публичный поиск;
+- SEO, sitemap, robots, canonical и социальные метаданные;
+- перенаправления и история изменений контента;
+- модерируемые комментарии;
+- организационное дерево и федерация между ChurchCMS-узлами;
+- внешние каналы Telegram, VK, MAX и YouTube;
+- резервное копирование, восстановление и подписанные обновления;
+- инструменты нагрузочного тестирования и release-gate.
 
-## Planned product profiles
+Финальная подготовка 1.0 сосредоточена на релизном аудите и фиксации реальных performance-порогов на выбранном эталонном сервере. Исходящая загрузка в Rutube не включается через недокументированные API и остаётся заблокированной до появления подтверждённого официального интерфейса загрузки.
 
-- Parish / Cathedral
-- Monastery
-- Theological school / Seminary
-- Mixed profile
+## Поддерживаемые профили установки
 
-## Repository structure
+- небольшой приход;
+- приход;
+- собор;
+- монастырь;
+- благочиние;
+- епархия;
+- митрополия;
+- духовная школа / семинария;
+- смешанный профиль;
+- универсальная организационная установка.
 
+## Архитектурные принципы
+
+- PHP 8.3+;
+- отсутствие обязательных внешних runtime-зависимостей;
+- PDO и поддержка PostgreSQL/MySQL;
+- изолированные модули с manifest/runtime-контрактом;
+- заменяемые темы с наследованием;
+- organization-scoped RBAC;
+- безопасная работа с секретами и внешними каналами;
+- обратимые миграции для автоматических schema-changing обновлений;
+- федерация с явными scopes, tombstones и сохранением источника данных.
+
+## Структура репозитория
+
+```text
+app/          HTTP- и прикладной слой
+core/         самостоятельное ядро PHP 8.3+
+modules/      изолированные CMS- и доменные модули
+themes/       заменяемые темы и шаблоны
+config/       конфигурация runtime
+docs/         архитектура, эксплуатация и интеграции
+bin/          CLI-команды
+ tools/        smoke, аудит, release и performance-инструменты
+legacy/       материалы для миграции и исторические эталоны
 ```
-app/          HTTP/application layer
-core/         dependency-free PHP 8.3+ runtime
-modules/      isolated CMS/domain modules
-themes/       replaceable presentation packages
-config/       runtime configuration
-docs/         architecture and integration documentation
-legacy/       migration/reference notes
+
+## Быстрая проверка репозитория
+
+Проверка миграций:
+
+```bash
+php bin/migrate.php validate
 ```
 
-## Implemented foundations
+Проверка тем:
 
-- standalone PHP 8.3+ runtime without mandatory Composer/vendor dependencies;
-- router, request/response and PDO database infrastructure;
-- isolated module manifests/runtime providers;
-- inheritable theme/template system;
-- modernized legacy-inspired responsive default theme;
-- versioned external API foundation for diocesan/partner integrations;
-- scoped Bearer API keys stored by hash;
-- generic publication syndication engine;
-- RSS 2.0 and Rambler/News feed renderers.
+```bash
+php bin/theme-check.php
+```
 
-Documentation:
+Перед релизом используйте единый предрелизный аудит, когда он присутствует в выбранной ветке релиза:
 
-- `docs/ARCHITECTURE.md`
-- `docs/THEMES.md`
-- `docs/DESIGN_SYSTEM.md`
-- `docs/API.md`
-- `docs/SYNDICATION.md`
+```bash
+php bin/release-audit.php
+```
 
-The historical dump is kept as a migration/reference artifact and must not be deployed as production code.
+Для финального 1.0 performance release-gate должен быть выполнен отдельно на зафиксированном эталонном стенде с реальными результатами нагрузочного теста и утверждёнными порогами.
 
-## Security note
+## Документация
 
-The legacy source contains outdated authentication, SQL access, file-upload components and potentially sensitive historical data. Do not expose the dump publicly or deploy it under a web root.
+Основные документы:
+
+- `docs/ROADMAP.md` — этапы продукта и фактический прогресс;
+- `docs/BACKLOG.md` — детальный технический backlog;
+- `docs/ARCHITECTURE.md` — архитектура системы;
+- `docs/THEMES.md` — темы и шаблоны;
+- `docs/DESIGN_SYSTEM.md` — визуальная система;
+- `docs/API.md` — HTTP API;
+- `docs/SYNDICATION.md` — синдикация;
+- `docs/RELEASE_AUDIT.md` — порядок предрелизного аудита после слияния соответствующего release-hardening инкремента.
+
+## Исторический код
+
+Legacy-дамп хранится только как источник для анализа и будущей миграции. Его нельзя размещать в публичном web-root или использовать как production runtime.
+
+## Безопасность
+
+Не публикуйте `config/local.php`, приватные ключи обновлений, OAuth/client secrets, токены внешних каналов, резервные копии и исходные Media blob. Секреты интеграций должны храниться только через встроенное зашифрованное хранилище ChurchCMS.
