@@ -54,6 +54,8 @@ jobs:
 
           cat > /tmp/churchcms-load.json <<'JSON'
           {
+            "requests": 1000,
+            "concurrency": 10,
             "errors": 0,
             "error_rate": 0,
             "requests_per_second": 100,
