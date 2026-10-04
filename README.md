@@ -61,7 +61,7 @@ themes/       заменяемые темы и шаблоны
 config/       конфигурация runtime
 docs/         архитектура, эксплуатация и интеграции
 bin/          CLI-команды
- tools/        smoke, аудит, release и performance-инструменты
+tools/        smoke, аудит, release и performance-инструменты
 legacy/       материалы для миграции и исторические эталоны
 ```
 
