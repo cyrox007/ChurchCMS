@@ -1,0 +1,7 @@
+{
+  "id": "education_admissions",
+  "name": "Приёмная кампания",
+  "version": "0.1.0",
+  "runtime": "runtime.php",
+  "capabilities": []
+}
