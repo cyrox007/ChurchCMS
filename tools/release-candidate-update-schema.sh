@@ -172,7 +172,7 @@ if php bin/update.php apply \
     exit 1
 fi
 
-php -r '$c=require "config/app.php"; exit(($c["version"] ?? "") === "999.10.1-rc-ci" ? 0 : 1);'
+php -r '$c=require "config/app.php"; exit(($c["app"]["version"] ?? "") === "999.10.1-rc-ci" ? 0 : 1);'
 test ! -e core/RcBrokenMarker.php
 test ! -e database/migrations/20991231_230001_rc_schema_broken.php
 
