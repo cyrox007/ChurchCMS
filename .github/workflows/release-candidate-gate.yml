@@ -3,9 +3,7 @@ name: Релизный кандидат 1.0
 on:
   workflow_dispatch:
   pull_request:
-    branches:
-      - develop
-      - main
+    branches: [develop, main]
     paths:
       - 'install.php'
       - 'bin/release-audit.php'
@@ -21,14 +19,13 @@ on:
       - 'core/ReversibleMigration.php'
       - 'database/migrations/**'
       - 'modules/*/migrations/**'
+      - 'tools/release-candidate-*.sh'
       - 'tools/update-sign.php'
       - 'tools/admin-password-reset-smoke.php'
       - 'docs/RELEASE_CANDIDATE.md'
       - '.github/workflows/release-candidate-gate.yml'
   push:
-    branches:
-      - develop
-      - main
+    branches: [develop, main]
     paths:
       - 'install.php'
       - 'bin/release-audit.php'
@@ -44,6 +41,7 @@ on:
       - 'core/ReversibleMigration.php'
       - 'database/migrations/**'
       - 'modules/*/migrations/**'
+      - 'tools/release-candidate-*.sh'
       - 'tools/update-sign.php'
       - 'tools/admin-password-reset-smoke.php'
       - 'docs/RELEASE_CANDIDATE.md'
@@ -59,21 +57,20 @@ jobs:
     steps:
       - name: Получить исходный код
         uses: actions/checkout@v4
-
       - name: Подготовить PHP 8.3
         uses: shivammathur/setup-php@v2
         with:
           php-version: '8.3'
           extensions: pdo, mbstring, openssl
           coverage: none
-
       - name: Выполнить аудит репозитория
         run: php bin/release-audit.php
 
   postgres-release-lifecycle:
     name: Установка, backup/restore и updater — PostgreSQL
     runs-on: ubuntu-latest
-
+    env:
+      CHURCHCMS_RC_DB_PASSWORD: churchcms
     services:
       postgres:
         image: postgres:16
@@ -88,471 +85,45 @@ jobs:
           --health-interval 10s
           --health-timeout 5s
           --health-retries 5
-
     steps:
       - name: Получить исходный код
         uses: actions/checkout@v4
-
       - name: Подготовить PHP 8.3
         uses: shivammathur/setup-php@v2
         with:
           php-version: '8.3'
           extensions: pdo, pdo_pgsql, dom, fileinfo, mbstring, openssl
           coverage: none
-
+      - name: Проверить синтаксис RC-сценариев
+        run: |
+          bash -n tools/release-candidate-installer.sh
+          bash -n tools/release-candidate-backup-restore.sh
+          bash -n tools/release-candidate-update-code.sh
+          bash -n tools/release-candidate-update-schema.sh
       - name: Проверить настоящий web-installer
-        shell: bash
+        run: bash tools/release-candidate-installer.sh
+      - name: Проверить readiness и восстановление пароля
         run: |
-          set -euo pipefail
-          rm -f config/local.php
-          mkdir -p storage/cache storage/logs storage/sessions storage/rate-limits storage/uploads
-
-          php -S 127.0.0.1:18080 >"$RUNNER_TEMP/installer-server.log" 2>&1 &
-          server_pid=$!
-          trap 'kill "$server_pid" 2>/dev/null || true' EXIT
-
-          for attempt in $(seq 1 30); do
-            if curl --fail --silent --show-error \
-              --cookie-jar "$RUNNER_TEMP/installer-cookies.txt" \
-              'http://127.0.0.1:18080/install.php?step=2' \
-              -o "$RUNNER_TEMP/installer-step2.html"; then
-              break
-            fi
-            sleep 1
-          done
-
-          csrf="$(sed -n 's/.*name="csrf_token" value="\([^"]*\)".*/\1/p' "$RUNNER_TEMP/installer-step2.html" | head -1)"
-          test -n "$csrf"
-
-          curl --fail --silent --show-error \
-            --cookie "$RUNNER_TEMP/installer-cookies.txt" \
-            --cookie-jar "$RUNNER_TEMP/installer-cookies.txt" \
-            --data-urlencode "csrf_token=$csrf" \
-            --data-urlencode 'step=2' \
-            --data-urlencode 'site_name=ChurchCMS RC' \
-            --data-urlencode 'profile=parish' \
-            --data-urlencode 'site_url=http://127.0.0.1:18080' \
-            --data-urlencode 'db_driver=pgsql' \
-            --data-urlencode 'db_host=127.0.0.1' \
-            --data-urlencode 'db_port=5432' \
-            --data-urlencode 'db_name=churchcms' \
-            --data-urlencode 'db_user=churchcms' \
-            --data-urlencode 'db_password=churchcms' \
-            'http://127.0.0.1:18080/install.php?step=2' \
-            -o "$RUNNER_TEMP/installer-step3.html"
-
-          grep -q '3. Создадим администратора' "$RUNNER_TEMP/installer-step3.html"
-          csrf="$(sed -n 's/.*name="csrf_token" value="\([^"]*\)".*/\1/p' "$RUNNER_TEMP/installer-step3.html" | head -1)"
-          test -n "$csrf"
-
-          curl --fail --silent --show-error \
-            --cookie "$RUNNER_TEMP/installer-cookies.txt" \
-            --cookie-jar "$RUNNER_TEMP/installer-cookies.txt" \
-            --data-urlencode "csrf_token=$csrf" \
-            --data-urlencode 'step=3' \
-            --data-urlencode 'admin_name=Администратор RC' \
-            --data-urlencode 'admin_username=rc-admin' \
-            --data-urlencode 'admin_email=rc@example.test' \
-            --data-urlencode 'admin_password=ChurchCMS-RC-Password-2026!' \
-            --data-urlencode 'admin_password_confirm=ChurchCMS-RC-Password-2026!' \
-            'http://127.0.0.1:18080/install.php?step=3' \
-            -o "$RUNNER_TEMP/installer-finished.html"
-
-          grep -q 'ChurchCMS установлена' "$RUNNER_TEMP/installer-finished.html"
-
-          php -r '
-          $config = require "config/local.php";
-          if (($config["installation"]["completed"] ?? false) !== true) {
-              fwrite(STDERR, "Installer не зафиксировал завершение установки.\n");
-              exit(1);
-          }
-          '
-
-          psql postgresql://churchcms:churchcms@127.0.0.1:5432/churchcms \
-            -Atqc "SELECT COUNT(*) FROM admin_users WHERE username = 'rc-admin' AND status = 'active'" \
-            | grep -qx 1
-
-          psql postgresql://churchcms:churchcms@127.0.0.1:5432/churchcms \
-            -Atqc "SELECT COUNT(*) FROM admin_user_roles aur JOIN admin_users u ON u.id = aur.user_id JOIN roles r ON r.id = aur.role_id WHERE u.username = 'rc-admin' AND r.role_key = 'superadmin'" \
-            | grep -qx 1
-
-          status="$(curl --silent --output "$RUNNER_TEMP/installer-locked.txt" --write-out '%{http_code}' 'http://127.0.0.1:18080/install.php')"
-          test "$status" = '404'
-          grep -q 'Installer is locked' "$RUNNER_TEMP/installer-locked.txt"
-
-      - name: Проверить healthcheck и восстановление пароля
-        shell: bash
-        run: |
-          set -euo pipefail
           php -r '
           require "core.php";
           $database = \ChurchCMS\Core\DatabaseManager::getInstance();
-          $health = (new \ChurchCMS\Core\InstallationHealthCheck(
-              $database,
-              CHURCHCMS_ROOT,
-          ))->check();
+          $health = (new \ChurchCMS\Core\InstallationHealthCheck($database, CHURCHCMS_ROOT))->check();
           if (($health["ready"] ?? false) !== true) {
               fwrite(STDERR, "Установка не готова: " . json_encode($health, JSON_UNESCAPED_UNICODE) . "\n");
               exit(1);
           }
           '
           php tools/admin-password-reset-smoke.php
-
-      - name: Проверить backup и restore базы/config/uploads
-        shell: bash
-        run: |
-          set -euo pipefail
-          backup_path="$RUNNER_TEMP/release-backups"
-          mkdir -p "$backup_path"
-
-          echo 'до резервной копии' > storage/uploads/rc-restore-marker.txt
-          psql postgresql://churchcms:churchcms@127.0.0.1:5432/churchcms \
-            -v ON_ERROR_STOP=1 \
-            -c "UPDATE admin_users SET display_name = 'До резервной копии' WHERE username = 'rc-admin'"
-
-          php bin/backup.php create --path="$backup_path" | tee "$RUNNER_TEMP/backup-create.txt"
-          backup_id="$(sed -n 's/^Резервная копия создана и проверена: \([^;]*\);.*/\1/p' "$RUNNER_TEMP/backup-create.txt")"
-          test -n "$backup_id"
-          php bin/backup.php verify "$backup_id" --path="$backup_path"
-
-          psql postgresql://churchcms:churchcms@127.0.0.1:5432/churchcms \
-            -v ON_ERROR_STOP=1 \
-            -c "UPDATE admin_users SET display_name = 'После резервной копии' WHERE username = 'rc-admin'"
-          echo 'после резервной копии' > storage/uploads/rc-restore-marker.txt
-
-          php -r '
-          $path = "config/local.php";
-          $config = require $path;
-          $config["release_candidate_mutation"] = true;
-          file_put_contents(
-              $path,
-              "<?php\n\ndeclare(strict_types=1);\n\nreturn " . var_export($config, true) . ";\n",
-          );
-          '
-
-          php bin/backup.php restore-db "$backup_id" --confirm="$backup_id" --path="$backup_path"
-          php bin/backup.php restore-files "$backup_id" --confirm="$backup_id" --path="$backup_path"
-
-          psql postgresql://churchcms:churchcms@127.0.0.1:5432/churchcms \
-            -Atqc "SELECT display_name FROM admin_users WHERE username = 'rc-admin'" \
-            | grep -qx 'До резервной копии'
-          grep -qx 'до резервной копии' storage/uploads/rc-restore-marker.txt
-
-          php -r '
-          $config = require "config/local.php";
-          if (array_key_exists("release_candidate_mutation", $config)) {
-              fwrite(STDERR, "config/local.php не восстановлен из backup.\n");
-              exit(1);
-          }
-          '
-
-      - name: Подготовить ключ подписи обновлений
-        shell: bash
-        run: |
-          set -euo pipefail
-          openssl genpkey \
-            -algorithm RSA \
-            -pkeyopt rsa_keygen_bits:2048 \
-            -out "$RUNNER_TEMP/rc-private.pem" >/dev/null 2>&1
-          openssl pkey \
-            -in "$RUNNER_TEMP/rc-private.pem" \
-            -pubout \
-            -out "$RUNNER_TEMP/rc-public.pem" >/dev/null 2>&1
-
-          php -r '
-          $path = "config/local.php";
-          $config = require $path;
-          $config["operations"]["update_trusted_public_keys"]["rc-ci"] = file_get_contents(
-              getenv("RUNNER_TEMP") . "/rc-public.pem"
-          );
-          file_put_contents(
-              $path,
-              "<?php\n\ndeclare(strict_types=1);\n\nreturn " . var_export($config, true) . ";\n",
-          );
-          '
-
+      - name: Проверить backup и restore
+        run: bash tools/release-candidate-backup-restore.sh
       - name: Проверить подписанный code-only update
-        shell: bash
-        run: |
-          set -euo pipefail
-          package="$RUNNER_TEMP/rc-code-update"
-          staging="$RUNNER_TEMP/rc-staging"
-          backups="$RUNNER_TEMP/rc-update-backups"
-          mkdir -p "$package/config" "$package/core" "$staging" "$backups"
-
-          current_version="$(php -r '$c = require "config/app.php"; echo $c["version"];')"
-          new_version='999.10.0-rc-ci'
-
-          CURRENT_VERSION="$current_version" NEW_VERSION="$new_version" python3 - "$package" <<'PY'
-          from pathlib import Path
-          import os
-          import sys
-
-          package = Path(sys.argv[1])
-          source = Path("config/app.php").read_text()
-          old = os.environ["CURRENT_VERSION"]
-          new = os.environ["NEW_VERSION"]
-          needle = f"'version' => '{old}'"
-          replacement = f"'version' => '{new}'"
-          if source.count(needle) != 1:
-              raise SystemExit("Не удалось подготовить версию code-only пакета.")
-          (package / "config/app.php").write_text(source.replace(needle, replacement, 1))
-          PY
-
-          cat > "$package/core/RcUpdateMarker.php" <<'PHP'
-          <?php
-
-          declare(strict_types=1);
-
-          namespace ChurchCMS\Core;
-
-          final class RcUpdateMarker
-          {
-              public const VALUE = 'code-only-applied';
-          }
-          PHP
-
-          php -r '
-          $package = $argv[1];
-          $from = $argv[2];
-          $to = $argv[3];
-          $paths = ["config/app.php", "core/RcUpdateMarker.php"];
-          $files = [];
-          foreach ($paths as $path) {
-              $file = $package . "/" . $path;
-              $files[] = [
-                  "path" => $path,
-                  "bytes" => filesize($file),
-                  "sha256" => hash_file("sha256", $file),
-              ];
-          }
-          file_put_contents(
-              $package . "/manifest.json",
-              json_encode([
-                  "format" => "churchcms-update-v1",
-                  "from_version" => $from,
-                  "version" => $to,
-                  "php_min" => "8.3",
-                  "files" => $files,
-                  "deleted_files" => [],
-              ], JSON_THROW_ON_ERROR | JSON_PRETTY_PRINT | JSON_UNESCAPED_SLASHES) . PHP_EOL,
-          );
-          ' "$package" "$current_version" "$new_version"
-
-          php tools/update-sign.php "$package/manifest.json" "$RUNNER_TEMP/rc-private.pem" rc-ci
-          php bin/update.php stage "$package" --path="$staging"
-          manifest="$(find "$staging" -mindepth 2 -maxdepth 2 -name manifest.json -type f -printf '%T@ %p\n' | sort -nr | head -1 | cut -d' ' -f2-)"
-          stage_id="$(basename "$(dirname "$manifest")")"
-
-          php bin/update.php apply \
-            "$stage_id" \
-            --confirm="$stage_id" \
-            --path="$staging" \
-            --backup-path="$backups" \
-            | tee "$RUNNER_TEMP/rc-code-update.txt"
-
-          grep -q 'backup:' "$RUNNER_TEMP/rc-code-update.txt"
-          php -r '$c = require "config/app.php"; exit(($c["version"] ?? "") === "999.10.0-rc-ci" ? 0 : 1);'
-          php -l core/RcUpdateMarker.php
-
-      - name: Проверить schema-changing update
-        shell: bash
-        run: |
-          set -euo pipefail
-          package="$RUNNER_TEMP/rc-schema-update"
-          staging="$RUNNER_TEMP/rc-staging"
-          backups="$RUNNER_TEMP/rc-update-backups"
-          mkdir -p "$package/config" "$package/database/migrations"
-
-          python3 - "$package" <<'PY'
-          from pathlib import Path
-          import sys
-
-          package = Path(sys.argv[1])
-          source = Path("config/app.php").read_text()
-          needle = "'version' => '999.10.0-rc-ci'"
-          replacement = "'version' => '999.10.1-rc-ci'"
-          if source.count(needle) != 1:
-              raise SystemExit("Не удалось подготовить schema-changing пакет.")
-          (package / "config/app.php").write_text(source.replace(needle, replacement, 1))
-          PY
-
-          cat > "$package/database/migrations/20991231_230000_rc_schema.php" <<'PHP'
-          <?php
-
-          declare(strict_types=1);
-
-          use ChurchCMS\Core\ReversibleMigration;
-          use PDO;
-
-          return new class implements ReversibleMigration {
-              public function id(): string
-              {
-                  return '20991231_230000_rc_schema';
-              }
-
-              public function up(PDO $pdo, string $driver): void
-              {
-                  $pdo->exec('CREATE TABLE rc_schema_gate (id INTEGER PRIMARY KEY, note VARCHAR(64) NOT NULL)');
-                  $pdo->exec("INSERT INTO rc_schema_gate (id, note) VALUES (1, 'applied')");
-              }
-
-              public function down(PDO $pdo, string $driver): void
-              {
-                  $pdo->exec('DROP TABLE rc_schema_gate');
-              }
-          };
-          PHP
-
-          php -r '
-          $package = $argv[1];
-          $paths = ["config/app.php", "database/migrations/20991231_230000_rc_schema.php"];
-          $files = [];
-          foreach ($paths as $path) {
-              $file = $package . "/" . $path;
-              $files[] = [
-                  "path" => $path,
-                  "bytes" => filesize($file),
-                  "sha256" => hash_file("sha256", $file),
-              ];
-          }
-          file_put_contents(
-              $package . "/manifest.json",
-              json_encode([
-                  "format" => "churchcms-update-v1",
-                  "from_version" => "999.10.0-rc-ci",
-                  "version" => "999.10.1-rc-ci",
-                  "php_min" => "8.3",
-                  "files" => $files,
-                  "deleted_files" => [],
-              ], JSON_THROW_ON_ERROR | JSON_PRETTY_PRINT | JSON_UNESCAPED_SLASHES) . PHP_EOL,
-          );
-          ' "$package"
-
-          php tools/update-sign.php "$package/manifest.json" "$RUNNER_TEMP/rc-private.pem" rc-ci
-          php bin/update.php stage "$package" --path="$staging"
-          manifest="$(find "$staging" -mindepth 2 -maxdepth 2 -name manifest.json -type f -printf '%T@ %p\n' | sort -nr | head -1 | cut -d' ' -f2-)"
-          stage_id="$(basename "$(dirname "$manifest")")"
-
-          php bin/update.php apply \
-            "$stage_id" \
-            --confirm="$stage_id" \
-            --path="$staging" \
-            --backup-path="$backups" \
-            | tee "$RUNNER_TEMP/rc-schema-update.txt"
-
-          grep -q 'миграций: 1' "$RUNNER_TEMP/rc-schema-update.txt"
-          psql postgresql://churchcms:churchcms@127.0.0.1:5432/churchcms \
-            -Atqc 'SELECT note FROM rc_schema_gate WHERE id = 1' \
-            | grep -qx applied
-
-      - name: Проверить rollback schema-changing update
-        shell: bash
-        run: |
-          set -euo pipefail
-          package="$RUNNER_TEMP/rc-schema-broken"
-          staging="$RUNNER_TEMP/rc-staging"
-          backups="$RUNNER_TEMP/rc-update-backups"
-          mkdir -p "$package/config" "$package/database/migrations" "$package/core"
-
-          python3 - "$package" <<'PY'
-          from pathlib import Path
-          import sys
-
-          package = Path(sys.argv[1])
-          source = Path("config/app.php").read_text()
-          needle = "'version' => '999.10.1-rc-ci'"
-          replacement = "'version' => '999.10.2-rc-ci'"
-          if source.count(needle) != 1:
-              raise SystemExit("Не удалось подготовить rollback-пакет.")
-          (package / "config/app.php").write_text(source.replace(needle, replacement, 1))
-          PY
-
-          cat > "$package/database/migrations/20991231_230001_rc_schema_broken.php" <<'PHP'
-          <?php
-
-          declare(strict_types=1);
-
-          use ChurchCMS\Core\ReversibleMigration;
-          use PDO;
-
-          return new class implements ReversibleMigration {
-              public function id(): string
-              {
-                  return '20991231_230001_rc_schema_broken';
-              }
-
-              public function up(PDO $pdo, string $driver): void
-              {
-                  $pdo->exec('CREATE TABLE rc_schema_broken (id INTEGER PRIMARY KEY)');
-              }
-
-              public function down(PDO $pdo, string $driver): void
-              {
-                  $pdo->exec('DROP TABLE rc_schema_broken');
-              }
-          };
-          PHP
-
-          printf '%s\n' '<?php this is not valid php {' > "$package/core/RcBrokenMarker.php"
-
-          php -r '
-          $package = $argv[1];
-          $paths = [
-              "config/app.php",
-              "database/migrations/20991231_230001_rc_schema_broken.php",
-              "core/RcBrokenMarker.php",
-          ];
-          $files = [];
-          foreach ($paths as $path) {
-              $file = $package . "/" . $path;
-              $files[] = [
-                  "path" => $path,
-                  "bytes" => filesize($file),
-                  "sha256" => hash_file("sha256", $file),
-              ];
-          }
-          file_put_contents(
-              $package . "/manifest.json",
-              json_encode([
-                  "format" => "churchcms-update-v1",
-                  "from_version" => "999.10.1-rc-ci",
-                  "version" => "999.10.2-rc-ci",
-                  "php_min" => "8.3",
-                  "files" => $files,
-                  "deleted_files" => [],
-              ], JSON_THROW_ON_ERROR | JSON_PRETTY_PRINT | JSON_UNESCAPED_SLASHES) . PHP_EOL,
-          );
-          ' "$package"
-
-          php tools/update-sign.php "$package/manifest.json" "$RUNNER_TEMP/rc-private.pem" rc-ci
-          php bin/update.php stage "$package" --path="$staging"
-          manifest="$(find "$staging" -mindepth 2 -maxdepth 2 -name manifest.json -type f -printf '%T@ %p\n' | sort -nr | head -1 | cut -d' ' -f2-)"
-          stage_id="$(basename "$(dirname "$manifest")")"
-
-          if php bin/update.php apply \
-            "$stage_id" \
-            --confirm="$stage_id" \
-            --path="$staging" \
-            --backup-path="$backups"; then
-            echo 'Пакет с post-migration ошибкой ошибочно применён.' >&2
-            exit 1
-          fi
-
-          php -r '$c = require "config/app.php"; exit(($c["version"] ?? "") === "999.10.1-rc-ci" ? 0 : 1);'
-          test ! -e core/RcBrokenMarker.php
-          test ! -e database/migrations/20991231_230001_rc_schema_broken.php
-          psql postgresql://churchcms:churchcms@127.0.0.1:5432/churchcms \
-            -Atqc "SELECT COUNT(*) FROM information_schema.tables WHERE table_schema = 'public' AND table_name = 'rc_schema_broken'" \
-            | grep -qx 0
-          psql postgresql://churchcms:churchcms@127.0.0.1:5432/churchcms \
-            -Atqc "SELECT COUNT(*) FROM churchcms_migrations WHERE migration_id = '20991231_230001_rc_schema_broken'" \
-            | grep -qx 0
+        run: bash tools/release-candidate-update-code.sh
+      - name: Проверить schema-changing update и rollback
+        run: bash tools/release-candidate-update-schema.sh
 
   mysql-release-runtime:
     name: Миграции и healthcheck — MySQL
     runs-on: ubuntu-latest
-
     services:
       mysql:
         image: mysql:8.4
@@ -568,19 +139,16 @@ jobs:
           --health-interval 10s
           --health-timeout 5s
           --health-retries 10
-
     steps:
       - name: Получить исходный код
         uses: actions/checkout@v4
-
       - name: Подготовить PHP 8.3
         uses: shivammathur/setup-php@v2
         with:
           php-version: '8.3'
           extensions: pdo, pdo_mysql, dom, fileinfo, openssl
           coverage: none
-
-      - name: Подготовить MySQL установку
+      - name: Подготовить установку и применить миграции
         shell: bash
         run: |
           set -euo pipefail
@@ -592,9 +160,7 @@ jobs:
 
           return [
               'installation' => ['completed' => true],
-              'security' => [
-                  'secret_key' => base64_encode(str_repeat('r', 32)),
-              ],
+              'security' => ['secret_key' => base64_encode(str_repeat('r', 32))],
               'database' => [
                   'driver' => 'mysql',
                   'host' => '127.0.0.1',
@@ -605,11 +171,9 @@ jobs:
               ],
           ];
           PHP
-
           php bin/migrate.php
           test "$(php bin/migrate.php)" = 'No pending migrations.'
-
-      - name: Сверить полный набор миграций и readiness
+      - name: Сверить миграции и readiness
         run: |
           php -r '
           require "core.php";
@@ -620,17 +184,12 @@ jobs:
               exit(1);
           }
           $expected = (new \ChurchCMS\Core\MigrationRunner($database, CHURCHCMS_ROOT))->validate();
-          $applied = $pdo->query(
-              "SELECT migration_id FROM churchcms_migrations ORDER BY migration_id"
-          )->fetchAll(PDO::FETCH_COLUMN);
+          $applied = $pdo->query("SELECT migration_id FROM churchcms_migrations ORDER BY migration_id")->fetchAll(PDO::FETCH_COLUMN);
           if ($applied !== $expected) {
               fwrite(STDERR, "Набор применённых MySQL миграций не совпадает с репозиторием.\n");
               exit(1);
           }
-          $health = (new \ChurchCMS\Core\InstallationHealthCheck(
-              $database,
-              CHURCHCMS_ROOT,
-          ))->check();
+          $health = (new \ChurchCMS\Core\InstallationHealthCheck($database, CHURCHCMS_ROOT))->check();
           if (($health["ready"] ?? false) !== true) {
               fwrite(STDERR, "MySQL runtime не готов: " . json_encode($health, JSON_UNESCAPED_UNICODE) . "\n");
               exit(1);
