@@ -1,0 +1,133 @@
+name: Проверка интеграции пожертвований
+
+on:
+  push:
+    branches:
+      - develop
+      - main
+    paths:
+      - 'modules/donations/**'
+      - 'modules/organizations/**'
+      - 'tools/donations-boundary-smoke.php'
+      - '.github/workflows/donations-boundary-smoke.yml'
+  pull_request:
+    branches:
+      - develop
+      - main
+    paths:
+      - 'modules/donations/**'
+      - 'modules/organizations/**'
+      - 'tools/donations-boundary-smoke.php'
+      - '.github/workflows/donations-boundary-smoke.yml'
+
+permissions:
+  contents: read
+
+jobs:
+  donations-postgresql:
+    runs-on: ubuntu-latest
+    services:
+      postgres:
+        image: postgres:16
+        env:
+          POSTGRES_DB: churchcms
+          POSTGRES_USER: churchcms
+          POSTGRES_PASSWORD: churchcms
+        ports:
+          - 5432:5432
+        options: >-
+          --health-cmd pg_isready
+          --health-interval 10s
+          --health-timeout 5s
+          --health-retries 5
+    steps:
+      - name: Получить исходный код
+        uses: actions/checkout@v4
+      - name: Подготовить PHP 8.3
+        uses: shivammathur/setup-php@v2
+        with:
+          php-version: '8.3'
+          extensions: pdo, pdo_pgsql, dom, mbstring
+          coverage: none
+      - name: Проверить синтаксис
+        shell: bash
+        run: |
+          set -euo pipefail
+          find modules/donations -type f -name '*.php' -print0 | xargs -0 -n1 php -l
+          php -l tools/donations-boundary-smoke.php
+          php bin/migrate.php validate
+      - name: Подготовить PostgreSQL
+        shell: bash
+        run: |
+          set -euo pipefail
+          mkdir -p storage/cache storage/logs storage/sessions storage/rate-limits storage/uploads
+          cat > config/local.php <<'PHP'
+          <?php
+          declare(strict_types=1);
+          return [
+              'installation' => ['completed' => true],
+              'security' => ['secret_key' => base64_encode(str_repeat('d', 32))],
+              'database' => [
+                  'driver' => 'pgsql',
+                  'host' => '127.0.0.1',
+                  'port' => 5432,
+                  'database' => 'churchcms',
+                  'username' => 'churchcms',
+                  'password' => 'churchcms',
+              ],
+          ];
+          PHP
+          php bin/migrate.php
+      - name: Проверить границу пожертвований
+        run: php tools/donations-boundary-smoke.php
+
+  donations-mysql:
+    runs-on: ubuntu-latest
+    services:
+      mysql:
+        image: mysql:8.4
+        env:
+          MYSQL_DATABASE: churchcms
+          MYSQL_USER: churchcms
+          MYSQL_PASSWORD: churchcms
+          MYSQL_ROOT_PASSWORD: root
+        ports:
+          - 3306:3306
+        options: >-
+          --health-cmd="mysqladmin ping -h localhost -uroot -proot"
+          --health-interval 10s
+          --health-timeout 5s
+          --health-retries 10
+    steps:
+      - name: Получить исходный код
+        uses: actions/checkout@v4
+      - name: Подготовить PHP 8.3
+        uses: shivammathur/setup-php@v2
+        with:
+          php-version: '8.3'
+          extensions: pdo, pdo_mysql, dom, mbstring
+          coverage: none
+      - name: Подготовить MySQL
+        shell: bash
+        run: |
+          set -euo pipefail
+          mkdir -p storage/cache storage/logs storage/sessions storage/rate-limits storage/uploads
+          cat > config/local.php <<'PHP'
+          <?php
+          declare(strict_types=1);
+          return [
+              'installation' => ['completed' => true],
+              'security' => ['secret_key' => base64_encode(str_repeat('d', 32))],
+              'database' => [
+                  'driver' => 'mysql',
+                  'host' => '127.0.0.1',
+                  'port' => 3306,
+                  'database' => 'churchcms',
+                  'username' => 'churchcms',
+                  'password' => 'churchcms',
+              ],
+          ];
+          PHP
+          php bin/migrate.php
+      - name: Проверить границу пожертвований
+        run: php tools/donations-boundary-smoke.php
