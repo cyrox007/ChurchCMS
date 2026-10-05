@@ -1,0 +1,7 @@
+{
+  "id": "ministries",
+  "name": "Служения и отделы",
+  "version": "0.1.0",
+  "runtime": "runtime.php",
+  "capabilities": []
+}
