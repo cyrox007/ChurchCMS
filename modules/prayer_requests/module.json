@@ -1,0 +1,9 @@
+{
+  "id": "prayer_requests",
+  "name": "Записки и молебны",
+  "version": "0.1.0",
+  "runtime": "runtime.php",
+  "capabilities": [
+    "prayer_requests.submit"
+  ]
+}
