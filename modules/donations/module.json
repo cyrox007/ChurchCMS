@@ -1,0 +1,9 @@
+{
+  "id": "donations",
+  "name": "Пожертвования",
+  "version": "0.1.0",
+  "runtime": "runtime.php",
+  "capabilities": [
+    "donations.checkout"
+  ]
+}
