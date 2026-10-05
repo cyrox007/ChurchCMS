@@ -23,14 +23,26 @@ cleanup() {
 }
 trap cleanup EXIT
 
+start_server() {
+    php -S 127.0.0.1:18080 -t "$root" >"$log" 2>&1 &
+    server_pid=$!
+}
+
+stop_server() {
+    if [[ -n "$server_pid" ]]; then
+        kill "$server_pid" 2>/dev/null || true
+        wait "$server_pid" 2>/dev/null || true
+        server_pid=''
+    fi
+}
+
 csrf_from() {
     sed -n 's/.*name="csrf_token" value="\([^"]*\)".*/\1/p' "$1" | head -1
 }
 
 rm -f config/local.php
 mkdir -p storage/cache storage/logs storage/sessions storage/rate-limits storage/uploads
-php -S 127.0.0.1:18080 -t "$root" >"$log" 2>&1 &
-server_pid=$!
+start_server
 
 step2="$temp/churchcms-rc-step2.html"
 ready='0'
@@ -100,6 +112,11 @@ psql postgresql://churchcms:${CHURCHCMS_RC_DB_PASSWORD:-churchcms}@127.0.0.1:543
     -Atqc "SELECT COUNT(*) FROM admin_user_roles aur JOIN admin_users u ON u.id=aur.user_id JOIN roles r ON r.id=aur.role_id WHERE u.username='rc-admin' AND r.role_key='superadmin'" \
     | grep -qx 1
 
+# Новый worker обязан прочитать уже завершённую установку с диска и закрыть installer.
+# Перезапуск исключает ложный результат от OPcache одного и того же тестового процесса.
+stop_server
+start_server
+sleep 1
 status="$(curl --silent --output "$temp/churchcms-rc-locked.txt" --write-out '%{http_code}' 'http://127.0.0.1:18080/install.php')"
 test "$status" = '404'
 grep -q 'Installer is locked' "$temp/churchcms-rc-locked.txt"
