@@ -30,11 +30,8 @@ final class EducationScheduleCatalogService
     /** @return array<string,mixed>|null */
     public function detail(string $publicId, string $siteKey = 'default'): ?array
     {
-        $record = $this->repository->find($publicId, $siteKey);
-        if ($record === null || $record->status !== 'published') {
-            return null;
-        }
-        return $this->project($record, true);
+        $record = $this->repository->findPublished($publicId, $siteKey);
+        return $record === null ? null : $this->project($record, true);
     }
 
     private function project(EducationScheduleRecord $record, bool $includeNote = false): array
