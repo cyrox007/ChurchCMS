@@ -80,6 +80,25 @@ final class EducationScheduleRepository
         return is_array($row) ? self::hydrate($row) : null;
     }
 
+    public function findPublished(string $publicId, string $siteKey = 'default'): ?EducationScheduleRecord
+    {
+        $statement = $this->pdo->prepare(
+            "SELECT s.*, p.title AS program_title,
+                    p.owner_organization_public_id AS program_owner_organization_public_id
+             FROM education_schedules s
+             INNER JOIN education_programs p
+                ON p.site_key = s.site_key AND p.public_id = s.program_public_id
+             WHERE s.site_key = :site_key
+               AND s.public_id = :public_id
+               AND s.status = 'published'
+               AND p.status = 'published'
+             LIMIT 1"
+        );
+        $statement->execute(['site_key' => $siteKey, 'public_id' => $publicId]);
+        $row = $statement->fetch();
+        return is_array($row) ? self::hydrate($row) : null;
+    }
+
     public function create(array $data): string
     {
         $statement = $this->pdo->prepare(
