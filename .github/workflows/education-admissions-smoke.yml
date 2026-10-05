@@ -1,0 +1,150 @@
+name: Проверка приёмной кампании
+
+on:
+  push:
+    branches:
+      - develop
+      - main
+    paths:
+      - 'modules/education_admissions/**'
+      - 'modules/education_programs/**'
+      - 'modules/organizations/**'
+      - 'themes/default/**'
+      - 'tools/education-admissions-smoke.php'
+      - '.github/workflows/education-admissions-smoke.yml'
+  pull_request:
+    branches:
+      - develop
+      - main
+    paths:
+      - 'modules/education_admissions/**'
+      - 'modules/education_programs/**'
+      - 'modules/organizations/**'
+      - 'themes/default/**'
+      - 'tools/education-admissions-smoke.php'
+      - '.github/workflows/education-admissions-smoke.yml'
+
+permissions:
+  contents: read
+
+jobs:
+  education-admissions-postgresql:
+    runs-on: ubuntu-latest
+    services:
+      postgres:
+        image: postgres:16
+        env:
+          POSTGRES_DB: churchcms
+          POSTGRES_USER: churchcms
+          POSTGRES_PASSWORD: churchcms
+        ports:
+          - 5432:5432
+        options: >-
+          --health-cmd pg_isready
+          --health-interval 10s
+          --health-timeout 5s
+          --health-retries 5
+    steps:
+      - name: Получить исходный код
+        uses: actions/checkout@v4
+      - name: Подготовить PHP 8.3
+        uses: shivammathur/setup-php@v2
+        with:
+          php-version: '8.3'
+          extensions: pdo, pdo_pgsql, dom, mbstring
+          coverage: none
+      - name: Проверить синтаксис и миграции
+        shell: bash
+        run: |
+          set -euo pipefail
+          find modules/education_admissions -type f -name '*.php' -print0 | xargs -0 -n1 php -l
+          php -l themes/default/templates/admin/education_admissions.php
+          php -l themes/default/templates/education_admissions/index.php
+          php -l themes/default/templates/education_admissions/show.php
+          php -l tools/education-admissions-smoke.php
+          php bin/migrate.php validate
+      - name: Подготовить PostgreSQL
+        shell: bash
+        run: |
+          set -euo pipefail
+          mkdir -p storage/cache storage/logs storage/sessions storage/rate-limits storage/uploads
+          cat > config/local.php <<'PHP'
+          <?php
+          declare(strict_types=1);
+          return [
+              'installation' => ['completed' => true],
+              'security' => ['secret_key' => base64_encode(str_repeat('a', 32))],
+              'database' => [
+                  'driver' => 'pgsql',
+                  'host' => '127.0.0.1',
+                  'port' => 5432,
+                  'database' => 'churchcms',
+                  'username' => 'churchcms',
+                  'password' => 'churchcms',
+              ],
+          ];
+          PHP
+          php bin/migrate.php
+      - name: Проверить lifecycle приёмной кампании
+        run: php tools/education-admissions-smoke.php
+
+  education-admissions-mysql:
+    runs-on: ubuntu-latest
+    services:
+      mysql:
+        image: mysql:8.4
+        env:
+          MYSQL_DATABASE: churchcms
+          MYSQL_USER: churchcms
+          MYSQL_PASSWORD: churchcms
+          MYSQL_ROOT_PASSWORD: root
+        ports:
+          - 3306:3306
+        options: >-
+          --health-cmd="mysqladmin ping -h localhost -uroot -proot"
+          --health-interval 10s
+          --health-timeout 5s
+          --health-retries 10
+    steps:
+      - name: Получить исходный код
+        uses: actions/checkout@v4
+      - name: Подготовить PHP 8.3
+        uses: shivammathur/setup-php@v2
+        with:
+          php-version: '8.3'
+          extensions: pdo, pdo_mysql, dom, mbstring
+          coverage: none
+      - name: Проверить синтаксис и миграции
+        shell: bash
+        run: |
+          set -euo pipefail
+          find modules/education_admissions -type f -name '*.php' -print0 | xargs -0 -n1 php -l
+          php -l themes/default/templates/admin/education_admissions.php
+          php -l themes/default/templates/education_admissions/index.php
+          php -l themes/default/templates/education_admissions/show.php
+          php -l tools/education-admissions-smoke.php
+          php bin/migrate.php validate
+      - name: Подготовить MySQL
+        shell: bash
+        run: |
+          set -euo pipefail
+          mkdir -p storage/cache storage/logs storage/sessions storage/rate-limits storage/uploads
+          cat > config/local.php <<'PHP'
+          <?php
+          declare(strict_types=1);
+          return [
+              'installation' => ['completed' => true],
+              'security' => ['secret_key' => base64_encode(str_repeat('a', 32))],
+              'database' => [
+                  'driver' => 'mysql',
+                  'host' => '127.0.0.1',
+                  'port' => 3306,
+                  'database' => 'churchcms',
+                  'username' => 'churchcms',
+                  'password' => 'churchcms',
+              ],
+          ];
+          PHP
+          php bin/migrate.php
+      - name: Проверить lifecycle приёмной кампании
+        run: php tools/education-admissions-smoke.php
