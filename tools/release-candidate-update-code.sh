@@ -34,7 +34,7 @@ file_put_contents(
 );
 '
 
-current_version="$(php -r '$c=require "config/app.php"; echo $c["version"];')"
+current_version="$(php -r '$c=require "config/app.php"; echo $c["app"]["version"];')"
 new_version='999.10.0-rc-ci'
 
 FROM_VERSION="$current_version" TO_VERSION="$new_version" PACKAGE="$package" python3 <<'PY'
@@ -105,7 +105,7 @@ php bin/update.php apply \
     | tee "$temp/churchcms-rc-code-update.txt"
 
 grep -q 'backup:' "$temp/churchcms-rc-code-update.txt"
-php -r '$c=require "config/app.php"; exit(($c["version"] ?? "") === "999.10.0-rc-ci" ? 0 : 1);'
+php -r '$c=require "config/app.php"; exit(($c["app"]["version"] ?? "") === "999.10.0-rc-ci" ? 0 : 1);'
 php -l core/RcUpdateMarker.php
 
 echo 'Code-only updater RC проверен.'
