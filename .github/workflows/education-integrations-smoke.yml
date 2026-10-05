@@ -1,0 +1,44 @@
+name: Проверка Moodle и OJS адаптеров
+
+on:
+  push:
+    branches:
+      - develop
+      - main
+    paths:
+      - 'modules/education_integrations/**'
+      - 'tools/education-integrations-smoke.php'
+      - '.github/workflows/education-integrations-smoke.yml'
+  pull_request:
+    branches:
+      - develop
+      - main
+    paths:
+      - 'modules/education_integrations/**'
+      - 'tools/education-integrations-smoke.php'
+      - '.github/workflows/education-integrations-smoke.yml'
+
+permissions:
+  contents: read
+
+jobs:
+  education-integrations:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Получить исходный код
+        uses: actions/checkout@v4
+      - name: Подготовить PHP 8.3
+        uses: shivammathur/setup-php@v2
+        with:
+          php-version: '8.3'
+          extensions: curl, dom, mbstring
+          coverage: none
+      - name: Проверить синтаксис
+        shell: bash
+        run: |
+          set -euo pipefail
+          find modules/education_integrations -type f -name '*.php' -print0 | xargs -0 -n1 php -l
+          php -l tools/education-integrations-smoke.php
+          php bin/migrate.php validate
+      - name: Проверить Moodle/OJS адаптеры без внешней сети
+        run: php tools/education-integrations-smoke.php
