@@ -1,0 +1,218 @@
+name: Релизный кандидат 1.0
+
+on:
+  workflow_dispatch:
+  pull_request:
+    branches: [develop, main]
+    paths:
+      - 'install.php'
+      - 'bin/release-audit.php'
+      - 'bin/backup.php'
+      - 'bin/update.php'
+      - 'core/BackupManager.php'
+      - 'core/DatabaseRestoreManager.php'
+      - 'core/FileRestoreManager.php'
+      - 'core/InstallationHealthCheck.php'
+      - 'core/MigrationRunner.php'
+      - 'core/UpdatePackageApplier.php'
+      - 'core/UpdatePackageStager.php'
+      - 'core/ReversibleMigration.php'
+      - 'database/migrations/**'
+      - 'modules/*/migrations/**'
+      - 'tools/release-candidate-*.sh'
+      - 'tools/update-sign.php'
+      - 'tools/admin-password-reset-smoke.php'
+      - 'docs/RELEASE_CANDIDATE.md'
+      - '.github/workflows/release-candidate-gate.yml'
+  push:
+    branches: [develop, main]
+    paths:
+      - 'install.php'
+      - 'bin/release-audit.php'
+      - 'bin/backup.php'
+      - 'bin/update.php'
+      - 'core/BackupManager.php'
+      - 'core/DatabaseRestoreManager.php'
+      - 'core/FileRestoreManager.php'
+      - 'core/InstallationHealthCheck.php'
+      - 'core/MigrationRunner.php'
+      - 'core/UpdatePackageApplier.php'
+      - 'core/UpdatePackageStager.php'
+      - 'core/ReversibleMigration.php'
+      - 'database/migrations/**'
+      - 'modules/*/migrations/**'
+      - 'tools/release-candidate-*.sh'
+      - 'tools/update-sign.php'
+      - 'tools/admin-password-reset-smoke.php'
+      - 'docs/RELEASE_CANDIDATE.md'
+      - '.github/workflows/release-candidate-gate.yml'
+
+permissions:
+  contents: read
+
+jobs:
+  pre-release-audit:
+    name: Предрелизный аудит
+    runs-on: ubuntu-latest
+    steps:
+      - name: Получить исходный код
+        uses: actions/checkout@v4
+      - name: Подготовить PHP 8.3
+        uses: shivammathur/setup-php@v2
+        with:
+          php-version: '8.3'
+          extensions: pdo, mbstring, openssl
+          coverage: none
+      - name: Выполнить аудит репозитория
+        run: php bin/release-audit.php
+
+  postgres-release-lifecycle:
+    name: Установка, backup/restore и updater — PostgreSQL
+    runs-on: ubuntu-latest
+    env:
+      CHURCHCMS_RC_DB_PASSWORD: churchcms
+    services:
+      postgres:
+        image: postgres:16
+        env:
+          POSTGRES_DB: churchcms
+          POSTGRES_USER: churchcms
+          POSTGRES_PASSWORD: churchcms
+        ports:
+          - 5432:5432
+        options: >-
+          --health-cmd pg_isready
+          --health-interval 10s
+          --health-timeout 5s
+          --health-retries 5
+    steps:
+      - name: Получить исходный код
+        uses: actions/checkout@v4
+      - name: Подготовить PHP 8.3
+        uses: shivammathur/setup-php@v2
+        with:
+          php-version: '8.3'
+          extensions: pdo, pdo_pgsql, dom, fileinfo, mbstring, openssl
+          coverage: none
+      - name: Проверить синтаксис RC-сценариев
+        run: |
+          bash -n tools/release-candidate-installer.sh
+          bash -n tools/release-candidate-backup-restore.sh
+          bash -n tools/release-candidate-update-code.sh
+          bash -n tools/release-candidate-update-schema.sh
+      - name: Проверить настоящий web-installer
+        run: bash tools/release-candidate-installer.sh
+      - name: Проверить readiness и восстановление пароля
+        run: |
+          php -r '
+          require "core.php";
+          $database = \ChurchCMS\Core\DatabaseManager::getInstance();
+          $health = (new \ChurchCMS\Core\InstallationHealthCheck($database, CHURCHCMS_ROOT))->check();
+          if (($health["ready"] ?? false) !== true) {
+              fwrite(STDERR, "Установка не готова: " . json_encode($health, JSON_UNESCAPED_UNICODE) . "\n");
+              exit(1);
+          }
+          '
+          php tools/admin-password-reset-smoke.php
+      - name: Проверить backup и restore
+        run: bash tools/release-candidate-backup-restore.sh
+      - name: Проверить подписанный code-only update
+        run: bash tools/release-candidate-update-code.sh
+      - name: Проверить schema-changing update и rollback
+        run: bash tools/release-candidate-update-schema.sh
+
+  mysql-release-runtime:
+    name: Миграции и healthcheck — MySQL
+    runs-on: ubuntu-latest
+    services:
+      mysql:
+        image: mysql:8.4
+        env:
+          MYSQL_DATABASE: churchcms
+          MYSQL_USER: churchcms
+          MYSQL_PASSWORD: churchcms
+          MYSQL_ROOT_PASSWORD: root
+        ports:
+          - 3306:3306
+        options: >-
+          --health-cmd="mysqladmin ping -h 127.0.0.1 -uroot -proot"
+          --health-interval 10s
+          --health-timeout 5s
+          --health-retries 10
+    steps:
+      - name: Получить исходный код
+        uses: actions/checkout@v4
+      - name: Подготовить PHP 8.3
+        uses: shivammathur/setup-php@v2
+        with:
+          php-version: '8.3'
+          extensions: pdo, pdo_mysql, dom, fileinfo, openssl
+          coverage: none
+      - name: Подготовить установку и применить миграции
+        shell: bash
+        run: |
+          set -euo pipefail
+          mkdir -p storage/cache storage/logs storage/sessions storage/rate-limits storage/uploads
+          cat > config/local.php <<'PHP'
+          <?php
+
+          declare(strict_types=1);
+
+          return [
+              'installation' => ['completed' => true],
+              'security' => ['secret_key' => base64_encode(str_repeat('r', 32))],
+              'database' => [
+                  'driver' => 'mysql',
+                  'host' => '127.0.0.1',
+                  'port' => 3306,
+                  'database' => 'churchcms',
+                  'username' => 'churchcms',
+                  'password' => 'churchcms',
+              ],
+          ];
+          PHP
+          php bin/migrate.php
+          test "$(php bin/migrate.php)" = 'No pending migrations.'
+      - name: Сверить миграции и readiness
+        run: |
+          php -r '
+          require "core.php";
+          $database = \ChurchCMS\Core\DatabaseManager::getInstance();
+          $pdo = $database->connection();
+          if ((string) $pdo->getAttribute(PDO::ATTR_DRIVER_NAME) !== "mysql") {
+              fwrite(STDERR, "Ожидался MySQL runtime.\n");
+              exit(1);
+          }
+          $expected = (new \ChurchCMS\Core\MigrationRunner($database, CHURCHCMS_ROOT))->validate();
+          $applied = $pdo->query("SELECT migration_id FROM churchcms_migrations ORDER BY migration_id")->fetchAll(PDO::FETCH_COLUMN);
+          if ($applied !== $expected) {
+              fwrite(STDERR, "Набор применённых MySQL миграций не совпадает с репозиторием.\n");
+              exit(1);
+          }
+          $health = (new \ChurchCMS\Core\InstallationHealthCheck($database, CHURCHCMS_ROOT))->check();
+          if (($health["ready"] ?? false) !== true) {
+              fwrite(STDERR, "MySQL runtime не готов: " . json_encode($health, JSON_UNESCAPED_UNICODE) . "\n");
+              exit(1);
+          }
+          '
+
+  release-candidate-gate:
+    name: RC 1.0 — итог
+    if: always()
+    needs:
+      - pre-release-audit
+      - postgres-release-lifecycle
+      - mysql-release-runtime
+    runs-on: ubuntu-latest
+    steps:
+      - name: Проверить итог обязательных контуров
+        env:
+          AUDIT_RESULT: ${{ needs.pre-release-audit.result }}
+          POSTGRES_RESULT: ${{ needs.postgres-release-lifecycle.result }}
+          MYSQL_RESULT: ${{ needs.mysql-release-runtime.result }}
+        run: |
+          set -euo pipefail
+          test "$AUDIT_RESULT" = 'success'
+          test "$POSTGRES_RESULT" = 'success'
+          test "$MYSQL_RESULT" = 'success'
+          echo 'RC gate 1.0 пройден: аудит, web-installer, PostgreSQL backup/restore/updater/rollback и MySQL runtime подтверждены.'

@@ -56,6 +56,20 @@ foreach ($required as $file) {
 }
 
 \ChurchCMS\Core\Config::load(CHURCHCMS_ROOT . '/config/app.php');
+
+$script = realpath((string) ($_SERVER['SCRIPT_FILENAME'] ?? ''));
+$installer = realpath(CHURCHCMS_ROOT . '/install.php');
+if (
+    session_status() === PHP_SESSION_ACTIVE
+    && $script !== false
+    && $installer !== false
+    && $script === $installer
+) {
+    // Мастер установки открывает собственную сессию для CSRF до загрузки ядра.
+    // Сохраняем её перед настройкой runtime-сессии, не меняя общий контракт безопасности.
+    session_write_close();
+}
+
 \ChurchCMS\Core\SessionSecurity::configure();
 
 $registry = \ChurchCMS\Core\ModuleRegistry::boot(CHURCHCMS_ROOT . '/modules');
