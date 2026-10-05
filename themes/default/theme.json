@@ -1,7 +1,7 @@
 {
   "id": "default",
   "name": "ChurchCMS Default",
-  "version": "0.8.25",
+  "version": "0.8.26",
   "profiles": [
     "small-parish",
     "parish",
@@ -91,6 +91,9 @@
     "admin.education_schedules": "admin/education_schedules",
     "education_schedules.index": "education_schedules/index",
     "education_schedules.show": "education_schedules/show",
+    "admin.education_science": "admin/education_science",
+    "education_science.index": "education_science/index",
+    "education_science.show": "education_science/show",
     "search.index": "search/index",
     "admin.youtube-channel": "admin/youtube-channel"
   }
