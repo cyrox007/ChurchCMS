@@ -3,6 +3,7 @@
 declare(strict_types=1);
 
 use ChurchCMS\Modules\Documents\DocumentService;
+use ChurchCMS\Modules\EducationPrograms\EducationProgramService;
 use ChurchCMS\Modules\Organizations\OrganizationService;
 use ChurchCMS\Modules\Search\PublicSearchService;
 
@@ -53,6 +54,63 @@ if (!in_array($publicUrl, $urls, true)) {
 
 if (in_array($privateUrl, $urls, true)) {
     fwrite(STDERR, "Приватный документ попал в публичный поиск.\n");
+    exit(1);
+}
+
+$programs = EducationProgramService::fromDatabase();
+$programId = $programs->createDraft(
+    ownerOrganizationPublicId: $root->publicId,
+    title: 'Церковная история для начинающих',
+    educationLevel: 'дополнительное образование',
+    studyForm: 'очная',
+    durationMonths: 6,
+    qualification: 'свидетельство слушателя',
+    admissionNote: '',
+    summary: 'Программа по истории Церкви.',
+    descriptionInput: '',
+    siteKey: $siteKey,
+);
+
+$draftId = $programs->createDraft(
+    ownerOrganizationPublicId: $root->publicId,
+    title: 'Закрытая программа церковной истории',
+    educationLevel: 'дополнительное образование',
+    studyForm: 'заочная',
+    durationMonths: 3,
+    qualification: null,
+    admissionNote: '',
+    summary: 'Черновик не должен попадать в публичный поиск.',
+    descriptionInput: '',
+    siteKey: $siteKey,
+);
+
+$programs->publish($programId, $siteKey);
+
+$programSearch = PublicSearchService::fromDatabase()->search('история', $siteKey);
+$programUrls = array_map(
+    static fn(array $item): string => (string) ($item['url'] ?? ''),
+    $programSearch['items'],
+);
+$programUrl = '/education/programs/' . rawurlencode($programId);
+$draftUrl = '/education/programs/' . rawurlencode($draftId);
+
+if (!in_array($programUrl, $programUrls, true)) {
+    fwrite(STDERR, "Опубликованная образовательная программа не найдена поиском.\n");
+    exit(1);
+}
+
+if (in_array($draftUrl, $programUrls, true)) {
+    fwrite(STDERR, "Черновик образовательной программы попал в публичный поиск.\n");
+    exit(1);
+}
+
+$qualificationSearch = PublicSearchService::fromDatabase()->search('свидетельство', $siteKey);
+$qualificationUrls = array_map(
+    static fn(array $item): string => (string) ($item['url'] ?? ''),
+    $qualificationSearch['items'],
+);
+if (!in_array($programUrl, $qualificationUrls, true)) {
+    fwrite(STDERR, "Образовательная программа не найдена по квалификации.\n");
     exit(1);
 }
 
