@@ -27,9 +27,8 @@ final class NativeEducationPlatformHttpClient implements EducationPlatformHttpCl
     /** @return array{status:int,body:string,json:array<string,mixed>|null} */
     private function request(string $method, string $url, ?string $body, array $headers): array
     {
-        if (!str_starts_with($url, 'https://')) {
-            throw new RuntimeException('Внешняя образовательная интеграция требует HTTPS.');
-        }
+        EducationPlatformEndpoint::baseUrl($url);
+        EducationPlatformEndpoint::assertPublicResolution($url);
 
         if (!extension_loaded('curl')) {
             throw new RuntimeException('Для внешних образовательных интеграций требуется ext-curl.');
