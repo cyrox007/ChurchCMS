@@ -1,0 +1,7 @@
+{
+  "id": "education_schedules",
+  "name": "Расписание обучения",
+  "version": "0.1.0",
+  "runtime": "runtime.php",
+  "capabilities": []
+}
