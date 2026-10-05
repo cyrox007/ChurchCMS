@@ -1,0 +1,7 @@
+{
+  "id": "sunday_school",
+  "name": "Воскресная школа",
+  "version": "0.1.0",
+  "runtime": "runtime.php",
+  "capabilities": []
+}
