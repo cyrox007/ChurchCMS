@@ -107,6 +107,7 @@ Priority is ordered within each section.
     - [x] список staging-пакетов и подтверждаемое применение code-only или безопасных schema-changing обновлений;
     - [x] единый безопасный restore БД + config/uploads из Admin Shell с аварийным снимком и автоматическим возвратом при ошибке;
     - [x] получение и проверка доверенного релизного пакета без ручного staging;
+- [x] единый RC gate 1.0: настоящий web-installer, PostgreSQL backup/restore, подписанный code-only updater, schema-changing update/rollback, MySQL migrations/readiness и итоговый обязательный gate;
 - [x] replace dashboard-card prototype with unified Admin Shell;
 - [x] persistent/collapsible admin navigation;
 - [x] shared admin header with site context and current user;
@@ -271,12 +272,13 @@ Priority is ordered within each section.
 - [x] MAX adapter;
   - [x] подключение, outbound и dev/fallback long polling;
   - [x] production webhook subscription с отдельным secret и автоматической регистрацией endpoint;
-- [ ] YouTube adapter;
+- [x] YouTube adapter;
   - [x] inbound public-channel sync через Data API key + uploads playlist;
-  - [ ] outbound video upload после готовности Media binary/resumable upload pipeline;
+  - [x] outbound video upload через OAuth 2.0 и Media resumable binary pipeline;
+  - [x] отдельные безопасные настройки API key/OAuth/privacy/category в Admin Shell без обратного вывода сохранённых секретов;
 - [ ] Rutube adapter;
   - [x] inbound public-channel sync через `/api/video/person/{id}/`;
-  - [ ] outbound video upload после подтверждённого upload API и готовности Media binary pipeline;
+  - [ ] outbound video upload после подтверждённого официального upload API;
 - [x] webhook receiver contract/signature validation;
 - [x] loop prevention tests;
 - [x] retry/dead-letter UI.
