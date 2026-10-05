@@ -1,7 +1,7 @@
 {
   "id": "default",
   "name": "ChurchCMS Default",
-  "version": "0.8.23",
+  "version": "0.8.24",
   "profiles": [
     "small-parish",
     "parish",
@@ -76,6 +76,18 @@
     "admin.library": "admin/library",
     "library.index": "library/index",
     "library.show": "library/show",
+    "admin.education_programs": "admin/education_programs",
+    "education_programs.index": "education_programs/index",
+    "education_programs.show": "education_programs/show",
+    "admin.education_staff": "admin/education_staff",
+    "education_staff.index": "education_staff/index",
+    "education_staff.show": "education_staff/show",
+    "admin.education_admissions": "admin/education_admissions",
+    "education_admissions.index": "education_admissions/index",
+    "education_admissions.show": "education_admissions/show",
+    "admin.education_disclosures": "admin/education_disclosures",
+    "education_disclosures.index": "education_disclosures/index",
+    "education_disclosures.show": "education_disclosures/show",
     "search.index": "search/index",
     "admin.youtube-channel": "admin/youtube-channel"
   }
