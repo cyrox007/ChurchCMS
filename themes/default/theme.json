@@ -1,7 +1,7 @@
 {
   "id": "default",
   "name": "ChurchCMS Default",
-  "version": "0.8.21",
+  "version": "0.8.22",
   "profiles": [
     "small-parish",
     "parish",
@@ -67,6 +67,9 @@
     "admin.shrines": "admin/shrines",
     "shrines.index": "shrines/index",
     "shrines.show": "shrines/show",
+    "admin.saints": "admin/saints",
+    "saints.index": "saints/index",
+    "saints.show": "saints/show",
     "admin.sunday_school": "admin/sunday-school",
     "sunday_school.index": "sunday-school/index",
     "sunday_school.show": "sunday-school/show",
