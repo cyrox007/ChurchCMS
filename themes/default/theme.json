@@ -1,7 +1,7 @@
 {
   "id": "default",
   "name": "ChurchCMS Default",
-  "version": "0.8.22",
+  "version": "0.8.23",
   "profiles": [
     "small-parish",
     "parish",
@@ -73,6 +73,9 @@
     "admin.sunday_school": "admin/sunday-school",
     "sunday_school.index": "sunday-school/index",
     "sunday_school.show": "sunday-school/show",
+    "admin.library": "admin/library",
+    "library.index": "library/index",
+    "library.show": "library/show",
     "search.index": "search/index",
     "admin.youtube-channel": "admin/youtube-channel"
   }
