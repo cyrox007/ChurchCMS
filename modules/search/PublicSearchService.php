@@ -51,6 +51,7 @@ final class PublicSearchService
             $this->documents($pattern, $siteKey),
             $this->people($pattern, $siteKey),
             $this->events($pattern, $siteKey),
+            $this->educationPrograms($pattern, $siteKey),
         );
 
         foreach ($items as &$item) {
@@ -239,6 +240,42 @@ final class PublicSearchService
                 'title' => (string) $row['title'],
                 'excerpt' => (string) ($row['excerpt'] ?? ''),
                 'url' => '/events/' . rawurlencode((string) $row['public_id']),
+            ],
+        );
+    }
+
+    /** @return list<array<string,mixed>> */
+    private function educationPrograms(string $pattern, string $siteKey): array
+    {
+        return $this->rows(
+            "SELECT 'education_program' AS type,
+                    public_id,
+                    title,
+                    summary,
+                    education_level,
+                    study_form,
+                    qualification
+             FROM education_programs
+             WHERE site_key = :site_key
+               AND status = 'published'
+               AND (
+                   LOWER(title) LIKE LOWER(:pattern) ESCAPE '!'
+                   OR LOWER(summary) LIKE LOWER(:pattern) ESCAPE '!'
+                   OR LOWER(education_level) LIKE LOWER(:pattern) ESCAPE '!'
+                   OR LOWER(study_form) LIKE LOWER(:pattern) ESCAPE '!'
+                   OR LOWER(qualification) LIKE LOWER(:pattern) ESCAPE '!'
+               )
+             ORDER BY sort_order ASC, title ASC, id ASC
+             LIMIT 20",
+            [
+                'site_key' => $siteKey,
+                'pattern' => $pattern,
+            ],
+            static fn(array $row): array => [
+                'type' => 'education_program',
+                'title' => (string) $row['title'],
+                'excerpt' => (string) ($row['summary'] ?? ''),
+                'url' => '/education/programs/' . rawurlencode((string) $row['public_id']),
             ],
         );
     }
