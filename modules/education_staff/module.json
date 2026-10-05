@@ -1,0 +1,7 @@
+{
+  "id": "education_staff",
+  "name": "Кафедры и преподаватели",
+  "version": "0.1.0",
+  "runtime": "runtime.php",
+  "capabilities": []
+}
