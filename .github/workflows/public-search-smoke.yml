@@ -8,6 +8,7 @@ on:
     paths:
       - 'modules/search/**'
       - 'modules/documents/**'
+      - 'modules/education_programs/**'
       - 'modules/organizations/**'
       - 'tools/public-search-smoke.php'
       - '.github/workflows/public-search-smoke.yml'
@@ -18,6 +19,7 @@ on:
     paths:
       - 'modules/search/**'
       - 'modules/documents/**'
+      - 'modules/education_programs/**'
       - 'modules/organizations/**'
       - 'tools/public-search-smoke.php'
       - '.github/workflows/public-search-smoke.yml'
