@@ -20,7 +20,7 @@ $catalog = EducationProgramCatalogService::fromDatabase();
 $siteKey = 'education-programs-smoke';
 $root = $organizations->ensureSiteRoot(
     'Тестовая образовательная организация',
-    'school',
+    'education',
     $siteKey,
 );
 $departmentId = $organizations->create(
@@ -105,7 +105,7 @@ if (
 
 $foreignRoot = $organizations->ensureSiteRoot(
     'Чужая образовательная организация',
-    'school',
+    'education',
     'education-programs-foreign',
 );
 
