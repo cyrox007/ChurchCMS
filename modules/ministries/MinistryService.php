@@ -4,19 +4,27 @@ declare(strict_types=1);
 
 namespace ChurchCMS\Modules\Ministries;
 
+use ChurchCMS\Core\DatabaseManager;
 use ChurchCMS\Core\HtmlSanitizer;
 use ChurchCMS\Core\Uuid;
+use ChurchCMS\Modules\Organizations\OrganizationRepository;
 use InvalidArgumentException;
+use PDO;
 
 final class MinistryService
 {
-    public function __construct(private readonly MinistryRepository $repository)
+    private MinistryRepository $repository;
+    private OrganizationRepository $organizations;
+
+    public function __construct(PDO $pdo)
     {
+        $this->repository = new MinistryRepository($pdo);
+        $this->organizations = new OrganizationRepository($pdo);
     }
 
     public static function fromDatabase(): self
     {
-        return new self(MinistryRepository::fromDatabase());
+        return new self(DatabaseManager::getInstance()->connection());
     }
 
     public function createDraft(
@@ -31,9 +39,11 @@ final class MinistryService
         int $sortOrder = 0,
         string $siteKey = 'default',
     ): string {
+        $siteKey = self::siteKey($siteKey);
+        $owner = $this->organization($ownerOrganizationPublicId, $siteKey);
         $now = gmdate('Y-m-d H:i:s');
         $data = $this->normalized(
-            $ownerOrganizationPublicId,
+            $owner->publicId,
             $title,
             $shortTitle,
             $leaderName,
@@ -67,12 +77,14 @@ final class MinistryService
         int $sortOrder = 0,
         string $siteKey = 'default',
     ): void {
+        $siteKey = self::siteKey($siteKey);
         if ($this->repository->find($publicId, $siteKey) === null) {
             throw new InvalidArgumentException('Служение не найдено.');
         }
+        $owner = $this->organization($ownerOrganizationPublicId, $siteKey);
 
         $data = $this->normalized(
-            $ownerOrganizationPublicId,
+            $owner->publicId,
             $title,
             $shortTitle,
             $leaderName,
@@ -88,12 +100,12 @@ final class MinistryService
 
     public function publish(string $publicId, string $siteKey = 'default'): void
     {
-        $this->setStatus($publicId, 'published', $siteKey);
+        $this->setStatus($publicId, 'published', self::siteKey($siteKey));
     }
 
     public function unpublish(string $publicId, string $siteKey = 'default'): void
     {
-        $this->setStatus($publicId, 'draft', $siteKey);
+        $this->setStatus($publicId, 'draft', self::siteKey($siteKey));
     }
 
     private function setStatus(string $publicId, string $status, string $siteKey): void
@@ -102,6 +114,16 @@ final class MinistryService
             throw new InvalidArgumentException('Служение не найдено.');
         }
         $this->repository->setStatus($publicId, $status, $siteKey);
+    }
+
+    private function organization(string $publicId, string $siteKey): object
+    {
+        $organization = $this->organizations->findByPublicId(trim($publicId), $siteKey);
+        if ($organization === null || $organization->status !== 'active') {
+            throw new InvalidArgumentException('Организация-владелец недоступна.');
+        }
+
+        return $organization;
     }
 
     private function normalized(
@@ -115,11 +137,7 @@ final class MinistryService
         string $descriptionInput,
         int $sortOrder,
     ): array {
-        $ownerOrganizationPublicId = trim($ownerOrganizationPublicId);
         $title = trim($title);
-        if ($ownerOrganizationPublicId === '') {
-            throw new InvalidArgumentException('Не выбрана организация-владелец.');
-        }
         if ($title === '' || mb_strlen($title) > 255) {
             throw new InvalidArgumentException('Название служения должно содержать от 1 до 255 символов.');
         }
@@ -139,6 +157,15 @@ final class MinistryService
             'description_html' => HtmlSanitizer::fromEditorInput($descriptionInput),
             'sort_order' => max(-100000, min(100000, $sortOrder)),
         ];
+    }
+
+    private static function siteKey(string $siteKey): string
+    {
+        $siteKey = trim($siteKey);
+        if ($siteKey === '' || strlen($siteKey) > 64) {
+            throw new InvalidArgumentException('Некорректный site_key.');
+        }
+        return $siteKey;
     }
 
     private static function nullable(?string $value, int $max): ?string
