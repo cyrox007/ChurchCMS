@@ -1,0 +1,82 @@
+name: Проверка профиля эталонного сервера
+
+on:
+  push:
+    branches: [develop, main]
+    paths:
+      - 'tools/performance/reference-host.php'
+      - 'docs/PERFORMANCE_RELEASE.md'
+      - '.github/workflows/performance-reference-profile-smoke.yml'
+  pull_request:
+    branches: [develop, main]
+    paths:
+      - 'tools/performance/reference-host.php'
+      - 'docs/PERFORMANCE_RELEASE.md'
+      - '.github/workflows/performance-reference-profile-smoke.yml'
+
+permissions:
+  contents: read
+
+jobs:
+  reference-profile:
+    name: Профиль эталонного сервера
+    runs-on: ubuntu-latest
+    steps:
+      - name: Получить исходный код
+        uses: actions/checkout@v4
+
+      - name: Подготовить PHP 8.3
+        uses: shivammathur/setup-php@v2
+        with:
+          php-version: '8.3'
+          coverage: none
+
+      - name: Проверить синтаксис
+        run: php -l tools/performance/reference-host.php
+
+      - name: Собрать профиль с явными runtime-параметрами
+        run: |
+          php tools/performance/reference-host.php \
+            --web-server='nginx test' \
+            --php-runtime='PHP-FPM 8.3 test' \
+            --database='PostgreSQL 16 test' \
+            --storage='NVMe test' \
+            --output=/tmp/churchcms-reference-host.json
+
+      - name: Проверить контракт JSON
+        run: |
+          php -r '
+          $profile = json_decode(
+              file_get_contents("/tmp/churchcms-reference-host.json"),
+              true,
+              32,
+              JSON_THROW_ON_ERROR,
+          );
+          if (($profile["schema"] ?? null) !== 1) {
+              fwrite(STDERR, "Некорректная версия схемы профиля.\n");
+              exit(1);
+          }
+          $hardware = $profile["reference_hardware"] ?? null;
+          if (!is_array($hardware)) {
+              fwrite(STDERR, "Отсутствует reference_hardware.\n");
+              exit(1);
+          }
+          foreach (["cpu", "storage", "web_server", "php", "database"] as $field) {
+              if (!is_string($hardware[$field] ?? null) || trim($hardware[$field]) === "") {
+                  fwrite(STDERR, "Не заполнено поле {$field}.\n");
+                  exit(1);
+              }
+          }
+          if (!is_int($hardware["memory_mb"] ?? null) || $hardware["memory_mb"] < 1) {
+              fwrite(STDERR, "Некорректный memory_mb.\n");
+              exit(1);
+          }
+          if (($hardware["web_server"] ?? null) !== "nginx test"
+              || ($hardware["php"] ?? null) !== "PHP-FPM 8.3 test"
+              || ($hardware["database"] ?? null) !== "PostgreSQL 16 test"
+              || ($hardware["storage"] ?? null) !== "NVMe test"
+          ) {
+              fwrite(STDERR, "Явные параметры профиля были изменены.\n");
+              exit(1);
+          }
+          '
