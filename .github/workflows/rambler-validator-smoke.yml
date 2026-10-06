@@ -1,0 +1,55 @@
+name: Проверка валидатора Rambler-фида
+
+on:
+  push:
+    branches:
+      - develop
+      - main
+    paths:
+      - 'core/RamblerFeedValidator.php'
+      - 'app/controllers/SyndicationAdminController.php'
+      - 'config/routes.php'
+      - 'themes/default/theme.json'
+      - 'themes/default/templates/admin/rambler-validator.php'
+      - 'themes/default/templates/admin/syndication-exports.php'
+      - 'tools/rambler-validator-smoke.php'
+      - '.github/workflows/rambler-validator-smoke.yml'
+  pull_request:
+    branches:
+      - develop
+      - main
+    paths:
+      - 'core/RamblerFeedValidator.php'
+      - 'app/controllers/SyndicationAdminController.php'
+      - 'config/routes.php'
+      - 'themes/default/theme.json'
+      - 'themes/default/templates/admin/rambler-validator.php'
+      - 'themes/default/templates/admin/syndication-exports.php'
+      - 'tools/rambler-validator-smoke.php'
+      - '.github/workflows/rambler-validator-smoke.yml'
+
+permissions:
+  contents: read
+
+jobs:
+  rambler-validator:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Получить исходный код
+        uses: actions/checkout@v4
+      - name: Подготовить PHP 8.3
+        uses: shivammathur/setup-php@v2
+        with:
+          php-version: '8.3'
+          extensions: dom, mbstring
+          coverage: none
+      - name: Проверить синтаксис и тему
+        run: |
+          set -euo pipefail
+          php -l core/RamblerFeedValidator.php
+          php -l app/controllers/SyndicationAdminController.php
+          php -l themes/default/templates/admin/rambler-validator.php
+          php -l tools/rambler-validator-smoke.php
+          php bin/theme-check.php
+      - name: Проверить правила Rambler-фида
+        run: php tools/rambler-validator-smoke.php
