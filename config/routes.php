@@ -7,6 +7,7 @@ use ChurchCMS\App\Controllers\AdminAuthController;
 use ChurchCMS\App\Controllers\AdminPasswordResetController;
 use ChurchCMS\App\Controllers\AdminController;
 use ChurchCMS\App\Controllers\AdminAccountController;
+use ChurchCMS\App\Controllers\SyndicationAdminController;
 use ChurchCMS\App\Controllers\ThemeAssetController;
 use ChurchCMS\App\Controllers\Api\V1\ExternalApiController;
 use ChurchCMS\App\Controllers\SyndicationController;
@@ -53,6 +54,7 @@ $router->group('/admin')
     ->add('GET', '', [AdminController::class, 'dashboard'], [RequireAdminMiddleware::class], 'admin_dashboard')
     ->add('GET', '/search', [AdminController::class, 'search'], [RequireAdminMiddleware::class], 'admin_search')
     ->add('GET', '/tasks', [AdminController::class, 'tasks'], [RequireAdminMiddleware::class], 'admin_tasks')
+    ->add('GET', '/syndication-exports', [SyndicationAdminController::class, 'index'], [RequireAdminMiddleware::class], 'admin_syndication_exports')
     ->add('GET', '/account/password', [AdminAccountController::class, 'password'], [RequireAdminMiddleware::class], 'admin_account_password')
     ->add('POST', '/account/password', [AdminAccountController::class, 'updatePassword'], [RequireAdminMiddleware::class, CsrfMiddleware::class], 'admin_account_password_update')
     ->endGroup();
