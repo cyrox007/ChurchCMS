@@ -1,0 +1,158 @@
+name: Проверка журнала экспортов синдикации
+
+on:
+  push:
+    branches:
+      - develop
+      - main
+    paths:
+      - 'database/migrations/20261006_070000_create_syndication_export_log.php'
+      - 'core/SyndicationExportLogRepository.php'
+      - 'app/controllers/SyndicationController.php'
+      - 'app/controllers/SyndicationAdminController.php'
+      - 'config/routes.php'
+      - 'themes/default/theme.json'
+      - 'themes/default/templates/admin/syndication-exports.php'
+      - 'themes/default/templates/admin/publications/index.php'
+      - 'tools/syndication-export-log-smoke.php'
+      - '.github/workflows/syndication-export-log-smoke.yml'
+  pull_request:
+    branches:
+      - develop
+      - main
+    paths:
+      - 'database/migrations/20261006_070000_create_syndication_export_log.php'
+      - 'core/SyndicationExportLogRepository.php'
+      - 'app/controllers/SyndicationController.php'
+      - 'app/controllers/SyndicationAdminController.php'
+      - 'config/routes.php'
+      - 'themes/default/theme.json'
+      - 'themes/default/templates/admin/syndication-exports.php'
+      - 'themes/default/templates/admin/publications/index.php'
+      - 'tools/syndication-export-log-smoke.php'
+      - '.github/workflows/syndication-export-log-smoke.yml'
+
+permissions:
+  contents: read
+
+jobs:
+  syndication-export-log-postgresql:
+    runs-on: ubuntu-latest
+    services:
+      postgres:
+        image: postgres:16
+        env:
+          POSTGRES_DB: churchcms
+          POSTGRES_USER: churchcms
+          POSTGRES_PASSWORD: churchcms
+        ports:
+          - 5432:5432
+        options: >-
+          --health-cmd pg_isready
+          --health-interval 10s
+          --health-timeout 5s
+          --health-retries 5
+    steps:
+      - name: Получить исходный код
+        uses: actions/checkout@v4
+      - name: Подготовить PHP 8.3
+        uses: shivammathur/setup-php@v2
+        with:
+          php-version: '8.3'
+          extensions: pdo, pdo_pgsql, dom, mbstring
+          coverage: none
+      - name: Проверить синтаксис и миграции
+        run: |
+          set -euo pipefail
+          php -l database/migrations/20261006_070000_create_syndication_export_log.php
+          php -l core/SyndicationExportLogRepository.php
+          php -l app/controllers/SyndicationController.php
+          php -l app/controllers/SyndicationAdminController.php
+          php -l themes/default/templates/admin/syndication-exports.php
+          php -l tools/syndication-export-log-smoke.php
+          php bin/migrate.php validate
+          php bin/theme-check.php
+      - name: Подготовить PostgreSQL
+        run: |
+          set -euo pipefail
+          mkdir -p storage/cache storage/logs storage/sessions storage/rate-limits storage/uploads
+          cat > config/local.php <<'PHP'
+          <?php
+          declare(strict_types=1);
+          return [
+              'installation' => ['completed' => true],
+              'security' => ['secret_key' => base64_encode(str_repeat('s', 32))],
+              'database' => [
+                  'driver' => 'pgsql',
+                  'host' => '127.0.0.1',
+                  'port' => 5432,
+                  'database' => 'churchcms',
+                  'username' => 'churchcms',
+                  'password' => 'churchcms',
+              ],
+          ];
+          PHP
+          php bin/migrate.php
+      - name: Проверить журнал экспортов
+        run: php tools/syndication-export-log-smoke.php
+
+  syndication-export-log-mysql:
+    runs-on: ubuntu-latest
+    services:
+      mysql:
+        image: mysql:8.4
+        env:
+          MYSQL_DATABASE: churchcms
+          MYSQL_USER: churchcms
+          MYSQL_PASSWORD: churchcms
+          MYSQL_ROOT_PASSWORD: root
+        ports:
+          - 3306:3306
+        options: >-
+          --health-cmd="mysqladmin ping -h localhost -uroot -proot"
+          --health-interval 10s
+          --health-timeout 5s
+          --health-retries 10
+    steps:
+      - name: Получить исходный код
+        uses: actions/checkout@v4
+      - name: Подготовить PHP 8.3
+        uses: shivammathur/setup-php@v2
+        with:
+          php-version: '8.3'
+          extensions: pdo, pdo_mysql, dom, mbstring
+          coverage: none
+      - name: Проверить синтаксис и миграции
+        run: |
+          set -euo pipefail
+          php -l database/migrations/20261006_070000_create_syndication_export_log.php
+          php -l core/SyndicationExportLogRepository.php
+          php -l app/controllers/SyndicationController.php
+          php -l app/controllers/SyndicationAdminController.php
+          php -l themes/default/templates/admin/syndication-exports.php
+          php -l tools/syndication-export-log-smoke.php
+          php bin/migrate.php validate
+          php bin/theme-check.php
+      - name: Подготовить MySQL
+        run: |
+          set -euo pipefail
+          mkdir -p storage/cache storage/logs storage/sessions storage/rate-limits storage/uploads
+          cat > config/local.php <<'PHP'
+          <?php
+          declare(strict_types=1);
+          return [
+              'installation' => ['completed' => true],
+              'security' => ['secret_key' => base64_encode(str_repeat('s', 32))],
+              'database' => [
+                  'driver' => 'mysql',
+                  'host' => '127.0.0.1',
+                  'port' => 3306,
+                  'database' => 'churchcms',
+                  'username' => 'churchcms',
+                  'password' => 'churchcms',
+              ],
+          ];
+          PHP
+          php bin/migrate.php
+      - name: Проверить журнал экспортов
+        run: php tools/syndication-export-log-smoke.php

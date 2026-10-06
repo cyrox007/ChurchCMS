@@ -24,6 +24,7 @@ $typeLabels = [
         </div>
 
         <div class="admin-heading__actions">
+            <a class="button button--quiet" href="<?= $theme->e($theme->route('admin_syndication_exports')) ?>">Журнал экспортов</a>
             <?php if (!empty($canCreate)): ?>
                 <a class="button button--primary" href="<?= $theme->e($theme->route('admin_publication_new')) ?>">+ Новая публикация</a>
             <?php endif; ?>
