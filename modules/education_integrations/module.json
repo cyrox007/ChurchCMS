@@ -1,0 +1,7 @@
+{
+  "id": "education_integrations",
+  "name": "Интеграции образования",
+  "version": "0.1.0",
+  "runtime": "runtime.php",
+  "capabilities": []
+}
