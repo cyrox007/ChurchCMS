@@ -16,6 +16,7 @@ $targetLabels = [
             <p>История фактического формирования фидов. Повторная выдача из кэша не создаёт новую запись.</p>
         </div>
         <div class="admin-heading__actions">
+            <a class="button button--quiet" href="<?= $theme->e($theme->route('admin_rambler_validator')) ?>">Проверить Rambler</a>
             <a class="button button--quiet" href="<?= $theme->e($theme->route('admin_publications')) ?>">К публикациям</a>
         </div>
     </header>

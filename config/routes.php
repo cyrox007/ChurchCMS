@@ -34,14 +34,12 @@ $router->add('GET', '/_theme-asset', [ThemeAssetController::class, 'asset'], [],
 $router->add('GET', '/feeds/rss.xml', [SyndicationController::class, 'rss'], [], 'feed_rss');
 $router->add('GET', '/feeds/rambler.xml', [SyndicationController::class, 'rambler'], [], 'feed_rambler');
 
-
 $router->group('/api/v1')
     ->add('GET', '/meta', [ExternalApiController::class, 'meta'], [ApiEnabledMiddleware::class, ApiCorsMiddleware::class, ApiPublicRateLimitMiddleware::class], 'api_v1_meta')
     ->add('OPTIONS', '/meta', [ExternalApiController::class, 'preflight'], [ApiEnabledMiddleware::class, ApiCorsMiddleware::class], 'api_v1_meta_options')
     ->add('GET', '/partner/ping', [ExternalApiController::class, 'partnerPing'], [ApiEnabledMiddleware::class, ApiCorsMiddleware::class, PartnerApiMiddleware::class, ApiPartnerRateLimitMiddleware::class], 'api_v1_partner_ping')
     ->add('OPTIONS', '/partner/ping', [ExternalApiController::class, 'preflight'], [ApiEnabledMiddleware::class, ApiCorsMiddleware::class], 'api_v1_partner_ping_options')
     ->endGroup();
-
 
 $router->group('/admin')
     ->add('GET', '/login', [AdminAuthController::class, 'login'], [], 'admin_login')
@@ -55,6 +53,7 @@ $router->group('/admin')
     ->add('GET', '/search', [AdminController::class, 'search'], [RequireAdminMiddleware::class], 'admin_search')
     ->add('GET', '/tasks', [AdminController::class, 'tasks'], [RequireAdminMiddleware::class], 'admin_tasks')
     ->add('GET', '/syndication-exports', [SyndicationAdminController::class, 'index'], [RequireAdminMiddleware::class], 'admin_syndication_exports')
+    ->add('GET', '/syndication-exports/rambler-validator', [SyndicationAdminController::class, 'ramblerValidator'], [RequireAdminMiddleware::class], 'admin_rambler_validator')
     ->add('GET', '/account/password', [AdminAccountController::class, 'password'], [RequireAdminMiddleware::class], 'admin_account_password')
     ->add('POST', '/account/password', [AdminAccountController::class, 'updatePassword'], [RequireAdminMiddleware::class, CsrfMiddleware::class], 'admin_account_password_update')
     ->endGroup();

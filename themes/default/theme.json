@@ -1,7 +1,7 @@
 {
   "id": "default",
   "name": "ChurchCMS Default",
-  "version": "0.8.28",
+  "version": "0.8.29",
   "profiles": [
     "small-parish",
     "parish",
@@ -32,6 +32,7 @@
     "admin.publications.editor": "admin/publications/editor",
     "admin.publications.syndication_overrides": "admin/publications/syndication-overrides",
     "admin.syndication_exports": "admin/syndication-exports",
+    "admin.rambler_validator": "admin/rambler-validator",
     "admin.pages.index": "admin/pages/index",
     "admin.pages.editor": "admin/pages/editor",
     "layout.admin": "layouts/admin",
