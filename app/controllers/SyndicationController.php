@@ -9,9 +9,11 @@ use ChurchCMS\Core\GeneratedOutputCache;
 use ChurchCMS\Core\RamblerSyndicationRenderer;
 use ChurchCMS\Core\Response;
 use ChurchCMS\Core\Rss2SyndicationRenderer;
+use ChurchCMS\Core\SyndicationExportLogRepository;
 use ChurchCMS\Core\SyndicationFeed;
 use ChurchCMS\Core\SyndicationRegistry;
 use ChurchCMS\Core\SyndicationRenderer;
+use Throwable;
 
 final class SyndicationController
 {
@@ -45,14 +47,39 @@ final class SyndicationController
         $body = $cache->get($key);
 
         if ($body === null) {
-            $feed = new SyndicationFeed(
-                title: (string) Config::get('syndication.channel_title', 'ChurchCMS'),
-                siteUrl: $siteUrl . '/',
-                description: (string) Config::get('syndication.channel_description', 'ChurchCMS feed'),
-                entries: SyndicationRegistry::entriesFor($target, 100),
-            );
-            $body = $renderer->render($feed);
-            $cache->put($key, $body);
+            $startedAt = hrtime(true);
+            $entryCount = 0;
+
+            try {
+                $entries = SyndicationRegistry::entriesFor($target, 100);
+                $entryCount = count($entries);
+                $feed = new SyndicationFeed(
+                    title: (string) Config::get('syndication.channel_title', 'ChurchCMS'),
+                    siteUrl: $siteUrl . '/',
+                    description: (string) Config::get('syndication.channel_description', 'ChurchCMS feed'),
+                    entries: $entries,
+                );
+                $body = $renderer->render($feed);
+                $cache->put($key, $body);
+
+                $this->recordExport(
+                    $target,
+                    'success',
+                    $entryCount,
+                    strlen($body),
+                    $startedAt,
+                );
+            } catch (Throwable $exception) {
+                $this->recordExport(
+                    $target,
+                    'failed',
+                    $entryCount,
+                    0,
+                    $startedAt,
+                    'generation_failed',
+                );
+                throw $exception;
+            }
         }
 
         http_response_code(200);
@@ -61,5 +88,31 @@ final class SyndicationController
         header('X-Content-Type-Options: nosniff');
         echo $body;
         exit;
+    }
+
+    private function recordExport(
+        string $target,
+        string $status,
+        int $entryCount,
+        int $bodyBytes,
+        int $startedAt,
+        ?string $errorCode = null,
+    ): void {
+        try {
+            $durationMs = max(
+                0,
+                (int) round((hrtime(true) - $startedAt) / 1_000_000),
+            );
+            SyndicationExportLogRepository::fromDefaultConnection()->record(
+                $target,
+                $status,
+                $entryCount,
+                $bodyBytes,
+                $durationMs,
+                $errorCode,
+            );
+        } catch (Throwable) {
+            // Журналирование не должно нарушать публичную выдачу фида.
+        }
     }
 }
