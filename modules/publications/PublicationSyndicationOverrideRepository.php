@@ -47,18 +47,10 @@ final class PublicationSyndicationOverrideRepository
         $result = [];
         foreach ($statement->fetchAll() as $row) {
             $result[(int) $row['publication_id']] = [
-                'title' => $row['title_override'] !== null
-                    ? (string) $row['title_override']
-                    : null,
-                'excerpt' => $row['excerpt_override'] !== null
-                    ? (string) $row['excerpt_override']
-                    : null,
-                'image_url' => $row['image_url'] !== null
-                    ? (string) $row['image_url']
-                    : null,
-                'image_mime' => $row['image_mime'] !== null
-                    ? (string) $row['image_mime']
-                    : null,
+                'title' => $row['title_override'] !== null ? (string) $row['title_override'] : null,
+                'excerpt' => $row['excerpt_override'] !== null ? (string) $row['excerpt_override'] : null,
+                'image_url' => $row['image_url'] !== null ? (string) $row['image_url'] : null,
+                'image_mime' => $row['image_mime'] !== null ? (string) $row['image_mime'] : null,
             ];
         }
 
@@ -214,7 +206,7 @@ SQL,
 
         $value = strtolower(trim((string) $value));
         if ($value === '') {
-            return null;
+            throw new InvalidArgumentException('Для изображения канала укажите MIME-тип.');
         }
         if (preg_match('#^image/[a-z0-9.+-]{1,100}$#D', $value) !== 1) {
             throw new InvalidArgumentException('Некорректный MIME-тип изображения канала.');
