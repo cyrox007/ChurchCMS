@@ -33,7 +33,11 @@ final class SyndicationRegistry
         $entries = [];
 
         foreach (self::$providers as $provider) {
-            foreach ($provider->entries() as $entry) {
+            $providedEntries = $provider instanceof TargetAwareSyndicationProvider
+                ? $provider->entriesForTarget($target)
+                : $provider->entries();
+
+            foreach ($providedEntries as $entry) {
                 if (!$entry instanceof SyndicationEntry || !$entry->isEnabledFor($target)) {
                     continue;
                 }

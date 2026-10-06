@@ -19,6 +19,7 @@ use ChurchCMS\Modules\Publications\PublicationSyndicationProvider;
 use ChurchCMS\Modules\Publications\FederatedPublicationSyndicationProvider;
 use ChurchCMS\Modules\Publications\PublicationAdminSearchProvider;
 use ChurchCMS\Modules\Publications\PublicationAdminTaskProvider;
+use ChurchCMS\Modules\Publications\PublicationSyndicationOverridesAdminController;
 use ChurchCMS\Modules\Publications\PublicationsApiController;
 use ChurchCMS\Modules\Publications\PublicationsCapability;
 use ChurchCMS\Modules\Publications\PublicationsController;
@@ -39,6 +40,7 @@ foreach ([
     'PublicationOrganizationAccessService.php',
     'PublicationScheduleWorker.php',
     'PublicationApiResource.php',
+    'PublicationSyndicationOverrideRepository.php',
     'FederatedPublicationFeedService.php',
     'FederatedPublicationSyndicationProvider.php',
     'PublicationSyndicationProvider.php',
@@ -48,6 +50,7 @@ foreach ([
     'PublicationsController.php',
     'PublicationsApiController.php',
     'PublicationsAdminController.php',
+    'PublicationSyndicationOverridesAdminController.php',
 ] as $file) {
     require_once $moduleRoot . '/' . $file;
 }
@@ -138,6 +141,20 @@ return new class implements ModuleRuntimeProvider {
             [PublicationsAdminController::class, 'create'],
             [RequireAdminMiddleware::class, CsrfMiddleware::class],
             'admin_publication_create',
+        );
+        $router->add(
+            'GET',
+            '/admin/publications/{publicId}/syndication-overrides',
+            [PublicationSyndicationOverridesAdminController::class, 'edit'],
+            [RequireAdminMiddleware::class],
+            'admin_publication_syndication_overrides',
+        );
+        $router->add(
+            'POST',
+            '/admin/publications/{publicId}/syndication-overrides',
+            [PublicationSyndicationOverridesAdminController::class, 'update'],
+            [RequireAdminMiddleware::class, CsrfMiddleware::class],
+            'admin_publication_syndication_overrides_update',
         );
         $router->add(
             'GET',

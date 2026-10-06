@@ -36,6 +36,7 @@ $required = [
     '/core/RateLimiter.php',
     '/core/SyndicationEntry.php',
     '/core/SyndicationProvider.php',
+    '/core/TargetAwareSyndicationProvider.php',
     '/core/SyndicationRegistry.php',
     '/core/SyndicationFeed.php',
     '/core/SyndicationRenderer.php',
