@@ -57,9 +57,14 @@ $typeLabels = [
                     </div>
 
                     <?php if (!empty($canEdit)): ?>
-                        <a class="button button--quiet" href="<?= $theme->e($theme->route('admin_publication_edit', ['publicId' => $publication->publicId])) ?>">
-                            Редактировать
-                        </a>
+                        <div class="admin-heading__actions">
+                            <a class="button button--quiet" href="<?= $theme->e($theme->route('admin_publication_syndication_overrides', ['publicId' => $publication->publicId])) ?>">
+                                Каналы
+                            </a>
+                            <a class="button button--quiet" href="<?= $theme->e($theme->route('admin_publication_edit', ['publicId' => $publication->publicId])) ?>">
+                                Редактировать
+                            </a>
+                        </div>
                     <?php endif; ?>
                 </article>
             <?php endforeach; ?>
