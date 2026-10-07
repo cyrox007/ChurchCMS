@@ -37,8 +37,17 @@ final class DistributionWebhookWorker
         ];
 
         foreach ($this->deliveries->due($limit) as $delivery) {
+            $id = (int) ($delivery['id'] ?? 0);
+            $expectedAttemptCount = (int) ($delivery['attempt_count'] ?? 0);
+            if (!$this->deliveries->claim($id, $expectedAttemptCount)) {
+                continue;
+            }
+
             ++$stats['processed'];
-            $result = $this->deliver($delivery);
+            $result = $this->deliver(
+                $delivery,
+                $expectedAttemptCount + 1,
+            );
             ++$stats[$result];
         }
 
@@ -46,10 +55,9 @@ final class DistributionWebhookWorker
     }
 
     /** @param array<string,mixed> $delivery */
-    private function deliver(array $delivery): string
+    private function deliver(array $delivery, int $attempt): string
     {
         $id = (int) ($delivery['id'] ?? 0);
-        $attempt = (int) ($delivery['attempt_count'] ?? 0) + 1;
         $payload = (string) ($delivery['payload_json'] ?? '');
         $eventId = (string) ($delivery['event_id'] ?? '');
         $eventType = (string) ($delivery['event_type'] ?? '');
