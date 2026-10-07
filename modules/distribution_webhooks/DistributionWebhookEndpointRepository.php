@@ -93,20 +93,38 @@ final class DistributionWebhookEndpointRepository
             . 'FROM distribution_webhook_endpoints WHERE site_key = :site_key ORDER BY id DESC'
         );
         $statement->execute([':site_key' => $this->siteKey($siteKey)]);
-        return array_map(fn(array $row): DistributionWebhookEndpoint => $this->hydrate($row), $statement->fetchAll());
+
+        return array_map(
+            fn(array $row): DistributionWebhookEndpoint => $this->hydrate($row),
+            $statement->fetchAll(),
+        );
     }
 
-    public function setActive(string $publicId, bool $active): void
-    {
+    public function setActive(
+        string $publicId,
+        bool $active,
+        string $siteKey = 'default',
+    ): void {
+        $publicId = trim($publicId);
+        if (preg_match('/^[a-f0-9-]{36}$/Di', $publicId) !== 1) {
+            throw new InvalidArgumentException('Некорректный идентификатор webhook endpoint.');
+        }
+
         $statement = $this->pdo->prepare(
-            'UPDATE distribution_webhook_endpoints SET is_active = :active, updated_at = :updated_at '
-            . 'WHERE public_id = :public_id'
+            'UPDATE distribution_webhook_endpoints '
+            . 'SET is_active = :active, updated_at = :updated_at '
+            . 'WHERE public_id = :public_id AND site_key = :site_key'
         );
         $statement->execute([
             ':active' => $active ? 1 : 0,
             ':updated_at' => gmdate('Y-m-d H:i:s'),
             ':public_id' => $publicId,
+            ':site_key' => $this->siteKey($siteKey),
         ]);
+
+        if ($statement->rowCount() !== 1) {
+            throw new InvalidArgumentException('Webhook endpoint не найден.');
+        }
     }
 
     public function decryptedSecret(DistributionWebhookEndpoint $endpoint): string
@@ -117,6 +135,7 @@ final class DistributionWebhookEndpointRepository
     private function hydrate(array $row): DistributionWebhookEndpoint
     {
         $events = json_decode((string) $row['event_types'], true, 32, JSON_THROW_ON_ERROR);
+
         return new DistributionWebhookEndpoint(
             id: (int) $row['id'],
             publicId: (string) $row['public_id'],
@@ -124,7 +143,9 @@ final class DistributionWebhookEndpointRepository
             name: (string) $row['name'],
             endpointUrl: (string) $row['endpoint_url'],
             secretEncrypted: (string) $row['secret_encrypted'],
-            eventTypes: is_array($events) ? array_values(array_filter($events, 'is_string')) : [],
+            eventTypes: is_array($events)
+                ? array_values(array_filter($events, 'is_string'))
+                : [],
             active: (bool) $row['is_active'],
         );
     }
@@ -132,21 +153,38 @@ final class DistributionWebhookEndpointRepository
     private function endpointUrl(string $url): string
     {
         $url = trim($url);
-        if ($url === '' || strlen($url) > 2048 || filter_var($url, FILTER_VALIDATE_URL) === false) {
+        if (
+            $url === ''
+            || strlen($url) > 2048
+            || filter_var($url, FILTER_VALIDATE_URL) === false
+        ) {
             throw new InvalidArgumentException('Укажите корректный webhook URL.');
         }
+
         $parts = parse_url($url);
         if (!is_array($parts) || strtolower((string) ($parts['scheme'] ?? '')) !== 'https') {
             throw new InvalidArgumentException('Webhook URL должен использовать HTTPS.');
         }
-        if (($parts['user'] ?? '') !== '' || ($parts['pass'] ?? '') !== '' || ($parts['fragment'] ?? '') !== '') {
+        if (
+            ($parts['user'] ?? '') !== ''
+            || ($parts['pass'] ?? '') !== ''
+            || ($parts['fragment'] ?? '') !== ''
+        ) {
             throw new InvalidArgumentException('Webhook URL не должен содержать credentials или fragment.');
         }
+
         $host = strtolower((string) ($parts['host'] ?? ''));
         if ($host === '' || $host === 'localhost' || str_ends_with($host, '.localhost')) {
             throw new InvalidArgumentException('Локальный webhook URL запрещён.');
         }
-        if (filter_var($host, FILTER_VALIDATE_IP) !== false && filter_var($host, FILTER_VALIDATE_IP, FILTER_FLAG_NO_PRIV_RANGE | FILTER_FLAG_NO_RES_RANGE) === false) {
+        if (
+            filter_var($host, FILTER_VALIDATE_IP) !== false
+            && filter_var(
+                $host,
+                FILTER_VALIDATE_IP,
+                FILTER_FLAG_NO_PRIV_RANGE | FILTER_FLAG_NO_RES_RANGE,
+            ) === false
+        ) {
             throw new InvalidArgumentException('Приватный или reserved IP запрещён для webhook.');
         }
 
@@ -167,6 +205,7 @@ final class DistributionWebhookEndpointRepository
         if ($result === []) {
             throw new InvalidArgumentException('Выберите хотя бы один тип webhook-события.');
         }
+
         return array_keys($result);
     }
 
@@ -175,6 +214,7 @@ final class DistributionWebhookEndpointRepository
         if (!in_array($eventType, ['publication.published', 'publication.withdrawn'], true)) {
             throw new InvalidArgumentException('Некорректный тип webhook-события.');
         }
+
         return $eventType;
     }
 
@@ -184,6 +224,7 @@ final class DistributionWebhookEndpointRepository
         if (preg_match('/^[a-z0-9][a-z0-9_.-]{0,63}$/D', $siteKey) !== 1) {
             throw new InvalidArgumentException('Некорректный site key.');
         }
+
         return $siteKey;
     }
 }
