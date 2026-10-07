@@ -55,7 +55,7 @@ $statement = $pdo->prepare(
     . '(public_id, site_key, type, status, slug, title, excerpt, body_html, author_name, '
     . 'published_at, created_at, updated_at, syndication_targets, syndication_title, syndication_excerpt, comments_enabled) '
     . 'VALUES (:public_id, :site_key, :type, :status, :slug, :title, :excerpt, :body_html, NULL, '
-    . ':published_at, :created_at, :updated_at, :targets, NULL, NULL, 0)'
+    . ':published_at, :created_at, :updated_at, :targets, NULL, NULL, FALSE)'
 );
 $statement->execute([
     ':public_id' => $publicationId,
