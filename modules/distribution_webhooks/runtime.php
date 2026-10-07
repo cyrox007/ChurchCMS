@@ -27,6 +27,8 @@ foreach ([
 }
 
 return new class implements ModuleRuntimeProvider {
+    private ?LazyDistributionWebhookListener $listener = null;
+
     public function moduleId(): string
     {
         return 'distribution_webhooks';
@@ -34,14 +36,15 @@ return new class implements ModuleRuntimeProvider {
 
     public function capabilities(): array
     {
-        return [];
+        return [
+            'distribution.webhooks' => $this->listener ??= new LazyDistributionWebhookListener(),
+        ];
     }
 
     public function boot(): void
     {
-        DistributionEventRegistry::register(
-            new LazyDistributionWebhookListener(),
-        );
+        $this->listener ??= new LazyDistributionWebhookListener();
+        DistributionEventRegistry::register($this->listener);
 
         AdminNavigationRegistry::register(
             id: 'distribution_webhooks',
