@@ -14,7 +14,7 @@ final class DistributionWebhookHttpClient
      */
     public function post(string $url, string $body, array $headers): array
     {
-        $this->assertPublicHttpsEndpoint($url);
+        $endpoint = $this->validatedEndpoint($url);
 
         if (!extension_loaded('curl')) {
             throw new RuntimeException('Для исходящих webhooks требуется ext-curl.');
@@ -30,6 +30,10 @@ final class DistributionWebhookHttpClient
             throw new RuntimeException('Не удалось инициализировать HTTP-клиент webhook.');
         }
 
+        $resolveAddress = str_contains($endpoint['address'], ':')
+            ? '[' . $endpoint['address'] . ']'
+            : $endpoint['address'];
+
         curl_setopt_array($curl, [
             CURLOPT_POST => true,
             CURLOPT_POSTFIELDS => $body,
@@ -41,6 +45,9 @@ final class DistributionWebhookHttpClient
             CURLOPT_PROTOCOLS => CURLPROTO_HTTPS,
             CURLOPT_REDIR_PROTOCOLS => CURLPROTO_HTTPS,
             CURLOPT_USERAGENT => 'ChurchCMS DistributionWebhooks/0.1',
+            CURLOPT_RESOLVE => [
+                $endpoint['host'] . ':' . $endpoint['port'] . ':' . $resolveAddress,
+            ],
         ]);
 
         $response = curl_exec($curl);
@@ -57,6 +64,12 @@ final class DistributionWebhookHttpClient
 
     public function assertPublicHttpsEndpoint(string $url): void
     {
+        $this->validatedEndpoint($url);
+    }
+
+    /** @return array{host:string,port:int,address:string} */
+    private function validatedEndpoint(string $url): array
+    {
         $parts = parse_url($url);
         if (!is_array($parts) || strtolower((string) ($parts['scheme'] ?? '')) !== 'https') {
             throw new RuntimeException('Webhook endpoint должен использовать HTTPS.');
@@ -65,6 +78,11 @@ final class DistributionWebhookHttpClient
         $host = strtolower(trim((string) ($parts['host'] ?? '')));
         if ($host === '' || $host === 'localhost' || str_ends_with($host, '.localhost')) {
             throw new RuntimeException('Локальный webhook endpoint запрещён.');
+        }
+
+        $port = isset($parts['port']) ? (int) $parts['port'] : 443;
+        if ($port <= 0 || $port > 65535) {
+            throw new RuntimeException('Некорректный порт webhook endpoint.');
         }
 
         $addresses = $this->resolve($host);
@@ -83,6 +101,14 @@ final class DistributionWebhookHttpClient
                 throw new RuntimeException('Webhook endpoint разрешился в приватный или reserved IP.');
             }
         }
+
+        sort($addresses, SORT_STRING);
+
+        return [
+            'host' => $host,
+            'port' => $port,
+            'address' => $addresses[0],
+        ];
     }
 
     /** @return list<string> */
