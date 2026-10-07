@@ -71,7 +71,37 @@ final class DistributionWebhookDeliveryRepository
             . 'ORDER BY d.next_attempt_at, d.id LIMIT ' . $limit
         );
         $rows = $statement->fetchAll();
+
         return is_array($rows) ? $rows : [];
+    }
+
+    public function claim(
+        int $id,
+        int $expectedAttemptCount,
+        int $leaseSeconds = 120,
+    ): bool {
+        $next = gmdate('Y-m-d H:i:s', time() + max(60, $leaseSeconds));
+        $now = gmdate('Y-m-d H:i:s');
+        $statement = $this->pdo->prepare(
+            'UPDATE distribution_webhook_deliveries SET '
+            . "status = 'retry', attempt_count = attempt_count + 1, "
+            . 'next_attempt_at = :next_attempt_at, last_attempt_at = :last_attempt_at, '
+            . 'updated_at = :updated_at '
+            . 'WHERE id = :id '
+            . "AND status IN ('pending','retry') "
+            . 'AND attempt_count = :attempt_count '
+            . 'AND next_attempt_at IS NOT NULL '
+            . 'AND next_attempt_at <= CURRENT_TIMESTAMP'
+        );
+        $statement->execute([
+            ':next_attempt_at' => $next,
+            ':last_attempt_at' => $now,
+            ':updated_at' => $now,
+            ':id' => $id,
+            ':attempt_count' => max(0, $expectedAttemptCount),
+        ]);
+
+        return $statement->rowCount() === 1;
     }
 
     public function delivered(int $id, int $attemptCount, int $responseStatus): void
@@ -139,6 +169,7 @@ final class DistributionWebhookDeliveryRepository
             . 'ORDER BY d.id DESC LIMIT ' . $limit
         );
         $rows = $statement->fetchAll();
+
         return is_array($rows) ? $rows : [];
     }
 }
