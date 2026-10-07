@@ -62,6 +62,38 @@ final class AuditLog
                 $e->getMessage(),
             ));
         }
+
+        self::dispatchDistributionEvent(
+            $eventType,
+            $subjectType,
+            $subjectId,
+        );
+    }
+
+    private static function dispatchDistributionEvent(
+        string $eventType,
+        ?string $subjectType,
+        ?string $subjectId,
+    ): void {
+        if ($subjectType !== 'publication' || $subjectId === null || $subjectId === '') {
+            return;
+        }
+
+        $distributionEvent = match ($eventType) {
+            'publication.published',
+            'publication.scheduled_published' => 'publication.published',
+            'publication.withdrawn' => 'publication.withdrawn',
+            default => null,
+        };
+
+        if ($distributionEvent === null) {
+            return;
+        }
+
+        DistributionEventRegistry::dispatch(
+            $distributionEvent,
+            ['public_id' => $subjectId],
+        );
     }
 
     private static function userAgent(?Request $request): ?string
