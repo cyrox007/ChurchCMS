@@ -6,7 +6,7 @@ namespace ChurchCMS\Modules\DistributionWebhooks;
 
 use RuntimeException;
 
-final class DistributionWebhookHttpClient
+final class DistributionWebhookHttpClient implements DistributionWebhookTransport
 {
     /**
      * @param array<string,string> $headers
