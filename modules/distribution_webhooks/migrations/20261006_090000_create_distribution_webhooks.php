@@ -49,10 +49,7 @@ CREATE TABLE distribution_webhook_deliveries (
 )
 SQL);
             $pdo->exec('CREATE INDEX distribution_webhook_deliveries_due_idx ON distribution_webhook_deliveries (status, next_attempt_at, id)');
-            return;
-        }
-
-        if ($driver === 'mysql') {
+        } elseif ($driver === 'mysql') {
             $pdo->exec(<<<'SQL'
 CREATE TABLE distribution_webhook_endpoints (
     id BIGINT UNSIGNED NOT NULL AUTO_INCREMENT PRIMARY KEY,
@@ -89,10 +86,30 @@ CREATE TABLE distribution_webhook_deliveries (
         FOREIGN KEY (endpoint_id) REFERENCES distribution_webhook_endpoints(id) ON DELETE CASCADE
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci
 SQL);
-            return;
+        } else {
+            throw new \RuntimeException("Неподдерживаемый драйвер миграции: {$driver}");
         }
 
-        throw new \RuntimeException("Неподдерживаемый драйвер миграции: {$driver}");
+        $permissions = [
+            'distribution_webhooks.read' => 'Просмотр исходящих webhooks',
+            'distribution_webhooks.manage' => 'Управление исходящими webhooks',
+        ];
+        $find = $pdo->prepare(
+            'SELECT id FROM permissions WHERE permission_key = :permission_key LIMIT 1'
+        );
+        $insert = $pdo->prepare(
+            'INSERT INTO permissions (permission_key, name) VALUES (:permission_key, :name)'
+        );
+        foreach ($permissions as $key => $name) {
+            $find->execute(['permission_key' => $key]);
+            if ($find->fetchColumn() !== false) {
+                continue;
+            }
+            $insert->execute([
+                'permission_key' => $key,
+                'name' => $name,
+            ]);
+        }
     }
 
     public function down(\PDO $pdo, string $driver): void
@@ -103,5 +120,8 @@ SQL);
 
         $pdo->exec('DROP TABLE distribution_webhook_deliveries');
         $pdo->exec('DROP TABLE distribution_webhook_endpoints');
+        $pdo->exec(
+            "DELETE FROM permissions WHERE permission_key IN ('distribution_webhooks.read','distribution_webhooks.manage')"
+        );
     }
 };
