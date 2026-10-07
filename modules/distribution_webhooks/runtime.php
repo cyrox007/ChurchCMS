@@ -9,7 +9,7 @@ use ChurchCMS\Core\DistributionEventRegistry;
 use ChurchCMS\Core\ModuleRuntimeProvider;
 use ChurchCMS\Core\Router;
 use ChurchCMS\Modules\DistributionWebhooks\DistributionWebhookAdminController;
-use ChurchCMS\Modules\DistributionWebhooks\DistributionWebhookService;
+use ChurchCMS\Modules\DistributionWebhooks\LazyDistributionWebhookListener;
 
 foreach ([
     'DistributionWebhookEndpoint.php',
@@ -21,6 +21,7 @@ foreach ([
     'DistributionWebhookService.php',
     'DistributionWebhookWorker.php',
     'DistributionWebhookAdminController.php',
+    'LazyDistributionWebhookListener.php',
 ] as $file) {
     require_once __DIR__ . '/' . $file;
 }
@@ -39,7 +40,7 @@ return new class implements ModuleRuntimeProvider {
     public function boot(): void
     {
         DistributionEventRegistry::register(
-            DistributionWebhookService::fromDatabase(),
+            new LazyDistributionWebhookListener(),
         );
 
         AdminNavigationRegistry::register(
