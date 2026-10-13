@@ -14,7 +14,7 @@ use ChurchCMS\Modules\Social\TelegramChannelAdapter;
 use ChurchCMS\Modules\Social\VkChannelAdapter;
 use ChurchCMS\Modules\Social\MaxChannelAdapter;
 use ChurchCMS\Modules\Social\YoutubePublishingChannelAdapter;
-use ChurchCMS\Modules\Social\RutubeChannelAdapter;
+use ChurchCMS\Modules\Social\RutubePublishingChannelAdapter;
 use ChurchCMS\Modules\Social\SocialAdminController;
 use ChurchCMS\Modules\Social\SocialAdminTaskProvider;
 use ChurchCMS\Modules\Social\SocialWebhookController;
@@ -30,11 +30,13 @@ foreach ([
     'ChannelInboundItem.php',
     'ChannelPullBatch.php',
     'ChannelPublishResult.php',
+    'ChannelPublishException.php',
     'ChannelAdapter.php',
     'ChannelConnectionTestResult.php',
     'ChannelConnectionTester.php',
     'ChannelConnectionActivator.php',
     'ChannelCredentialsOptional.php',
+    'ChannelOperationalStatusProvider.php',
     'ChannelWebhookRequest.php',
     'ChannelWebhookResult.php',
     'ChannelWebhookAdapter.php',
@@ -52,6 +54,11 @@ foreach ([
     'YoutubePublishingChannelAdapter.php',
     'YoutubeConnectionConfiguration.php',
     'RutubeChannelAdapter.php',
+    'RutubeUploadResult.php',
+    'RutubeUploadTransport.php',
+    'RutubeUnavailableUploadTransport.php',
+    'RutubeVideoPolicy.php',
+    'RutubePublishingChannelAdapter.php',
     'SocialConnectionRepository.php',
     'SocialConnectionService.php',
     'YoutubeAdminConnectionCreator.php',
@@ -111,7 +118,7 @@ return new class implements ModuleRuntimeProvider {
             new YoutubePublishingChannelAdapter(),
         );
         ChannelAdapterRegistry::register(
-            new RutubeChannelAdapter(),
+            new RutubePublishingChannelAdapter(),
         );
 
         AdminNavigationRegistry::register(
