@@ -215,7 +215,7 @@
 - [x] updater;
 - [x] backup/restore;
 - [x] health/readiness checks;
-- [ ] deployment docs;
+- [x] deployment docs;
 - [x] observability/log rotation.
 
 ## P2 — Комментарии
