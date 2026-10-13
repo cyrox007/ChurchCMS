@@ -1,0 +1,50 @@
+name: Браузерная проверка AJAX Admin Shell
+
+on:
+  push:
+    branches:
+      - develop
+      - main
+    paths:
+      - 'themes/default/assets/js/admin-async.js'
+      - 'themes/default/templates/layouts/admin.php'
+      - 'tools/browser/**'
+      - '.github/workflows/admin-async-browser-smoke.yml'
+  pull_request:
+    branches:
+      - develop
+      - main
+    paths:
+      - 'themes/default/assets/js/admin-async.js'
+      - 'themes/default/templates/layouts/admin.php'
+      - 'tools/browser/**'
+      - '.github/workflows/admin-async-browser-smoke.yml'
+
+permissions:
+  contents: read
+
+jobs:
+  chromium:
+    name: Chromium — AJAX-сценарии
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Получить исходный код
+        uses: actions/checkout@v4
+
+      - name: Подготовить Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+
+      - name: Установить тестовый раннер
+        working-directory: tools/browser
+        run: npm install --no-audit --no-fund
+
+      - name: Установить Chromium
+        working-directory: tools/browser
+        run: npx playwright install --with-deps chromium
+
+      - name: Выполнить браузерный AJAX-аудит
+        working-directory: tools/browser
+        run: npm run test:admin-async
