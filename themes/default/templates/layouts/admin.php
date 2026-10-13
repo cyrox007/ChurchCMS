@@ -15,6 +15,7 @@ $current = static fn(string $section): string =>
     <meta name="color-scheme" content="light">
     <title><?= $theme->e($title ?? 'ChurchCMS') ?> — управление</title>
     <link rel="stylesheet" href="<?= $theme->e($theme->asset('css/site.css')) ?>">
+    <link rel="stylesheet" href="<?= $theme->e($theme->asset('css/admin-async.css')) ?>">
 </head>
 <body class="admin-app">
 <a class="skip-link" href="#admin-content">Перейти к содержанию</a>
@@ -54,7 +55,7 @@ $current = static fn(string $section): string =>
                     <?= $theme->e($displayName) ?>
                 </a>
             <?php endif; ?>
-            <form method="post" action="<?= $theme->e($theme->route('admin_logout')) ?>">
+            <form method="post" action="<?= $theme->e($theme->route('admin_logout')) ?>" data-no-ajax>
                 <?= $theme->csrfInput() ?>
                 <button class="admin-logout" type="submit">Выйти</button>
             </form>
@@ -119,6 +120,15 @@ $current = static fn(string $section): string =>
         </main>
     </div>
 </div>
+<div
+    class="admin-async-status"
+    data-admin-async-status
+    role="status"
+    aria-live="polite"
+    aria-atomic="true"
+    hidden
+></div>
 <script src="<?= $theme->e($theme->asset('js/admin-shell.js')) ?>" defer></script>
+<script src="<?= $theme->e($theme->asset('js/admin-async.js')) ?>" defer></script>
 </body>
 </html>
