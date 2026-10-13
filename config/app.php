@@ -41,12 +41,8 @@ return [
         'storage_path' => dirname(__DIR__, 2)
             . '/' . basename(dirname(__DIR__)) . '-media',
         'max_upload_bytes' => 536870912,
-        // Публичная веб-копия тяжёлых фотографий. Оригинал не изменяется.
         'image_web_max_side' => 2560,
         'image_web_quality' => 82,
-        // Внешний архив выключен до явной настройки оператором.
-        // S3-compatible backend позволяет вынести старые оригиналы с VPS,
-        // сохранив их доступными через автоматическое восстановление в cache.
         'archive' => [
             'driver' => 'disabled',
             'endpoint' => '',
@@ -67,13 +63,9 @@ return [
         ],
     ],
     'operations' => [
-        // По умолчанию служебные данные лежат рядом с каталогом сайта, а не внутри публичного корня.
         'backup_path' => dirname(__DIR__, 2) . '/' . basename(dirname(__DIR__)) . '-backups',
         'update_staging_path' => dirname(__DIR__, 2) . '/' . basename(dirname(__DIR__)) . '-updates',
-        // Точный HTTPS URL подписанного manifest.json задаётся локально.
         'update_release_manifest_url' => '',
-        // Публичные ключи релизов задаются в config/local.php.
-        // При пустом списке ни один пакет обновления не считается доверенным.
         'update_trusted_public_keys' => [],
     ],
     'database' => [
@@ -89,11 +81,8 @@ return [
         'profile' => 'parish',
     ],
     'federation' => [
-        // Постоянный ID конкретной установки генерируется installer в config/local.php.
         'instance_id' => '',
         'enabled' => true,
-        // Частные/локальные адреса discovery выключены по умолчанию как защита от SSRF.
-        // Для закрытой сети оператор может явно включить это в config/local.php.
         'allow_private_discovery' => false,
     ],
     'seo' => [
@@ -120,9 +109,7 @@ return [
             ],
         ],
     ],
-    'theme' => [
-        'active' => 'default',
-    ],
+    'theme' => ['active' => 'default'],
     'comments' => [
         'enabled' => true,
         'moderation' => 'premoderated',
@@ -140,11 +127,17 @@ return [
         'targets' => [
             'rss' => ['enabled' => true],
             'rambler' => ['enabled' => false],
-            // Включение формирует технически готовую полнотекстовую RSS.
-            // partner_approved отмечается только после подтверждения СМИ2.
             'smi2' => [
                 'enabled' => false,
                 'partner_approved' => false,
+            ],
+            // Публичная документация Mail не закрепляет открытый протокол
+            // партнёрской доставки. Фид используется только для согласования,
+            // пока партнёр не подтвердит конкретный контракт доставки.
+            'news_mail' => [
+                'enabled' => false,
+                'partner_approved' => false,
+                'delivery_contract_confirmed' => false,
             ],
         ],
     ],
@@ -157,7 +150,6 @@ return [
             'public_per_minute' => 120,
             'partner_per_minute' => 600,
         ],
-        // Secrets belong in config/local.php. Store only SHA-256 token hashes.
         'partner_tokens' => [],
     ],
 ];
