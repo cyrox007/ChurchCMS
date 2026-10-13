@@ -14,6 +14,7 @@ use ChurchCMS\Modules\Social\ChannelPublishResult;
 use ChurchCMS\Modules\Social\ChannelPullBatch;
 use ChurchCMS\Modules\Social\ChannelConnectionTestResult;
 use ChurchCMS\Modules\Social\RutubeChannelAdapter;
+use ChurchCMS\Modules\Social\RutubePublishingChannelAdapter;
 use ChurchCMS\Modules\Social\SocialConnection;
 use ChurchCMS\Modules\Social\SocialConnectionService;
 
@@ -109,9 +110,6 @@ final class RutubeSmokeHttpClient implements ChannelHttpClient
         );
     }
 
-    /**
-     * @return array<string,mixed>
-     */
     private static function item(
         string $id,
         int $publishedAt,
@@ -141,14 +139,6 @@ final class RutubeSmokeHttpClient implements ChannelHttpClient
         ];
     }
 
-    /**
-     * @param array<string,mixed> $json
-     * @return array{
-     *     status:int,
-     *     body:string,
-     *     json:array<string,mixed>|null
-     * }
-     */
     private static function ok(array $json): array
     {
         return [
@@ -165,8 +155,8 @@ final class RutubeSmokeHttpClient implements ChannelHttpClient
 }
 
 $registered = ChannelAdapterRegistry::get('rutube');
-if (!$registered instanceof RutubeChannelAdapter) {
-    fwrite(STDERR, "Rutube adapter не зарегистрирован runtime.\n");
+if (!$registered instanceof RutubePublishingChannelAdapter) {
+    fwrite(STDERR, "Rutube publishing adapter не зарегистрирован runtime.\n");
     exit(1);
 }
 
@@ -185,11 +175,13 @@ if (
     !is_array($rutubeInfo)
     || ($rutubeInfo['credentials_required'] ?? true) !== false
     || ($rutubeInfo['can_import'] ?? false) !== true
-    || ($rutubeInfo['can_publish'] ?? true) !== false
+    || ($rutubeInfo['can_publish'] ?? false) !== true
+    || (($rutubeInfo['operational_status']['inbound_ready'] ?? false) !== true)
+    || (($rutubeInfo['operational_status']['outbound_ready'] ?? true) !== false)
 ) {
     fwrite(
         STDERR,
-        "Мастер неверно описывает capabilities Rutube.\n",
+        "Мастер неверно описывает capabilities или готовность Rutube.\n",
     );
     exit(1);
 }
@@ -400,7 +392,7 @@ $publish = $adapter->publish(
 if ($publish->success) {
     fwrite(
         STDERR,
-        "Inbound-only Rutube adapter ошибочно подтвердил outbound.\n",
+        "Inbound Rutube adapter ошибочно подтвердил outbound.\n",
     );
     exit(1);
 }

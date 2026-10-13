@@ -14,6 +14,7 @@ final class SocialConnectionService
 {
     private const CREDENTIALLESS_MARKER =
         'churchcms:public-adapter';
+
     public function __construct(
         private readonly SocialConnectionRepository $connections,
     ) {
@@ -34,7 +35,14 @@ final class SocialConnectionService
      *     can_test:bool,
      *     can_publish:bool,
      *     can_import:bool,
-     *     credentials_required:bool
+     *     credentials_required:bool,
+     *     operational_status:?array{
+     *         level:string,
+     *         inbound_ready:bool,
+     *         outbound_ready:bool,
+     *         code:string,
+     *         message:string
+     *     }
      * }>
      */
     public function availableAdapters(): array
@@ -78,6 +86,10 @@ final class SocialConnectionService
                         ChannelCapability::WEBHOOK,
                     ],
                 ),
+                'operational_status' =>
+                    $adapter instanceof ChannelOperationalStatusProvider
+                        ? $adapter->operationalStatus()
+                        : null,
             ];
         }
 

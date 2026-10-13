@@ -10,6 +10,7 @@ use ChurchCMS\Core\SecretVault;
 use ChurchCMS\Modules\Publications\Publication;
 use ChurchCMS\Modules\Publications\PublicationRepository;
 use DateTimeImmutable;
+use RuntimeException;
 use Throwable;
 
 final class ChannelOutboundDispatcher
@@ -69,13 +70,18 @@ final class ChannelOutboundDispatcher
                 $this->dispatchOne($post);
                 $summary['sent']++;
             } catch (Throwable $error) {
-                $this->outbox->markFailed(
-                    $post->id,
-                    self::safeError($error),
+                $attemptLimit = self::attemptLimit(
+                    $error,
                     $maxAttempts,
                 );
 
-                if ($beforeAttempts + 1 >= $maxAttempts) {
+                $this->outbox->markFailed(
+                    $post->id,
+                    self::safeError($error),
+                    $attemptLimit,
+                );
+
+                if ($beforeAttempts + 1 >= $attemptLimit) {
                     $summary['dead_letter']++;
                 } else {
                     $summary['retried']++;
@@ -154,10 +160,11 @@ final class ChannelOutboundDispatcher
         );
 
         if (!$result->success) {
-            throw new RuntimeException(
+            throw new ChannelPublishException(
                 trim((string) $result->error) !== ''
                     ? (string) $result->error
-                    : 'Адаптер не подтвердил внешнюю публикацию.'
+                    : 'Адаптер не подтвердил внешнюю публикацию.',
+                $result->retryable,
             );
         }
 
@@ -270,6 +277,20 @@ final class ChannelOutboundDispatcher
         }
 
         return false;
+    }
+
+    private static function attemptLimit(
+        Throwable $error,
+        int $maxAttempts,
+    ): int {
+        if (
+            $error instanceof ChannelPublishException
+            && !$error->retryable
+        ) {
+            return 1;
+        }
+
+        return $maxAttempts;
     }
 
     private static function safeError(Throwable $error): string
