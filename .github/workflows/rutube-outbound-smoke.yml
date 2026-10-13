@@ -1,0 +1,76 @@
+name: Проверка исходящего Rutube
+
+on:
+  push:
+    branches:
+      - develop
+      - main
+    paths:
+      - 'modules/social/Rutube*.php'
+      - 'modules/social/ChannelOperationalStatusProvider.php'
+      - 'modules/social/ChannelPublishException.php'
+      - 'modules/social/ChannelPublishResult.php'
+      - 'modules/social/ChannelOutboundDispatcher.php'
+      - 'modules/social/SocialConnectionService.php'
+      - 'modules/social/runtime.php'
+      - 'themes/default/templates/admin/external-channels.php'
+      - 'tools/rutube-outbound-smoke.php'
+      - 'docs/RUTUBE_OUTBOUND.md'
+      - '.github/workflows/rutube-outbound-smoke.yml'
+  pull_request:
+    branches:
+      - develop
+      - main
+    paths:
+      - 'modules/social/Rutube*.php'
+      - 'modules/social/ChannelOperationalStatusProvider.php'
+      - 'modules/social/ChannelPublishException.php'
+      - 'modules/social/ChannelPublishResult.php'
+      - 'modules/social/ChannelOutboundDispatcher.php'
+      - 'modules/social/SocialConnectionService.php'
+      - 'modules/social/runtime.php'
+      - 'themes/default/templates/admin/external-channels.php'
+      - 'tools/rutube-outbound-smoke.php'
+      - 'docs/RUTUBE_OUTBOUND.md'
+      - '.github/workflows/rutube-outbound-smoke.yml'
+
+permissions:
+  contents: read
+
+jobs:
+  rutube-outbound:
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Получить исходный код
+        uses: actions/checkout@v4
+
+      - name: Подготовить PHP 8.3
+        uses: shivammathur/setup-php@v2
+        with:
+          php-version: '8.3'
+          extensions: mbstring, openssl
+          coverage: none
+
+      - name: Проверить синтаксис исходящего контура
+        shell: bash
+        run: |
+          set -euo pipefail
+          php -l modules/social/ChannelOperationalStatusProvider.php
+          php -l modules/social/ChannelPublishException.php
+          php -l modules/social/ChannelPublishResult.php
+          php -l modules/social/ChannelOutboundDispatcher.php
+          php -l modules/social/SocialConnectionService.php
+          php -l modules/social/RutubeUploadResult.php
+          php -l modules/social/RutubeUploadTransport.php
+          php -l modules/social/RutubeUnavailableUploadTransport.php
+          php -l modules/social/RutubeVideoPolicy.php
+          php -l modules/social/RutubePublishingChannelAdapter.php
+          php -l modules/social/runtime.php
+          php -l tools/rutube-outbound-smoke.php
+
+      - name: Проверить исходящую публикацию Rutube без сети
+        run: php tools/rutube-outbound-smoke.php
+
+      - name: Проверить AJAX-контракт административного экрана
+        run: php tools/admin-async-audit.php
