@@ -6,6 +6,7 @@ namespace ChurchCMS\App\Controllers;
 
 use ChurchCMS\Core\Config;
 use ChurchCMS\Core\GeneratedOutputCache;
+use ChurchCMS\Core\NewsMailSyndicationRenderer;
 use ChurchCMS\Core\RamblerSyndicationRenderer;
 use ChurchCMS\Core\Response;
 use ChurchCMS\Core\Rss2SyndicationRenderer;
@@ -31,6 +32,11 @@ final class SyndicationController
     public function smi2(): never
     {
         $this->emit('smi2', new Smi2SyndicationRenderer());
+    }
+
+    public function newsMail(): never
+    {
+        $this->emit('news_mail', new NewsMailSyndicationRenderer());
     }
 
     private function emit(string $target, SyndicationRenderer $renderer): never
