@@ -95,8 +95,25 @@ final class ErrorHandler
             . $message
         );
 
+        if (class_exists(LogManager::class)) {
+            try {
+                LogManager::forErrorLog(self::$root)->append('error.log', $record);
+                return;
+            } catch (Throwable $loggingError) {
+                error_log(
+                    'ChurchCMS log maintenance fallback: '
+                    . self::singleLine($loggingError->getMessage(), 500)
+                );
+            }
+        }
+
+        self::appendFallback($record);
+    }
+
+    private static function appendFallback(string $record): void
+    {
         $path = self::logPath();
-        if ($path === null) {
+        if ($path === null || is_link($path)) {
             return;
         }
 
