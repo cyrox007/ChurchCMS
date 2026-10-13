@@ -29,9 +29,7 @@ final class MediaArchiveService
         return $this->archive !== null;
     }
 
-    /**
-     * @return array{enabled:bool,backend:?string}
-     */
+    /** @return array{enabled:bool,backend:?string} */
     public function status(): array
     {
         return [
@@ -93,19 +91,7 @@ final class MediaArchiveService
 
         try {
             $this->archive->fetch($objectKey, $temporary);
-            $actualBytes = filesize($temporary);
-            $actualHash = hash_file('sha256', $temporary);
-
-            if (
-                !is_int($actualBytes)
-                || $actualBytes !== $bytes
-                || !is_string($actualHash)
-                || !hash_equals($sha256, $actualHash)
-            ) {
-                throw new RuntimeException(
-                    'Обратная проверка Media archive по SHA-256 не пройдена.'
-                );
-            }
+            self::assertFile($temporary, $sha256, $bytes, 'Обратная проверка Media archive');
         } finally {
             @unlink($temporary);
         }
@@ -118,7 +104,12 @@ final class MediaArchiveService
         );
 
         if ($removeLocal) {
-            $this->local->removeVerified($sha256, $bytes);
+            $verifiedPath = $this->local->readablePath($sha256, $bytes);
+            if ($verifiedPath === null || !@unlink($verifiedPath)) {
+                throw new RuntimeException(
+                    'Архив проверен, но локальный Media blob удалить не удалось.'
+                );
+            }
         }
     }
 
@@ -156,22 +147,8 @@ final class MediaArchiveService
         }
 
         try {
-            $this->archive->fetch(
-                (string) $location['object_key'],
-                $temporary,
-            );
-            $actualBytes = filesize($temporary);
-            $actualHash = hash_file('sha256', $temporary);
-            if (
-                !is_int($actualBytes)
-                || $actualBytes !== $bytes
-                || !is_string($actualHash)
-                || !hash_equals($sha256, $actualHash)
-            ) {
-                throw new RuntimeException(
-                    'Восстановленный Media blob не прошёл SHA-256 проверку.'
-                );
-            }
+            $this->archive->fetch((string) $location['object_key'], $temporary);
+            self::assertFile($temporary, $sha256, $bytes, 'Восстановленный Media blob');
 
             $stored = $this->local->storeFile($temporary);
             if (
@@ -189,6 +166,26 @@ final class MediaArchiveService
         $this->locations->markRestored($sha256);
 
         return $this->local->readablePath($sha256, $bytes);
+    }
+
+    private static function assertFile(
+        string $path,
+        string $sha256,
+        int $bytes,
+        string $label,
+    ): void {
+        $actualBytes = filesize($path);
+        $actualHash = hash_file('sha256', $path);
+        if (
+            !is_int($actualBytes)
+            || $actualBytes !== $bytes
+            || !is_string($actualHash)
+            || !hash_equals($sha256, $actualHash)
+        ) {
+            throw new RuntimeException(
+                $label . ' не прошёл проверку размера и SHA-256.'
+            );
+        }
     }
 
     private static function objectKey(string $sha256): string
