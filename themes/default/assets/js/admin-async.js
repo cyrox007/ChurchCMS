@@ -214,16 +214,16 @@
     };
 
     const submitPost = async (form, submitter) => {
+        const body = new FormData(form);
+        if ((submitter instanceof HTMLButtonElement || submitter instanceof HTMLInputElement)
+            && submitter.name) {
+            body.set(submitter.name, submitter.value);
+        }
+
         setFormBusy(form, true);
         announce('Выполняется операция…', 'loading');
 
         try {
-            const body = new FormData(form);
-            if ((submitter instanceof HTMLButtonElement || submitter instanceof HTMLInputElement)
-                && submitter.name) {
-                body.set(submitter.name, submitter.value);
-            }
-
             const result = await requestHtml(form.action || window.location.href, {
                 method: 'POST',
                 body,
