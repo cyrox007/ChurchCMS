@@ -11,6 +11,7 @@ final class ChannelPublishResult
         public readonly ?string $remoteId = null,
         public readonly ?string $remoteUrl = null,
         public readonly ?string $error = null,
+        public readonly bool $retryable = true,
     ) {
     }
 }
