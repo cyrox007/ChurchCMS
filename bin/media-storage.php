@@ -52,6 +52,19 @@ try {
         exit($summary['errors'] === [] ? 0 : 2);
     }
 
+    if ($action === 'optimize-images') {
+        $summary = $maintenance->optimizeImages(
+            limit: $limit,
+            apply: $apply,
+        );
+        echo ($apply ? 'Оптимизация изображений Media' : 'Dry-run оптимизации изображений Media') . PHP_EOL;
+        echo json_encode(
+            $summary,
+            JSON_THROW_ON_ERROR | JSON_PRETTY_PRINT | JSON_UNESCAPED_UNICODE | JSON_UNESCAPED_SLASHES,
+        ) . PHP_EOL;
+        exit($summary['errors'] === [] ? 0 : 2);
+    }
+
     if ($action === 'prune-cache') {
         $summary = $maintenance->pruneArchiveCache(
             olderThanDays: $olderThan,
@@ -68,7 +81,7 @@ try {
 
     fwrite(
         STDERR,
-        "Неизвестное действие. Используйте report, archive или prune-cache.\n",
+        "Неизвестное действие. Используйте report, optimize-images, archive или prune-cache.\n",
     );
     exit(64);
 } catch (Throwable $error) {
