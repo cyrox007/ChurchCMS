@@ -1,0 +1,10 @@
+{
+  "private": true,
+  "type": "module",
+  "scripts": {
+    "test:admin-async": "playwright test admin-async.spec.mjs --reporter=line"
+  },
+  "devDependencies": {
+    "@playwright/test": "1.55.0"
+  }
+}
