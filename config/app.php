@@ -20,7 +20,7 @@ return [
     ],
     'security' => [
         'csp_report_only' => false,
-        // Generated during installation and overridden in config/local.php.
+        // Генерируется установщиком и переопределяется в config/local.php.
         'secret_key' => '',
         'password_reset' => [
             // По умолчанию доставка отключена. Для native mail задайте "mail"
@@ -41,6 +41,20 @@ return [
         'storage_path' => dirname(__DIR__, 2)
             . '/' . basename(dirname(__DIR__)) . '-media',
         'max_upload_bytes' => 536870912,
+        // Внешний архив выключен до явной настройки оператором.
+        // S3-compatible backend позволяет вынести старые оригиналы с VPS,
+        // сохранив их доступными через автоматическое восстановление в cache.
+        'archive' => [
+            'driver' => 'disabled',
+            'endpoint' => '',
+            'bucket' => '',
+            'region' => 'us-east-1',
+            'access_key' => '',
+            'secret_key' => '',
+            'prefix' => 'churchcms-media',
+            'archive_after_days' => 90,
+            'local_cache_days' => 30,
+        ],
     ],
     'performance' => [
         'page_cache' => [
