@@ -140,6 +140,12 @@ return [
         'targets' => [
             'rss' => ['enabled' => true],
             'rambler' => ['enabled' => false],
+            // Включение формирует технически готовую полнотекстовую RSS.
+            // partner_approved отмечается только после подтверждения СМИ2.
+            'smi2' => [
+                'enabled' => false,
+                'partner_approved' => false,
+            ],
         ],
     ],
     'api' => [
