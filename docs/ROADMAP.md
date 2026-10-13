@@ -2,18 +2,23 @@
 
 ## Статус версии 1.0
 
-Функциональный состав версии 1.0 реализован. Кодовый релизный контур готов; перед созданием тега `1.0.0` остаётся обязательный эталонный performance gate на реальном production-подобном стенде.
+Версия 1.0 **не считается функционально завершённой** до закрытия исходного объёма работ, AJAX/UX-аудита административных сценариев, эталонного performance gate и последующего живого тестового развёртывания.
 
-Не блокируют 1.0 и ведутся отдельно:
+Ранее созданная `release/1.0.0-rc1` остаётся промежуточным снимком. Финальная release branch будет создана заново после завершения работ ниже.
 
-- legacy VPDS migration — до получения подтверждённого формата legacy-экспорта;
-- исходящая загрузка Rutube — до подтверждённого официального upload API;
-- СМИ2 и News Mail — до получения актуальных партнёрских контрактов;
-- пилотные внедрения и накопление редакторской обратной связи.
+Обязательные незакрытые направления 1.0:
+
+- legacy VPDS migration;
+- исходящий контур Rutube;
+- СМИ2;
+- News Mail;
+- современный AJAX/UX всех действий внутри открытой административной страницы;
+- эталонный performance gate;
+- живое тестовое развёртывание и исправление найденных дефектов.
 
 ## Phase 0 — Фундамент
 
-Статус: функционально завершён для 1.0; performance gate ожидает эталонный стенд.
+Статус: базовый технический контур готов; финальные UX/performance/live gates ещё не пройдены.
 
 - [x] PHP 8.3+ standalone bootstrap.
 - [x] Native autoloader.
@@ -34,7 +39,9 @@
 - [x] Обновления и резервные копии: backup/restore, staging, цифровая подпись, защищённая HTTPS-доставка, code-only apply/rollback и schema-changing apply только через новые обратимые миграции с восстановлением данных.
 - [x] Anonymous full-page caching foundation.
 - [x] Production deployment profile: Nginx HTTPS, отдельный PHP-FPM pool, cron-workers, журналирование и post-deploy проверки.
+- [ ] AJAX/UX release gate: действия внутри текущей административной страницы без полной перезагрузки, состояния выполнения/успеха/ошибки, защита от повторной отправки и аудит исключений.
 - [ ] Load-test release gate: сценарий, анализ запросов и валидатор порогов реализованы; остаются измерения на утверждённом эталонном сервере и фиксация порогов.
+- [ ] Живое тестовое развёртывание после закрытия функционального scope и устранение найденных дефектов.
 
 ## Phase 1 — Приходской профиль
 
@@ -79,7 +86,7 @@
 
 ## Phase 4 — Legacy migration
 
-Статус: после 1.0, заблокировано до получения подтверждённого формата legacy-экспорта VPDS.
+Статус: обязательный объём 1.0.
 
 - [ ] VPDS database mapping.
 - [ ] Content migration.
@@ -89,9 +96,11 @@
 - [ ] Broken-link/media diagnostics.
 - [ ] Migration dry-run/reporting.
 
+Импортёр должен поддерживать проверяемый контракт входных данных и выдавать подробный отчёт несовместимости, если реальная legacy-схема отличается от ожидаемой.
+
 ## Phase 5 — Pilot deployments
 
-Статус: отдельный пост-релизный цикл проверки на реальных площадках.
+Статус: финальная проверка 1.0 после завершения кода, AJAX/UX и performance gate, но до тега `1.0.0`.
 
 - [ ] Vladimir Cathedral experimental deployment.
 - [ ] Evaluate large-cathedral pilot.
@@ -124,9 +133,20 @@
 - [x] Built-in Telegram/VK/MAX adapters.
 - [x] Built-in YouTube adapter: inbound Data API sync + OAuth resumable video upload через Media pipeline.
 - [x] Rutube inbound sync.
-- [ ] Rutube outbound upload — внешний блокер: нет подтверждённого официального upload API.
+- [ ] Rutube outbound: законченный provider contract, Media validation, настройки и диагностическое состояние для партнёрского доступа; реальный машинный upload включается только через подтверждённый официальный API.
 - [x] RSS/Rambler syndication, export log, target-specific overrides и Rambler validator.
 - [x] Signed distribution webhooks с retry/dead-letter журналом.
-- [ ] СМИ2 — внешний блокер: требуется актуальная партнёрская спецификация.
-- [ ] News Mail — внешний блокер: требуется onboarding-контракт.
+- [ ] СМИ2: отдельный target/profile, feed projection, validator, Admin Shell и onboarding diagnostics.
+- [ ] News Mail: отдельный target/profile, feed projection, validator, Admin Shell и onboarding diagnostics.
 - [x] Adapter SDK documentation for other/future platforms.
+
+## Cross-cutting — AJAX/UX
+
+- [ ] общий progressive-enhancement слой Admin Shell для POST-действий;
+- [ ] multipart/upload без полной перезагрузки;
+- [ ] информативные loading/success/error состояния и `aria-live`;
+- [ ] блокировка повторной отправки;
+- [ ] синхронизация рабочей области, счётчиков и навигации после операции;
+- [ ] статический аудит POST-форм и явных исключений;
+- [ ] браузерный smoke по всем административным модулям;
+- [ ] ручной предрелизный проход сценариев без полной перезагрузки.

@@ -162,6 +162,18 @@ $record(
             : 'Проверка тем завершилась ошибкой.'),
 );
 
+$adminAsync = $run(
+    [PHP_BINARY, 'tools/admin-async-audit.php'],
+    $root,
+);
+$record(
+    'AJAX/UX административных операций',
+    $adminAsync['exit_code'] === 0,
+    $adminAsync['output'] !== ''
+        ? $adminAsync['output']
+        : 'Проверка административных операций завершена.',
+);
+
 $performanceResult = null;
 $performanceThresholds = null;
 foreach (array_slice($argv, 1) as $argument) {
@@ -228,6 +240,6 @@ if ($failures !== []) {
 
 echo 'Предрелизный аудит пройден. '
     . 'Для финального 1.0 дополнительно обязателен performance release-gate '
-    . 'на зафиксированном эталонном стенде.'
+    . 'на зафиксированном эталонном стенде и живой smoke после полного функционального scope.'
     . PHP_EOL;
 exit(0);
