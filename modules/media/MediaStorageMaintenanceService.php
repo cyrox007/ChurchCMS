@@ -27,13 +27,9 @@ final class MediaStorageMaintenanceService
         );
     }
 
-    /**
-     * @return list<array{sha256:string,bytes:int,mime_type:string,oldest_created_at:string}>
-     */
-    public function archivePlan(
-        int $olderThanDays = 90,
-        int $limit = 100,
-    ): array {
+    /** @return list<array{sha256:string,bytes:int,mime_type:string,oldest_created_at:string}> */
+    public function archivePlan(int $olderThanDays = 90, int $limit = 100): array
+    {
         $olderThanDays = max(1, min(36500, $olderThanDays));
         $limit = max(1, min(1000, $limit));
         $cutoff = gmdate('Y-m-d H:i:s', time() - ($olderThanDays * 86400));
@@ -66,9 +62,7 @@ final class MediaStorageMaintenanceService
         );
     }
 
-    /**
-     * @return array{planned:int,archived:int,removed_local:int,bytes:int,errors:list<string>}
-     */
+    /** @return array{planned:int,archived:int,removed_local:int,bytes:int,errors:list<string>} */
     public function archiveOld(
         int $olderThanDays = 90,
         int $limit = 100,
@@ -101,11 +95,73 @@ final class MediaStorageMaintenanceService
                     $summary['removed_local']++;
                 }
             } catch (\Throwable $error) {
-                $summary['errors'][] = substr(
-                    str_replace(["\r", "\n", "\0"], [' ', ' ', ''], $error->getMessage()),
-                    0,
-                    300,
+                $summary['errors'][] = self::safeError($error);
+            }
+        }
+
+        return $summary;
+    }
+
+    /** @return list<array{public_id:string,site_key:string,bytes:int}> */
+    public function imageOptimizationPlan(int $limit = 100): array
+    {
+        $limit = max(1, min(1000, $limit));
+        $statement = $this->pdo->query(
+            "SELECT a.public_id, a.site_key, a.bytes
+             FROM media_assets a
+             LEFT JOIN media_derivatives d
+               ON d.site_key = a.site_key
+              AND d.media_public_id = a.public_id
+              AND d.variant = 'web'
+             WHERE a.status <> 'archived'
+               AND a.media_type = 'image'
+               AND a.mime_type IN ('image/jpeg', 'image/png', 'image/webp')
+               AND a.pixel_width IS NOT NULL
+               AND a.pixel_height IS NOT NULL
+               AND d.id IS NULL
+             ORDER BY a.created_at, a.id
+             LIMIT {$limit}"
+        );
+
+        return array_map(
+            static fn(array $row): array => [
+                'public_id' => (string) $row['public_id'],
+                'site_key' => (string) $row['site_key'],
+                'bytes' => (int) $row['bytes'],
+            ],
+            $statement->fetchAll(),
+        );
+    }
+
+    /** @return array{planned:int,optimized:int,source_bytes:int,web_bytes:int,saved_bytes:int,errors:list<string>} */
+    public function optimizeImages(int $limit = 100, bool $apply = false): array
+    {
+        $plan = $this->imageOptimizationPlan($limit);
+        $summary = [
+            'planned' => count($plan),
+            'optimized' => 0,
+            'source_bytes' => array_sum(array_column($plan, 'bytes')),
+            'web_bytes' => 0,
+            'saved_bytes' => 0,
+            'errors' => [],
+        ];
+
+        if (!$apply) {
+            return $summary;
+        }
+
+        $optimizer = MediaImageOptimizationService::fromConfig();
+        foreach ($plan as $item) {
+            try {
+                $derivative = $optimizer->generateWeb(
+                    $item['public_id'],
+                    $item['site_key'],
                 );
+                $summary['optimized']++;
+                $summary['web_bytes'] += $derivative->bytes;
+                $summary['saved_bytes'] += max(0, $item['bytes'] - $derivative->bytes);
+            } catch (\Throwable $error) {
+                $summary['errors'][] = self::safeError($error);
             }
         }
 
@@ -145,10 +201,7 @@ final class MediaStorageMaintenanceService
                 continue;
             }
 
-            $planned[] = [
-                'path' => $path,
-                'bytes' => $bytes,
-            ];
+            $planned[] = ['path' => $path, 'bytes' => $bytes];
         }
 
         $summary = [
@@ -167,10 +220,18 @@ final class MediaStorageMaintenanceService
                 $summary['removed']++;
                 continue;
             }
-
             $summary['errors'][] = 'Не удалось удалить одну из локальных архивных копий.';
         }
 
         return $summary;
+    }
+
+    private static function safeError(\Throwable $error): string
+    {
+        return substr(
+            str_replace(["\r", "\n", "\0"], [' ', ' ', ''], trim($error->getMessage())),
+            0,
+            300,
+        );
     }
 }
