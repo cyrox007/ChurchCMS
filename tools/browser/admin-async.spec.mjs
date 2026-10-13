@@ -129,7 +129,7 @@ test.beforeEach(() => {
     requests.length = 0;
 });
 
-test('POST выполняется без полной перезагрузки и отправляет AJAX-заголовки', async ({page}) => {
+test('POST выполняется без полной перезагрузки и отправляет все данные формы', async ({page}) => {
     await page.goto(`${baseUrl}/admin/items`);
     await expect(page.locator('[data-view-state]')).toHaveAttribute('data-view-state', 'all:1:0');
     await expect.poll(() => page.evaluate(() => window.__churchCmsDocumentBoot)).toBe(1);
@@ -152,8 +152,17 @@ test('POST выполняется без полной перезагрузки �
     expect(requests).toHaveLength(1);
     expect(requests[0].headers['x-requested-with']).toBe('XMLHttpRequest');
     expect(requests[0].headers['x-churchcms-async']).toBe('1');
+    expect(requests[0].body).toContain('Тестовая запись');
     expect(requests[0].body).toContain('fixture.txt');
     expect(requests[0].body).toContain('browser-audit');
+});
+
+test('повторной отправки во время активного POST не происходит', async ({page}) => {
+    await page.goto(`${baseUrl}/admin/items`);
+    await page.dblclick('#save-button', {delay: 20});
+
+    await expect(page.locator('[data-view-state]')).toHaveAttribute('data-view-state', 'all:1:1');
+    expect(requests).toHaveLength(1);
 });
 
 test('GET-фильтр и пагинация работают через AJAX, Back восстанавливает состояние', async ({page}) => {
