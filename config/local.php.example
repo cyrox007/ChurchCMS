@@ -4,19 +4,35 @@ declare(strict_types=1);
 
 return [
     'security' => [
-        // Generate 32 random bytes and store as base64. The installer does this automatically.
+        // Сгенерируйте 32 случайных байта и сохраните в base64.
+        // Установщик делает это автоматически.
         'secret_key' => 'base64-encoded-32-byte-secret',
     ],
     'database' => [
         'password' => 'change-me',
     ],
+    'media' => [
+        'archive' => [
+            // Включайте только после проверки dry-run и отдельной резервной копии.
+            // Поддерживается S3-compatible HTTPS endpoint.
+            'driver' => 'disabled', // 's3'
+            'endpoint' => 'https://s3.example.org',
+            'bucket' => 'churchcms-media',
+            'region' => 'us-east-1',
+            'access_key' => '',
+            'secret_key' => '',
+            'prefix' => 'churchcms-media',
+            'archive_after_days' => 90,
+            'local_cache_days' => 30,
+        ],
+    ],
     'syndication' => [
-        // Use the canonical HTTPS production URL.
+        // Канонический HTTPS URL production-сайта.
         'site_url' => 'https://example.org',
         'channel_title' => 'Название сайта',
         'channel_description' => 'Новости организации',
         'targets' => [
-            // Enable only after editorial/legal onboarding with the aggregator.
+            // Включайте только после редакционного/юридического подключения агрегатора.
             'rambler' => ['enabled' => false],
         ],
     ],

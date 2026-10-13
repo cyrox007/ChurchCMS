@@ -20,8 +20,17 @@ PATH=/usr/local/sbin:/usr/local/bin:/usr/sbin:/usr/bin:/sbin:/bin
 # Подписанные исходящие webhooks распространения.
 * * * * * churchcms flock -n /run/lock/churchcms-distribution-webhooks.lock php /var/www/churchcms/bin/distribution-webhooks.php >/dev/null 2>&1
 
+# Ежедневный снимок объёма Media для прогноза заполнения диска.
+7 3 * * * churchcms flock -n /run/lock/churchcms-media-storage.lock php /var/www/churchcms/bin/media-storage.php --action=report --record-snapshot >/dev/null 2>&1
+
 # Обслуживание и очистка архивов журнала ошибок.
 17 3 * * * churchcms flock -n /run/lock/churchcms-log-maintenance.lock php /var/www/churchcms/bin/log-maintenance.php >/dev/null 2>&1
+
+# Автоматическое архивирование Media намеренно не включено без решения оператора.
+# Сначала настройте S3-compatible archive, выполните dry-run и проверьте резервирование bucket.
+# После этого можно включить небольшие ежедневные партии, например:
+# 27 3 * * * churchcms flock -n /run/lock/churchcms-media-archive.lock php /var/www/churchcms/bin/media-storage.php --action=archive --older-than=90 --limit=100 --delete-local --apply >/var/log/churchcms-media-archive.log 2>&1
+# 47 3 * * * churchcms flock -n /run/lock/churchcms-media-optimize.lock php /var/www/churchcms/bin/media-storage.php --action=optimize-images --limit=50 --apply >/var/log/churchcms-media-optimize.log 2>&1
 
 # Автоматический backup намеренно не включён по умолчанию: сначала задайте
 # политику хранения и внешний мониторинг результата. После этого можно включить:

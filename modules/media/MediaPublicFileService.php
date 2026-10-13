@@ -12,6 +12,7 @@ final class MediaPublicFileService
         private readonly MediaBlobStorage $storage,
         private readonly MediaRepository $media,
         private readonly MediaDerivativeRepository $derivatives,
+        private readonly ?MediaArchiveService $archive = null,
     ) {
     }
 
@@ -21,6 +22,7 @@ final class MediaPublicFileService
             MediaBlobStorage::fromConfig(),
             MediaRepository::fromDatabase(),
             MediaDerivativeRepository::fromDatabase(),
+            MediaArchiveService::fromConfig(),
         );
     }
 
@@ -35,10 +37,7 @@ final class MediaPublicFileService
 
         if (
             preg_match('/^[a-f0-9]{64}$/D', $sha256) !== 1
-            || preg_match(
-                '/^[a-z][a-z0-9_.-]{1,63}$/D',
-                $variant,
-            ) !== 1
+            || preg_match('/^[a-z][a-z0-9_.-]{1,63}$/D', $variant) !== 1
         ) {
             throw new InvalidArgumentException(
                 'Некорректный публичный Media URL.'
@@ -68,7 +67,7 @@ final class MediaPublicFileService
                 return null;
             }
 
-            $path = $this->storage->readablePath(
+            $path = $this->localPath(
                 $asset->sha256,
                 $asset->bytes,
             );
@@ -96,15 +95,12 @@ final class MediaPublicFileService
 
         if (
             $derivative === null
-            || !hash_equals(
-                $derivative->sha256,
-                $sha256,
-            )
+            || !hash_equals($derivative->sha256, $sha256)
         ) {
             return null;
         }
 
-        $path = $this->storage->readablePath(
+        $path = $this->localPath(
             $derivative->sha256,
             $derivative->bytes,
         );
@@ -131,5 +127,17 @@ final class MediaPublicFileService
             . rawurlencode($sha256)
             . '/'
             . rawurlencode($variant);
+    }
+
+    private function localPath(
+        string $sha256,
+        int $bytes,
+    ): ?string {
+        $path = $this->storage->readablePath($sha256, $bytes);
+        if ($path !== null) {
+            return $path;
+        }
+
+        return $this->archive?->ensureLocal($sha256, $bytes);
     }
 }

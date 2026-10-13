@@ -5,6 +5,7 @@ declare(strict_types=1);
 namespace ChurchCMS\Modules\Media;
 
 use InvalidArgumentException;
+use Throwable;
 
 final class MediaUploadService
 {
@@ -15,8 +16,7 @@ final class MediaUploadService
         private readonly MediaService $media,
         ?MediaImageMetadataReader $imageMetadata = null,
     ) {
-        $this->imageMetadata = $imageMetadata
-            ?? new MediaImageMetadataReader();
+        $this->imageMetadata = $imageMetadata ?? new MediaImageMetadataReader();
     }
 
     public static function fromConfig(): self
@@ -28,12 +28,7 @@ final class MediaUploadService
     }
 
     /**
-     * @param array{
-     *     name?:mixed,
-     *     tmp_name?:mixed,
-     *     error?:mixed,
-     *     size?:mixed
-     * } $file
+     * @param array{name?:mixed,tmp_name?:mixed,error?:mixed,size?:mixed} $file
      */
     public function importUploadedFile(
         array $file,
@@ -43,18 +38,12 @@ final class MediaUploadService
         ?string $altText = null,
     ): string {
         $error = (int) ($file['error'] ?? UPLOAD_ERR_NO_FILE);
-
         if ($error !== UPLOAD_ERR_OK) {
-            throw new InvalidArgumentException(
-                self::uploadErrorMessage($error),
-            );
+            throw new InvalidArgumentException(self::uploadErrorMessage($error));
         }
 
         $temporary = (string) ($file['tmp_name'] ?? '');
-        if (
-            $temporary === ''
-            || !is_uploaded_file($temporary)
-        ) {
+        if ($temporary === '' || !is_uploaded_file($temporary)) {
             throw new InvalidArgumentException(
                 'Временный файл загрузки не прошёл проверку PHP.'
             );
@@ -63,8 +52,7 @@ final class MediaUploadService
         return $this->importFile(
             sourcePath: $temporary,
             originalName: (string) ($file['name'] ?? ''),
-            ownerOrganizationPublicId:
-                $ownerOrganizationPublicId,
+            ownerOrganizationPublicId: $ownerOrganizationPublicId,
             siteKey: $siteKey,
             title: $title,
             altText: $altText,
@@ -79,79 +67,72 @@ final class MediaUploadService
         ?string $title = null,
         ?string $altText = null,
     ): string {
-        $originalName = self::safeOriginalName(
-            $originalName,
-        );
-        $blob = $this->storage->storeFile(
-            $sourcePath,
-        );
+        $originalName = self::safeOriginalName($originalName);
+        $blob = $this->storage->storeFile($sourcePath);
         $image = $this->imageMetadata->read(
             $this->storage->pathForHash($blob->sha256),
             $blob->mimeType,
         );
 
-        return $this->media->registerMetadata(
+        $publicId = $this->media->registerMetadata(
             mediaType: $blob->mediaType,
             originalName: $originalName,
             mimeType: $blob->mimeType,
             bytes: $blob->bytes,
             sha256: $blob->sha256,
-            ownerOrganizationPublicId:
-                $ownerOrganizationPublicId,
+            ownerOrganizationPublicId: $ownerOrganizationPublicId,
             siteKey: $siteKey,
             title: $title,
             altText: $altText,
             pixelWidth: $image?->width,
             pixelHeight: $image?->height,
         );
+
+        if (
+            $blob->mediaType === 'image'
+            && $image !== null
+            && in_array($blob->mimeType, ['image/jpeg', 'image/png', 'image/webp'], true)
+        ) {
+            try {
+                MediaImageOptimizationService::fromConfig()->generateWeb(
+                    $publicId,
+                    $siteKey,
+                );
+            } catch (Throwable $error) {
+                // Оригинал уже принят и остаётся доступным. Ошибка производной
+                // версии не должна превращать безопасную загрузку в потерю файла.
+                error_log(
+                    'ChurchCMS Media web optimization: ' . $error->getMessage()
+                );
+            }
+        }
+
+        return $publicId;
     }
 
-    private static function uploadErrorMessage(
-        int $error,
-    ): string {
+    private static function uploadErrorMessage(int $error): string
+    {
         return match ($error) {
-            UPLOAD_ERR_INI_SIZE,
-            UPLOAD_ERR_FORM_SIZE =>
+            UPLOAD_ERR_INI_SIZE, UPLOAD_ERR_FORM_SIZE =>
                 'Загружаемый Media-файл превышает разрешённый размер.',
-            UPLOAD_ERR_PARTIAL =>
-                'Media-файл был загружен не полностью.',
-            UPLOAD_ERR_NO_FILE =>
-                'Выберите Media-файл для загрузки.',
-            UPLOAD_ERR_NO_TMP_DIR =>
-                'На сервере недоступен временный каталог загрузки.',
-            UPLOAD_ERR_CANT_WRITE =>
-                'Сервер не смог записать временный Media-файл.',
-            UPLOAD_ERR_EXTENSION =>
-                'PHP-расширение остановило загрузку Media-файла.',
-            default =>
-                'Не удалось принять Media-файл.',
+            UPLOAD_ERR_PARTIAL => 'Media-файл был загружен не полностью.',
+            UPLOAD_ERR_NO_FILE => 'Выберите Media-файл для загрузки.',
+            UPLOAD_ERR_NO_TMP_DIR => 'На сервере недоступен временный каталог загрузки.',
+            UPLOAD_ERR_CANT_WRITE => 'Сервер не смог записать временный Media-файл.',
+            UPLOAD_ERR_EXTENSION => 'PHP-расширение остановило загрузку Media-файла.',
+            default => 'Не удалось принять Media-файл.',
         };
     }
 
-    private static function safeOriginalName(
-        string $value,
-    ): string {
-        $value = trim(
-            str_replace(
-                ["\0", "\r", "\n"],
-                '',
-                $value,
-            ),
-        );
-        $value = basename(
-            str_replace('\\', '/', $value),
-        );
-
-        if (
-            $value === ''
-            || $value === '.'
-            || $value === '..'
-        ) {
+    private static function safeOriginalName(string $value): string
+    {
+        $value = trim(str_replace(["\0", "\r", "\n"], '', $value));
+        $value = basename(str_replace('\\', '/', $value));
+        if ($value === '' || $value === '.' || $value === '..') {
             throw new InvalidArgumentException(
                 'Некорректное имя исходного Media-файла.'
             );
         }
-
         return $value;
     }
 }

@@ -11,10 +11,10 @@ use ChurchCMS\Modules\Organizations\OrganizationService;
 
 require dirname(__DIR__) . '/core.php';
 
-if (!function_exists('imagepng')) {
+if (!function_exists('imagepng') || !function_exists('imagewebp')) {
     fwrite(
         STDERR,
-        "Для derivative smoke требуется GD.\n",
+        "Для derivative smoke требуется GD с поддержкой WebP.\n",
     );
     exit(1);
 }
@@ -233,18 +233,41 @@ try {
     $variants = $capability->forAsset(
         $largePublicId,
     );
+    $variantNames = array_map(
+        static fn(MediaDerivative $item): string => $item->variant,
+        $variants,
+    );
 
     if (
-        count($variants) !== 2
-        || array_map(
-            static fn(MediaDerivative $item): string =>
-                $item->variant,
-            $variants,
-        ) !== ['medium', 'thumbnail']
+        count($variants) !== 3
+        || $variantNames !== ['medium', 'thumbnail', 'web']
     ) {
         fwrite(
             STDERR,
             "Список derivatives сформирован неверно.\n",
+        );
+        exit(1);
+    }
+
+    $web = null;
+    foreach ($variants as $variant) {
+        if ($variant->variant === 'web') {
+            $web = $variant;
+            break;
+        }
+    }
+
+    if (
+        !$web instanceof MediaDerivative
+        || $web->mimeType !== 'image/webp'
+        || $web->pixelWidth !== 1600
+        || $web->pixelHeight !== 900
+        || $web->bytes <= 0
+        || !$storage->exists($web->sha256)
+    ) {
+        fwrite(
+            STDERR,
+            "Автоматическая WebP веб-версия изображения сформирована неверно.\n",
         );
         exit(1);
     }

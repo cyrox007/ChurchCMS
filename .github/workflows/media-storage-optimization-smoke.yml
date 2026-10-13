@@ -1,0 +1,108 @@
+name: Проверка экономичного Media-хранилища
+
+on:
+  pull_request:
+    paths:
+      - 'modules/media/**'
+      - 'bin/media-storage.php'
+      - 'config/app.php'
+      - 'config/local.php.example'
+      - 'themes/default/templates/admin/media/index.php'
+      - 'tools/media-storage-optimization-smoke.php'
+      - '.github/workflows/media-storage-optimization-smoke.yml'
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  media-storage:
+    runs-on: ubuntu-24.04
+    services:
+      postgres:
+        image: postgres:16
+        env:
+          POSTGRES_DB: churchcms
+          POSTGRES_USER: churchcms
+          POSTGRES_PASSWORD: churchcms
+        ports:
+          - 5432:5432
+        options: >-
+          --health-cmd pg_isready
+          --health-interval 10s
+          --health-timeout 5s
+          --health-retries 5
+
+    steps:
+      - name: Получить исходный код
+        uses: actions/checkout@v4
+
+      - name: Подготовить PHP 8.3
+        uses: shivammathur/setup-php@v2
+        with:
+          php-version: '8.3'
+          extensions: pdo, pdo_pgsql, mbstring, fileinfo, gd, curl
+          coverage: none
+
+      - name: Проверить синтаксис Media storage
+        run: |
+          set -euo pipefail
+          php -l modules/media/MediaArchiveBackend.php
+          php -l modules/media/MediaS3ArchiveBackend.php
+          php -l modules/media/MediaArchiveRepository.php
+          php -l modules/media/MediaArchiveBackendFactory.php
+          php -l modules/media/MediaArchiveService.php
+          php -l modules/media/MediaStorageReportService.php
+          php -l modules/media/MediaStorageMaintenanceService.php
+          php -l modules/media/MediaImageOptimizationService.php
+          php -l modules/media/MediaPublicFileService.php
+          php -l modules/media/MediaUploadService.php
+          php -l bin/media-storage.php
+          php -l tools/media-storage-optimization-smoke.php
+
+      - name: Подготовить тестовую установку
+        run: |
+          set -euo pipefail
+          MEDIA_DIR="$(mktemp -d)/churchcms-media"
+          mkdir -p "$MEDIA_DIR"
+          cat > config/local.php <<PHP
+          <?php
+          declare(strict_types=1);
+          return [
+              'installation' => ['completed' => true],
+              'security' => [
+                  'secret_key' => base64_encode(str_repeat('m', 32)),
+              ],
+              'database' => [
+                  'driver' => 'pgsql',
+                  'host' => '127.0.0.1',
+                  'port' => 5432,
+                  'database' => 'churchcms',
+                  'username' => 'churchcms',
+                  'password' => 'churchcms',
+              ],
+              'media' => [
+                  'storage_path' => '$MEDIA_DIR',
+                  'archive' => ['driver' => 'disabled'],
+              ],
+          ];
+          PHP
+          php bin/migrate.php
+
+      - name: Проверить архивирование и восстановление без сети
+        run: php tools/media-storage-optimization-smoke.php
+
+      - name: Проверить dry-run и отчёт хранилища
+        run: |
+          set -euo pipefail
+          php bin/media-storage.php --action=report --record-snapshot
+          php bin/media-storage.php --action=optimize-images --limit=10
+          php bin/media-storage.php --action=archive --older-than=90 --limit=10
+          php bin/media-storage.php --action=prune-cache --older-than=30 --limit=10
+
+      - name: Проверить миграции и тему
+        run: |
+          set -euo pipefail
+          php bin/migrate.php validate
+          php bin/theme-check.php
+          php tools/admin-async-audit.php

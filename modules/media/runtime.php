@@ -24,11 +24,20 @@ foreach ([
     'MediaAsset.php',
     'MediaStoredBlob.php',
     'MediaBlobStorage.php',
+    'MediaArchiveBackend.php',
+    'MediaS3ArchiveBackend.php',
+    'MediaArchiveRepository.php',
+    'MediaArchiveBackendFactory.php',
+    'MediaArchiveService.php',
+    'MediaStorageReportService.php',
+    'MediaStorageMaintenanceService.php',
+    'MediaStorageCapability.php',
     'MediaImageMetadata.php',
     'MediaImageMetadataReader.php',
     'MediaDerivative.php',
     'MediaDerivativeRepository.php',
     'MediaImageDerivativeService.php',
+    'MediaImageOptimizationService.php',
     'MediaDerivativeCapability.php',
     'MediaBinarySource.php',
     'MediaBinaryChunk.php',
@@ -76,14 +85,11 @@ return new class implements ModuleRuntimeProvider {
     public function capabilities(): array
     {
         return [
-            'media.usage-references' =>
-                new \ChurchCMS\Modules\Media\MediaUsageCapability(),
-            'media.derivatives' =>
-                new \ChurchCMS\Modules\Media\MediaDerivativeCapability(),
-            'media.resumable-upload' =>
-                new \ChurchCMS\Modules\Media\MediaResumableUploadCapability(),
-            'media.galleries' =>
-                new \ChurchCMS\Modules\Media\MediaGalleryCapability(),
+            'media.usage-references' => new \ChurchCMS\Modules\Media\MediaUsageCapability(),
+            'media.derivatives' => new \ChurchCMS\Modules\Media\MediaDerivativeCapability(),
+            'media.resumable-upload' => new \ChurchCMS\Modules\Media\MediaResumableUploadCapability(),
+            'media.galleries' => new \ChurchCMS\Modules\Media\MediaGalleryCapability(),
+            'media.storage' => new \ChurchCMS\Modules\Media\MediaStorageCapability(),
         ];
     }
 
@@ -105,204 +111,24 @@ return new class implements ModuleRuntimeProvider {
         );
 
         $router = Router::getInstance();
-
-        $router->add(
-            'GET',
-            '/admin/media',
-            [MediaAdminController::class, 'index'],
-            [RequireAdminMiddleware::class],
-            'admin_media',
-        );
-
-        $router->add(
-            'POST',
-            '/admin/media/upload',
-            [MediaAdminController::class, 'upload'],
-            [
-                RequireAdminMiddleware::class,
-                CsrfMiddleware::class,
-            ],
-            'admin_media_upload',
-        );
-
-        $router->add(
-            'POST',
-            '/admin/media/{publicId}/visibility',
-            [MediaAdminController::class, 'visibility'],
-            [
-                RequireAdminMiddleware::class,
-                CsrfMiddleware::class,
-            ],
-            'admin_media_visibility',
-        );
-
-        $router->add(
-            'GET',
-            '/admin/media/galleries',
-            [MediaGalleryAdminController::class, 'index'],
-            [RequireAdminMiddleware::class],
-            'admin_media_galleries',
-        );
-
-        $router->add(
-            'POST',
-            '/admin/media/galleries',
-            [MediaGalleryAdminController::class, 'create'],
-            [
-                RequireAdminMiddleware::class,
-                CsrfMiddleware::class,
-            ],
-            'admin_media_galleries_create',
-        );
-
-        $router->add(
-            'POST',
-            '/admin/media/galleries/{publicId}',
-            [MediaGalleryAdminController::class, 'update'],
-            [
-                RequireAdminMiddleware::class,
-                CsrfMiddleware::class,
-            ],
-            'admin_media_galleries_update',
-        );
-
-        $router->add(
-            'POST',
-            '/admin/media/galleries/{publicId}/publish',
-            [MediaGalleryAdminController::class, 'publish'],
-            [
-                RequireAdminMiddleware::class,
-                CsrfMiddleware::class,
-            ],
-            'admin_media_galleries_publish',
-        );
-
-        $router->add(
-            'POST',
-            '/admin/media/galleries/{publicId}/withdraw',
-            [MediaGalleryAdminController::class, 'withdraw'],
-            [
-                RequireAdminMiddleware::class,
-                CsrfMiddleware::class,
-            ],
-            'admin_media_galleries_withdraw',
-        );
-
-        $router->add(
-            'POST',
-            '/admin/media/galleries/{publicId}/archive',
-            [MediaGalleryAdminController::class, 'archive'],
-            [
-                RequireAdminMiddleware::class,
-                CsrfMiddleware::class,
-            ],
-            'admin_media_galleries_archive',
-        );
-
-        $router->add(
-            'GET',
-            '/galleries',
-            [MediaGalleryPublicController::class, 'index'],
-            [],
-            'gallery_index',
-        );
-
-        $router->add(
-            'GET',
-            '/galleries/{publicId}',
-            [MediaGalleryPublicController::class, 'show'],
-            [],
-            'gallery_show',
-        );
-
-        $router->add(
-            'GET',
-            '/api/v1/galleries',
-            [MediaGalleryApiController::class, 'index'],
-            [
-                ApiEnabledMiddleware::class,
-                ApiCorsMiddleware::class,
-                ApiPublicRateLimitMiddleware::class,
-            ],
-            'api_v1_galleries',
-        );
-
-        $router->add(
-            'GET',
-            '/api/v1/galleries/{publicId}',
-            [MediaGalleryApiController::class, 'show'],
-            [
-                ApiEnabledMiddleware::class,
-                ApiCorsMiddleware::class,
-                ApiPublicRateLimitMiddleware::class,
-            ],
-            'api_v1_gallery_show',
-        );
-
-        $router->add(
-            'GET',
-            '/media/{publicId}/{sha256}/{variant}',
-            [MediaPublicController::class, 'file'],
-            [],
-            'public_media_file',
-        );
-
-        $router->add(
-            'HEAD',
-            '/media/{publicId}/{sha256}/{variant}',
-            [MediaPublicController::class, 'file'],
-            [],
-            'public_media_file_head',
-        );
-
-        $router->add(
-            'GET',
-            '/api/v1/media/{publicId}',
-            [MediaApiController::class, 'show'],
-            [
-                ApiEnabledMiddleware::class,
-                ApiCorsMiddleware::class,
-                ApiPublicRateLimitMiddleware::class,
-            ],
-            'api_v1_media_show',
-        );
-
-        $router->add(
-            'GET',
-            '/api/v1/media/aggregated',
-            [MediaApiController::class, 'aggregated'],
-            [
-                ApiEnabledMiddleware::class,
-                ApiCorsMiddleware::class,
-                ApiPublicRateLimitMiddleware::class,
-            ],
-            'api_v1_media_aggregated',
-        );
-
-        $router->add(
-            'GET',
-            '/api/v1/partner/media',
-            [MediaApiController::class, 'partnerIndex'],
-            [
-                ApiEnabledMiddleware::class,
-                ApiCorsMiddleware::class,
-                PartnerApiMiddleware::class,
-                ApiPartnerRateLimitMiddleware::class,
-            ],
-            'api_v1_partner_media',
-        );
-
-        $router->add(
-            'GET',
-            '/api/v1/partner/media/tombstones',
-            [MediaApiController::class, 'partnerTombstones'],
-            [
-                ApiEnabledMiddleware::class,
-                ApiCorsMiddleware::class,
-                PartnerApiMiddleware::class,
-                ApiPartnerRateLimitMiddleware::class,
-            ],
-            'api_v1_partner_media_tombstones',
-        );
+        $router->add('GET', '/admin/media', [MediaAdminController::class, 'index'], [RequireAdminMiddleware::class], 'admin_media');
+        $router->add('POST', '/admin/media/upload', [MediaAdminController::class, 'upload'], [RequireAdminMiddleware::class, CsrfMiddleware::class], 'admin_media_upload');
+        $router->add('POST', '/admin/media/{publicId}/visibility', [MediaAdminController::class, 'visibility'], [RequireAdminMiddleware::class, CsrfMiddleware::class], 'admin_media_visibility');
+        $router->add('GET', '/admin/media/galleries', [MediaGalleryAdminController::class, 'index'], [RequireAdminMiddleware::class], 'admin_media_galleries');
+        $router->add('POST', '/admin/media/galleries', [MediaGalleryAdminController::class, 'create'], [RequireAdminMiddleware::class, CsrfMiddleware::class], 'admin_media_galleries_create');
+        $router->add('POST', '/admin/media/galleries/{publicId}', [MediaGalleryAdminController::class, 'update'], [RequireAdminMiddleware::class, CsrfMiddleware::class], 'admin_media_galleries_update');
+        $router->add('POST', '/admin/media/galleries/{publicId}/publish', [MediaGalleryAdminController::class, 'publish'], [RequireAdminMiddleware::class, CsrfMiddleware::class], 'admin_media_galleries_publish');
+        $router->add('POST', '/admin/media/galleries/{publicId}/withdraw', [MediaGalleryAdminController::class, 'withdraw'], [RequireAdminMiddleware::class, CsrfMiddleware::class], 'admin_media_galleries_withdraw');
+        $router->add('POST', '/admin/media/galleries/{publicId}/archive', [MediaGalleryAdminController::class, 'archive'], [RequireAdminMiddleware::class, CsrfMiddleware::class], 'admin_media_galleries_archive');
+        $router->add('GET', '/galleries', [MediaGalleryPublicController::class, 'index'], [], 'gallery_index');
+        $router->add('GET', '/galleries/{publicId}', [MediaGalleryPublicController::class, 'show'], [], 'gallery_show');
+        $router->add('GET', '/api/v1/galleries', [MediaGalleryApiController::class, 'index'], [ApiEnabledMiddleware::class, ApiCorsMiddleware::class, ApiPublicRateLimitMiddleware::class], 'api_v1_galleries');
+        $router->add('GET', '/api/v1/galleries/{publicId}', [MediaGalleryApiController::class, 'show'], [ApiEnabledMiddleware::class, ApiCorsMiddleware::class, ApiPublicRateLimitMiddleware::class], 'api_v1_gallery_show');
+        $router->add('GET', '/media/{publicId}/{sha256}/{variant}', [MediaPublicController::class, 'file'], [], 'public_media_file');
+        $router->add('HEAD', '/media/{publicId}/{sha256}/{variant}', [MediaPublicController::class, 'file'], [], 'public_media_file_head');
+        $router->add('GET', '/api/v1/media/{publicId}', [MediaApiController::class, 'show'], [ApiEnabledMiddleware::class, ApiCorsMiddleware::class, ApiPublicRateLimitMiddleware::class], 'api_v1_media_show');
+        $router->add('GET', '/api/v1/media/aggregated', [MediaApiController::class, 'aggregated'], [ApiEnabledMiddleware::class, ApiCorsMiddleware::class, ApiPublicRateLimitMiddleware::class], 'api_v1_media_aggregated');
+        $router->add('GET', '/api/v1/partner/media', [MediaApiController::class, 'partnerIndex'], [ApiEnabledMiddleware::class, ApiCorsMiddleware::class, PartnerApiMiddleware::class, ApiPartnerRateLimitMiddleware::class], 'api_v1_partner_media');
+        $router->add('GET', '/api/v1/partner/media/tombstones', [MediaApiController::class, 'partnerTombstones'], [ApiEnabledMiddleware::class, ApiCorsMiddleware::class, PartnerApiMiddleware::class, ApiPartnerRateLimitMiddleware::class], 'api_v1_partner_media_tombstones');
     }
 };
