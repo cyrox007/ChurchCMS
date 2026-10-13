@@ -34,6 +34,7 @@ $router->add('GET', '/_theme-asset', [ThemeAssetController::class, 'asset'], [],
 $router->add('GET', '/feeds/rss.xml', [SyndicationController::class, 'rss'], [], 'feed_rss');
 $router->add('GET', '/feeds/rambler.xml', [SyndicationController::class, 'rambler'], [], 'feed_rambler');
 $router->add('GET', '/feeds/smi2.xml', [SyndicationController::class, 'smi2'], [], 'feed_smi2');
+$router->add('GET', '/feeds/news-mail.xml', [SyndicationController::class, 'newsMail'], [], 'feed_news_mail');
 
 $router->group('/api/v1')
     ->add('GET', '/meta', [ExternalApiController::class, 'meta'], [ApiEnabledMiddleware::class, ApiCorsMiddleware::class, ApiPublicRateLimitMiddleware::class], 'api_v1_meta')
@@ -56,6 +57,7 @@ $router->group('/admin')
     ->add('GET', '/syndication-exports', [SyndicationAdminController::class, 'index'], [RequireAdminMiddleware::class], 'admin_syndication_exports')
     ->add('GET', '/syndication-exports/rambler-validator', [SyndicationAdminController::class, 'ramblerValidator'], [RequireAdminMiddleware::class], 'admin_rambler_validator')
     ->add('GET', '/syndication-exports/smi2-validator', [SyndicationAdminController::class, 'smi2Validator'], [RequireAdminMiddleware::class], 'admin_smi2_validator')
+    ->add('GET', '/syndication-exports/news-mail-validator', [SyndicationAdminController::class, 'newsMailValidator'], [RequireAdminMiddleware::class], 'admin_news_mail_validator')
     ->add('GET', '/account/password', [AdminAccountController::class, 'password'], [RequireAdminMiddleware::class], 'admin_account_password')
     ->add('POST', '/account/password', [AdminAccountController::class, 'updatePassword'], [RequireAdminMiddleware::class, CsrfMiddleware::class], 'admin_account_password_update')
     ->endGroup();
