@@ -6,7 +6,7 @@ namespace ChurchCMS\Modules\Social;
 
 final class RutubeVideoPolicy
 {
-    public const MAX_BYTES = 25 * 1024 * 1024 * 1024;
+    public const MAX_BYTES = 25_000_000_000;
     public const MAX_DURATION_SECONDS = 5 * 60 * 60;
 
     /** @var list<string> */
@@ -19,6 +19,7 @@ final class RutubeVideoPolicy
         'video/mpeg',
         'video/3gpp',
         'video/webm',
+        'video/x-matroska',
         'video/hevc',
         'video/h265',
     ];
