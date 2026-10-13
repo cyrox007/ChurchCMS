@@ -6,6 +6,7 @@ $statusLabels = [
 $targetLabels = [
     'rss' => 'RSS 2.0',
     'rambler' => 'Rambler',
+    'smi2' => 'СМИ2',
 ];
 ?>
 <section class="admin-shell">
@@ -16,6 +17,7 @@ $targetLabels = [
             <p>История фактического формирования фидов. Повторная выдача из кэша не создаёт новую запись.</p>
         </div>
         <div class="admin-heading__actions">
+            <a class="button button--quiet" href="<?= $theme->e($theme->route('admin_smi2_validator')) ?>">Проверить СМИ2</a>
             <a class="button button--quiet" href="<?= $theme->e($theme->route('admin_rambler_validator')) ?>">Проверить Rambler</a>
             <a class="button button--quiet" href="<?= $theme->e($theme->route('admin_publications')) ?>">К публикациям</a>
         </div>
@@ -28,6 +30,7 @@ $targetLabels = [
                 <option value=""<?= $target === '' ? ' selected' : '' ?>>Все</option>
                 <option value="rss"<?= $target === 'rss' ? ' selected' : '' ?>>RSS 2.0</option>
                 <option value="rambler"<?= $target === 'rambler' ? ' selected' : '' ?>>Rambler</option>
+                <option value="smi2"<?= $target === 'smi2' ? ' selected' : '' ?>>СМИ2</option>
             </select>
         </label>
         <button class="button button--quiet" type="submit">Применить</button>
@@ -37,7 +40,7 @@ $targetLabels = [
         <?= $theme->component('admin.state', [
             'kind' => 'empty',
             'title' => 'Экспортов пока нет',
-            'message' => 'Запись появится после первого формирования включённого RSS или Rambler-фида.',
+            'message' => 'Запись появится после первого формирования включённого RSS, Rambler или СМИ2-фида.',
         ]) ?>
     <?php else: ?>
         <div class="editorial-list">
