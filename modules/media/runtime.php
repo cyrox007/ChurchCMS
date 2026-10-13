@@ -24,6 +24,14 @@ foreach ([
     'MediaAsset.php',
     'MediaStoredBlob.php',
     'MediaBlobStorage.php',
+    'MediaArchiveBackend.php',
+    'MediaS3ArchiveBackend.php',
+    'MediaArchiveRepository.php',
+    'MediaArchiveBackendFactory.php',
+    'MediaArchiveService.php',
+    'MediaStorageReportService.php',
+    'MediaStorageMaintenanceService.php',
+    'MediaStorageCapability.php',
     'MediaImageMetadata.php',
     'MediaImageMetadataReader.php',
     'MediaDerivative.php',
@@ -84,6 +92,8 @@ return new class implements ModuleRuntimeProvider {
                 new \ChurchCMS\Modules\Media\MediaResumableUploadCapability(),
             'media.galleries' =>
                 new \ChurchCMS\Modules\Media\MediaGalleryCapability(),
+            'media.storage' =>
+                new \ChurchCMS\Modules\Media\MediaStorageCapability(),
         ];
     }
 
@@ -118,10 +128,7 @@ return new class implements ModuleRuntimeProvider {
             'POST',
             '/admin/media/upload',
             [MediaAdminController::class, 'upload'],
-            [
-                RequireAdminMiddleware::class,
-                CsrfMiddleware::class,
-            ],
+            [RequireAdminMiddleware::class, CsrfMiddleware::class],
             'admin_media_upload',
         );
 
@@ -129,10 +136,7 @@ return new class implements ModuleRuntimeProvider {
             'POST',
             '/admin/media/{publicId}/visibility',
             [MediaAdminController::class, 'visibility'],
-            [
-                RequireAdminMiddleware::class,
-                CsrfMiddleware::class,
-            ],
+            [RequireAdminMiddleware::class, CsrfMiddleware::class],
             'admin_media_visibility',
         );
 
@@ -148,10 +152,7 @@ return new class implements ModuleRuntimeProvider {
             'POST',
             '/admin/media/galleries',
             [MediaGalleryAdminController::class, 'create'],
-            [
-                RequireAdminMiddleware::class,
-                CsrfMiddleware::class,
-            ],
+            [RequireAdminMiddleware::class, CsrfMiddleware::class],
             'admin_media_galleries_create',
         );
 
@@ -159,10 +160,7 @@ return new class implements ModuleRuntimeProvider {
             'POST',
             '/admin/media/galleries/{publicId}',
             [MediaGalleryAdminController::class, 'update'],
-            [
-                RequireAdminMiddleware::class,
-                CsrfMiddleware::class,
-            ],
+            [RequireAdminMiddleware::class, CsrfMiddleware::class],
             'admin_media_galleries_update',
         );
 
@@ -170,10 +168,7 @@ return new class implements ModuleRuntimeProvider {
             'POST',
             '/admin/media/galleries/{publicId}/publish',
             [MediaGalleryAdminController::class, 'publish'],
-            [
-                RequireAdminMiddleware::class,
-                CsrfMiddleware::class,
-            ],
+            [RequireAdminMiddleware::class, CsrfMiddleware::class],
             'admin_media_galleries_publish',
         );
 
@@ -181,10 +176,7 @@ return new class implements ModuleRuntimeProvider {
             'POST',
             '/admin/media/galleries/{publicId}/withdraw',
             [MediaGalleryAdminController::class, 'withdraw'],
-            [
-                RequireAdminMiddleware::class,
-                CsrfMiddleware::class,
-            ],
+            [RequireAdminMiddleware::class, CsrfMiddleware::class],
             'admin_media_galleries_withdraw',
         );
 
@@ -192,10 +184,7 @@ return new class implements ModuleRuntimeProvider {
             'POST',
             '/admin/media/galleries/{publicId}/archive',
             [MediaGalleryAdminController::class, 'archive'],
-            [
-                RequireAdminMiddleware::class,
-                CsrfMiddleware::class,
-            ],
+            [RequireAdminMiddleware::class, CsrfMiddleware::class],
             'admin_media_galleries_archive',
         );
 
@@ -219,11 +208,7 @@ return new class implements ModuleRuntimeProvider {
             'GET',
             '/api/v1/galleries',
             [MediaGalleryApiController::class, 'index'],
-            [
-                ApiEnabledMiddleware::class,
-                ApiCorsMiddleware::class,
-                ApiPublicRateLimitMiddleware::class,
-            ],
+            [ApiEnabledMiddleware::class, ApiCorsMiddleware::class, ApiPublicRateLimitMiddleware::class],
             'api_v1_galleries',
         );
 
@@ -231,11 +216,7 @@ return new class implements ModuleRuntimeProvider {
             'GET',
             '/api/v1/galleries/{publicId}',
             [MediaGalleryApiController::class, 'show'],
-            [
-                ApiEnabledMiddleware::class,
-                ApiCorsMiddleware::class,
-                ApiPublicRateLimitMiddleware::class,
-            ],
+            [ApiEnabledMiddleware::class, ApiCorsMiddleware::class, ApiPublicRateLimitMiddleware::class],
             'api_v1_gallery_show',
         );
 
@@ -259,11 +240,7 @@ return new class implements ModuleRuntimeProvider {
             'GET',
             '/api/v1/media/{publicId}',
             [MediaApiController::class, 'show'],
-            [
-                ApiEnabledMiddleware::class,
-                ApiCorsMiddleware::class,
-                ApiPublicRateLimitMiddleware::class,
-            ],
+            [ApiEnabledMiddleware::class, ApiCorsMiddleware::class, ApiPublicRateLimitMiddleware::class],
             'api_v1_media_show',
         );
 
@@ -271,11 +248,7 @@ return new class implements ModuleRuntimeProvider {
             'GET',
             '/api/v1/media/aggregated',
             [MediaApiController::class, 'aggregated'],
-            [
-                ApiEnabledMiddleware::class,
-                ApiCorsMiddleware::class,
-                ApiPublicRateLimitMiddleware::class,
-            ],
+            [ApiEnabledMiddleware::class, ApiCorsMiddleware::class, ApiPublicRateLimitMiddleware::class],
             'api_v1_media_aggregated',
         );
 
@@ -283,12 +256,7 @@ return new class implements ModuleRuntimeProvider {
             'GET',
             '/api/v1/partner/media',
             [MediaApiController::class, 'partnerIndex'],
-            [
-                ApiEnabledMiddleware::class,
-                ApiCorsMiddleware::class,
-                PartnerApiMiddleware::class,
-                ApiPartnerRateLimitMiddleware::class,
-            ],
+            [ApiEnabledMiddleware::class, ApiCorsMiddleware::class, PartnerApiMiddleware::class, ApiPartnerRateLimitMiddleware::class],
             'api_v1_partner_media',
         );
 
@@ -296,12 +264,7 @@ return new class implements ModuleRuntimeProvider {
             'GET',
             '/api/v1/partner/media/tombstones',
             [MediaApiController::class, 'partnerTombstones'],
-            [
-                ApiEnabledMiddleware::class,
-                ApiCorsMiddleware::class,
-                PartnerApiMiddleware::class,
-                ApiPartnerRateLimitMiddleware::class,
-            ],
+            [ApiEnabledMiddleware::class, ApiCorsMiddleware::class, PartnerApiMiddleware::class, ApiPartnerRateLimitMiddleware::class],
             'api_v1_partner_media_tombstones',
         );
     }
