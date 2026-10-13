@@ -11,12 +11,14 @@ on:
       - 'core.php'
       - 'app/controllers/SyndicationController.php'
       - 'app/controllers/SyndicationAdminController.php'
+      - 'modules/publications/PublicationSyndicationOverridesAdminController.php'
       - 'config/app.php'
       - 'config/local.php.example'
       - 'config/routes.php'
       - 'themes/default/theme.json'
       - 'themes/default/templates/admin/smi2-validator.php'
       - 'themes/default/templates/admin/syndication-exports.php'
+      - 'themes/default/templates/admin/publications/syndication-overrides.php'
       - 'tools/smi2-validator-smoke.php'
       - 'docs/SMI2_SYNDICATION.md'
       - '.github/workflows/smi2-syndication-smoke.yml'
@@ -30,12 +32,14 @@ on:
       - 'core.php'
       - 'app/controllers/SyndicationController.php'
       - 'app/controllers/SyndicationAdminController.php'
+      - 'modules/publications/PublicationSyndicationOverridesAdminController.php'
       - 'config/app.php'
       - 'config/local.php.example'
       - 'config/routes.php'
       - 'themes/default/theme.json'
       - 'themes/default/templates/admin/smi2-validator.php'
       - 'themes/default/templates/admin/syndication-exports.php'
+      - 'themes/default/templates/admin/publications/syndication-overrides.php'
       - 'tools/smi2-validator-smoke.php'
       - 'docs/SMI2_SYNDICATION.md'
       - '.github/workflows/smi2-syndication-smoke.yml'
@@ -62,8 +66,10 @@ jobs:
           php -l core/Smi2FeedValidator.php
           php -l app/controllers/SyndicationController.php
           php -l app/controllers/SyndicationAdminController.php
+          php -l modules/publications/PublicationSyndicationOverridesAdminController.php
           php -l themes/default/templates/admin/smi2-validator.php
           php -l themes/default/templates/admin/syndication-exports.php
+          php -l themes/default/templates/admin/publications/syndication-overrides.php
           php -l tools/smi2-validator-smoke.php
           php bin/theme-check.php
       - name: Проверить полнотекстовый RSS СМИ2
