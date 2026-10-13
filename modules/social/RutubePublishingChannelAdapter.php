@@ -23,7 +23,11 @@ final class RutubePublishingChannelAdapter implements
 
     public function label(): string
     {
-        return $this->inbound->label();
+        $label = $this->inbound->label();
+
+        return $this->upload->isReady()
+            ? $label
+            : $label . ' · исходящая отправка ожидает партнёрский API';
     }
 
     public function capabilities(): array
