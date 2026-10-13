@@ -1,18 +1,18 @@
-# ChurchCMS backlog
+# Backlog ChurchCMS
 
-Priority is ordered within each section.
+Приоритет указан внутри каждого раздела.
 
-## P0 — Current
+## P0 — Текущий фундамент
 
-- [x] Publications database schema.
-- [x] Publications repository/service.
-- [x] Publication public pages (read-only slice).
-- [x] Publication public API.
-- [x] Publication partner API/scopes (incremental updated_since sync).
-- [x] Publication syndication provider.
-- [x] Publication distribution target storage/service; admin UI pending Auth/RBAC.
-- [x] Migration CLI validation.
-- [x] PHP 8.3 lint/theme validation CI, PostgreSQL-backed runtime smoke test and MySQL 8 migration/runtime smoke.
+- [x] Схема БД публикаций.
+- [x] Репозиторий и сервис публикаций.
+- [x] Публичные страницы публикаций.
+- [x] Публичный API публикаций.
+- [x] Partner API/scopes публикаций с инкрементальной синхронизацией `updated_since`.
+- [x] Провайдер синдикации публикаций.
+- [x] Хранение и сервис целей распространения публикаций.
+- [x] Проверка миграций через CLI.
+- [x] PHP 8.3 lint/theme CI, runtime smoke на PostgreSQL и миграции/runtime smoke на MySQL 8.
 
 ## P0 — Организационная структура и федерация
 
@@ -70,7 +70,7 @@ Priority is ordered within each section.
 - [x] federation health/retry/conflict UI;
   - [x] сводные метрики активных связей и worker, отдельные success/error/partial/not-started состояния без раскрытия содержимого sync cursor.
 
-## P0 — Installation and operator UX
+## P0 — Установка и работа оператора
 
 - [x] four-step web installer;
 - [x] automatic environment/self-check;
@@ -108,7 +108,7 @@ Priority is ordered within each section.
     - [x] единый безопасный restore БД + config/uploads из Admin Shell с аварийным снимком и автоматическим возвратом при ошибке;
     - [x] получение и проверка доверенного релизного пакета без ручного staging;
 - [x] единый RC gate 1.0: настоящий web-installer, PostgreSQL backup/restore, подписанный code-only updater, schema-changing update/rollback, MySQL migrations/readiness и итоговый обязательный gate;
-- [x] replace dashboard-card prototype with unified Admin Shell;
+- [x] unified Admin Shell;
 - [x] persistent/collapsible admin navigation;
 - [x] shared admin header with site context and current user;
 - [x] global admin search foundation;
@@ -118,7 +118,7 @@ Priority is ordered within each section.
 - [x] unified empty/error/success/loading states across admin screens;
 - [x] keyboard/focus/accessibility audit for administration.
 
-## P1 — Core security
+## P1 — Безопасность ядра
 
 - [x] hardened session lifecycle;
 - [x] CSRF token service/middleware;
@@ -134,7 +134,7 @@ Priority is ordered within each section.
   - [x] forgotten-password/reset flow: одноразовый hashed token, TTL, neutral response, CSRF/rate-limit и подключаемый канал доставки;
 - [x] production error handler.
 
-## P1 — Content
+## P1 — Контент
 
 - [x] content tree/pages;
   - [x] PostgreSQL/MySQL schema foundation with stable public IDs, site-scoped canonical paths, parent links and ordered-tree indexes;
@@ -151,7 +151,7 @@ Priority is ordered within each section.
 - [x] structured image/video SEO: Article/NewsArticle + ImageObject + gated VideoObject через public Media usage slots;
 - [x] redirect manager.
 
-## P1 — Media
+## P1 — Медиа
 
 - [x] safe uploads;
   - [x] приватное content-addressed blob-хранилище вне корня ChurchCMS;
@@ -174,52 +174,51 @@ Priority is ordered within each section.
 - [x] document categories/rubrics;
 - [x] document file versions/replacements: последовательная история Media-файлов, примечания и просмотр истории в Admin Shell.
 
-## P2 — Parish/Cathedral
+## P2 — Приход/собор
 
 - [x] people/clergy: Admin/public/API, Media-портреты и lifecycle назначений;
 - [x] worship: Admin/public/API, повторяющиеся правила и праздничные шаблоны;
 - [x] events: Admin/public/API, календарь, publish/withdraw/cancel и повторяющиеся правила;
-- [ ] ministries;
-- [ ] shrines;
-- [ ] saints;
-- [ ] Sunday school;
-- [ ] library;
-- [ ] donations adapter;
-- [ ] prayer request adapter.
+- [x] ministries;
+- [x] shrines;
+- [x] saints;
+- [x] Sunday school;
+- [x] library;
+- [x] donations integration boundary;
+- [x] prayer requests integration boundary.
 
-## P2 — External distribution
+## P2 — Внешнее распространение
 
-- diocesan incremental sync endpoints;
-- tombstones/withdrawals;
-- syndication export log;
-- target-specific title/excerpt/image overrides;
-- Rambler validator;
-- СМИ2 adapter after current partner spec is obtained;
-- News Mail adapter after onboarding contract is obtained;
-- optional webhooks with signed payloads/retry log.
+- [x] diocesan incremental sync endpoints;
+- [x] tombstones/withdrawals;
+- [x] syndication export log;
+- [x] target-specific title/excerpt/image overrides;
+- [x] Rambler validator;
+- [ ] СМИ2 adapter — заблокирован до получения актуальной партнёрской спецификации;
+- [ ] News Mail adapter — заблокирован до получения onboarding-контракта;
+- [x] optional webhooks with signed payloads/retry log.
 
-## P2 — Education
+## P2 — Образование
 
-- programs;
-- teachers/chairs;
-- admissions;
-- educational disclosures;
-- schedules;
-- science;
-- Moodle/OJS adapters.
+- [x] programs;
+- [x] teachers/chairs;
+- [x] admissions;
+- [x] educational disclosures;
+- [x] schedules;
+- [x] science;
+- [x] Moodle/OJS adapters.
 
-## P3 — Migration and operations
+## P3 — Миграция и эксплуатация
 
-- legacy VPDS importer;
-- installer;
-- updater;
-- backup/restore;
-- health/readiness checks;
-- deployment docs;
-- observability/log rotation.
+- [ ] legacy VPDS importer — заблокирован до получения подтверждённого формата/контракта legacy-экспорта;
+- [x] installer;
+- [x] updater;
+- [x] backup/restore;
+- [x] health/readiness checks;
+- [ ] deployment docs;
+- [x] observability/log rotation.
 
-
-## P2 — Comments
+## P2 — Комментарии
 
 - [x] optional comments module foundation;
 - [x] per-publication comments_enabled storage/domain/service switch;
@@ -231,10 +230,9 @@ Priority is ordered within each section.
 - [x] spam/reject/approve workflow;
 - [x] close discussion without deleting comments;
 - [x] audit moderation actions;
-- public API disabled by default for comments.
+- публичный API комментариев по умолчанию отключён.
 
-
-## P0 — Performance and scale
+## P0 — Производительность и масштабирование
 
 - [x] stateless anonymous public pages;
 - [x] dependency-free anonymous full-page cache;
@@ -245,12 +243,12 @@ Priority is ordered within each section.
 - [x] database-backed runtime smoke test;
 - [x] representative dataset benchmark;
 - [x] HTTP load-test scenario for publication list/detail and home page;
-- [ ] define reference hardware and release thresholds;
-  - blocker: выбрать и зафиксировать эталонный Nginx/PHP-FPM + PostgreSQL/MySQL стенд, затем снять реальные HTTP p50/p95/p99/RPS/ошибки; GitHub Actions используется только для smoke и не является эталонным железом;
+- [ ] определить эталонное оборудование и релизные пороги;
+  - блокер: выбрать и зафиксировать эталонный Nginx/PHP-FPM + PostgreSQL/MySQL стенд, затем снять реальные HTTP p50/p95/p99/RPS/ошибки; GitHub Actions используется только для smoke и не является эталонным железом;
 - [x] verify reverse-proxy Nginx configuration;
 - [x] query-plan/index audit with production-scale fixture data.
 
-## P1 — External Channels
+## P1 — Внешние каналы
 
 - [x] open-ended provider ID model;
 - [x] adapter capability contract for social/video channels;
@@ -278,7 +276,7 @@ Priority is ordered within each section.
   - [x] отдельные безопасные настройки API key/OAuth/privacy/category в Admin Shell без обратного вывода сохранённых секретов;
 - [ ] Rutube adapter;
   - [x] inbound public-channel sync через `/api/video/person/{id}/`;
-  - [ ] outbound video upload после подтверждённого официального upload API;
+  - [ ] outbound video upload — заблокирован до подтверждённого официального upload API;
 - [x] webhook receiver contract/signature validation;
 - [x] loop prevention tests;
 - [x] retry/dead-letter UI.
