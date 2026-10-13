@@ -2,12 +2,15 @@
 
 declare(strict_types=1);
 
+define('CHURCHCMS_ROOT', dirname(__DIR__));
+require CHURCHCMS_ROOT . '/core/RuntimeAutoloader.php';
+
+ChurchCMS\Core\RuntimeAutoloader::register(CHURCHCMS_ROOT);
+
 use ChurchCMS\Core\Smi2FeedValidator;
 use ChurchCMS\Core\Smi2SyndicationRenderer;
 use ChurchCMS\Core\SyndicationEntry;
 use ChurchCMS\Core\SyndicationFeed;
-
-require dirname(__DIR__) . '/core.php';
 
 $entry = new SyndicationEntry(
     id: 'publication:test-smi2',
@@ -38,15 +41,13 @@ $errors = array_values(array_filter(
 ));
 
 if ($errors !== []) {
-    fwrite(STDERR, "Корректный фид СМИ2 не прошёл проверку:\n");
-    foreach ($errors as $error) {
-        fwrite(
-            STDERR,
-            '- ' . (string) ($error['code'] ?? 'unknown')
-            . ': ' . (string) ($error['message'] ?? '') . "\n",
-        );
-    }
-    exit(1);
+    throw new RuntimeException(
+        'Корректный фид СМИ2 не прошёл проверку: '
+        . json_encode(
+            $errors,
+            JSON_UNESCAPED_UNICODE | JSON_UNESCAPED_SLASHES,
+        ),
+    );
 }
 
 $brokenXml = str_replace(
@@ -58,18 +59,23 @@ $brokenIssues = $validator->validate(
     $brokenXml,
     $renderer->contentType(),
 );
-$codes = array_column($brokenIssues, 'code');
-if (!in_array('full_text_missing', $codes, true)) {
-    fwrite(
-        STDERR,
-        "Валидатор не обнаружил отсутствие полного текста.\n",
+if (!in_array(
+    'full_text_missing',
+    array_column($brokenIssues, 'code'),
+    true,
+)) {
+    throw new RuntimeException(
+        'Валидатор не обнаружил отсутствие полного текста.',
     );
-    exit(1);
 }
 
-if (!str_contains($xml, 'xmlns:content="http://purl.org/rss/1.0/modules/content/"')) {
-    fwrite(STDERR, "В RSS отсутствует пространство имён content.\n");
-    exit(1);
+if (!str_contains(
+    $xml,
+    'xmlns:content="http://purl.org/rss/1.0/modules/content/"',
+)) {
+    throw new RuntimeException(
+        'В RSS отсутствует пространство имён content.',
+    );
 }
 
 fwrite(
