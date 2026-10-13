@@ -2,9 +2,11 @@
 $targetLabels = [
     'rss' => 'RSS 2.0',
     'rambler' => 'Rambler',
+    'smi2' => 'СМИ2',
 ];
 $targets = is_array($targets ?? null) ? $targets : [];
 $overrides = is_array($overrides ?? null) ? $overrides : [];
+$smi2Enabled = ($smi2Enabled ?? false) === true;
 ?>
 <section class="admin-shell">
     <header class="admin-heading">
@@ -34,11 +36,35 @@ $overrides = is_array($overrides ?? null) ? $overrides : [];
         ]) ?>
     <?php endif; ?>
 
+    <section class="editor-card">
+        <div class="editor-card__heading">
+            <div>
+                <p class="eyebrow">СМИ2</p>
+                <h2>Полнотекстовый партнёрский фид</h2>
+                <p>Подключение здесь управляет только этим материалом. Сам `/feeds/smi2.xml` включается отдельно в локальной конфигурации.</p>
+            </div>
+        </div>
+        <form
+            method="post"
+            action="<?= $theme->e($theme->route('admin_publication_syndication_overrides_update', ['publicId' => $publication->publicId])) ?>"
+        >
+            <?= $theme->csrfInput() ?>
+            <input
+                type="hidden"
+                name="smi2_mode"
+                value="<?= $smi2Enabled ? 'disable' : 'enable' ?>"
+            >
+            <button class="button <?= $smi2Enabled ? 'button--quiet' : 'button--primary' ?>" type="submit">
+                <?= $smi2Enabled ? 'Исключить из СМИ2' : 'Передавать в СМИ2' ?>
+            </button>
+        </form>
+    </section>
+
     <?php if ($targets === []): ?>
         <?= $theme->component('admin.state', [
             'kind' => 'empty',
             'title' => 'Каналы не выбраны',
-            'message' => 'Сначала выберите каналы внешнего распространения в редакторе публикации.',
+            'message' => 'Подключите СМИ2 выше либо выберите другие каналы внешнего распространения в редакторе публикации.',
             'action_href' => $theme->route('admin_publication_edit', ['publicId' => $publication->publicId]),
             'action_label' => 'Открыть публикацию',
         ]) ?>

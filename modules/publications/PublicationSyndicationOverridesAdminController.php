@@ -30,6 +30,16 @@ final class PublicationSyndicationOverridesAdminController
     {
         AdminAuthorization::requirePermission($request, 'publications.edit');
         $publication = $this->publication($request, $publicId);
+        $smi2Mode = trim((string) $request->post('smi2_mode', ''));
+
+        if ($smi2Mode !== '') {
+            $this->updateSmi2Target(
+                $request,
+                $publication,
+                $smi2Mode,
+            );
+        }
+
         $form = $this->form($request, $publication->syndicationTargets);
 
         try {
@@ -62,21 +72,73 @@ final class PublicationSyndicationOverridesAdminController
         }
     }
 
+    private function updateSmi2Target(
+        Request $request,
+        Publication $publication,
+        string $mode,
+    ): never {
+        if (!in_array($mode, ['enable', 'disable'], true)) {
+            Response::text('400 Bad Request', 400);
+        }
+
+        $targets = array_values(array_filter(
+            $publication->syndicationTargets,
+            static fn(string $target): bool => $target !== 'smi2',
+        ));
+        if ($mode === 'enable') {
+            $targets[] = 'smi2';
+        }
+
+        PublicationService::fromDatabase()->setSyndicationTargets(
+            $publication->publicId,
+            $targets,
+        );
+        AuditLog::emit(
+            eventType: 'publication.smi2_target_changed',
+            actorUserId: $this->userId($request),
+            subjectType: 'publication',
+            subjectId: $publication->publicId,
+            metadata: [
+                'enabled' => $mode === 'enable',
+            ],
+            request: $request,
+        );
+
+        Response::redirectLocal(
+            '/admin/publications/'
+            . rawurlencode($publication->publicId)
+            . '/syndication-overrides?smi2='
+            . ($mode === 'enable' ? 'enabled' : 'disabled'),
+        );
+    }
+
     private function render(
         Request $request,
         Publication $publication,
         array $overrides,
         ?string $error = null,
     ): never {
+        $smi2Status = match ((string) $request->get('smi2', '')) {
+            'enabled' => 'Материал подключён к полнотекстовому фиду СМИ2.',
+            'disabled' => 'Материал исключён из полнотекстового фида СМИ2.',
+            default => null,
+        };
+
         AdminShell::page($request, 'admin.publications.syndication_overrides', [
             'title' => 'Переопределения каналов',
             'publication' => $publication,
             'targets' => $publication->syndicationTargets,
             'overrides' => $overrides,
+            'smi2Enabled' => in_array(
+                'smi2',
+                $publication->syndicationTargets,
+                true,
+            ),
             'error' => $error,
-            'success' => $request->get('saved') === '1'
-                ? 'Переопределения каналов сохранены.'
-                : null,
+            'success' => $smi2Status
+                ?? ($request->get('saved') === '1'
+                    ? 'Переопределения каналов сохранены.'
+                    : null),
         ], 'publications');
     }
 

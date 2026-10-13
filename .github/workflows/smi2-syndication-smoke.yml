@@ -1,0 +1,76 @@
+name: Проверка фида СМИ2
+
+on:
+  push:
+    branches:
+      - develop
+      - main
+    paths:
+      - 'core/Smi2SyndicationRenderer.php'
+      - 'core/Smi2FeedValidator.php'
+      - 'core.php'
+      - 'app/controllers/SyndicationController.php'
+      - 'app/controllers/SyndicationAdminController.php'
+      - 'modules/publications/PublicationSyndicationOverridesAdminController.php'
+      - 'config/app.php'
+      - 'config/local.php.example'
+      - 'config/routes.php'
+      - 'themes/default/theme.json'
+      - 'themes/default/templates/admin/smi2-validator.php'
+      - 'themes/default/templates/admin/syndication-exports.php'
+      - 'themes/default/templates/admin/publications/syndication-overrides.php'
+      - 'tools/smi2-validator-smoke.php'
+      - 'docs/SMI2_SYNDICATION.md'
+      - '.github/workflows/smi2-syndication-smoke.yml'
+  pull_request:
+    branches:
+      - develop
+      - main
+    paths:
+      - 'core/Smi2SyndicationRenderer.php'
+      - 'core/Smi2FeedValidator.php'
+      - 'core.php'
+      - 'app/controllers/SyndicationController.php'
+      - 'app/controllers/SyndicationAdminController.php'
+      - 'modules/publications/PublicationSyndicationOverridesAdminController.php'
+      - 'config/app.php'
+      - 'config/local.php.example'
+      - 'config/routes.php'
+      - 'themes/default/theme.json'
+      - 'themes/default/templates/admin/smi2-validator.php'
+      - 'themes/default/templates/admin/syndication-exports.php'
+      - 'themes/default/templates/admin/publications/syndication-overrides.php'
+      - 'tools/smi2-validator-smoke.php'
+      - 'docs/SMI2_SYNDICATION.md'
+      - '.github/workflows/smi2-syndication-smoke.yml'
+
+permissions:
+  contents: read
+
+jobs:
+  smi2-feed:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Получить исходный код
+        uses: actions/checkout@v4
+      - name: Подготовить PHP 8.3
+        uses: shivammathur/setup-php@v2
+        with:
+          php-version: '8.3'
+          extensions: dom, mbstring
+          coverage: none
+      - name: Проверить синтаксис и тему
+        run: |
+          set -euo pipefail
+          php -l core/Smi2SyndicationRenderer.php
+          php -l core/Smi2FeedValidator.php
+          php -l app/controllers/SyndicationController.php
+          php -l app/controllers/SyndicationAdminController.php
+          php -l modules/publications/PublicationSyndicationOverridesAdminController.php
+          php -l themes/default/templates/admin/smi2-validator.php
+          php -l themes/default/templates/admin/syndication-exports.php
+          php -l themes/default/templates/admin/publications/syndication-overrides.php
+          php -l tools/smi2-validator-smoke.php
+          php bin/theme-check.php
+      - name: Проверить полнотекстовый RSS СМИ2
+        run: php tools/smi2-validator-smoke.php

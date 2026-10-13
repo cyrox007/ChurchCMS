@@ -9,6 +9,7 @@ use ChurchCMS\Core\GeneratedOutputCache;
 use ChurchCMS\Core\RamblerSyndicationRenderer;
 use ChurchCMS\Core\Response;
 use ChurchCMS\Core\Rss2SyndicationRenderer;
+use ChurchCMS\Core\Smi2SyndicationRenderer;
 use ChurchCMS\Core\SyndicationExportLogRepository;
 use ChurchCMS\Core\SyndicationFeed;
 use ChurchCMS\Core\SyndicationRegistry;
@@ -25,6 +26,11 @@ final class SyndicationController
     public function rambler(): never
     {
         $this->emit('rambler', new RamblerSyndicationRenderer());
+    }
+
+    public function smi2(): never
+    {
+        $this->emit('smi2', new Smi2SyndicationRenderer());
     }
 
     private function emit(string $target, SyndicationRenderer $renderer): never
