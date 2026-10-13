@@ -24,17 +24,21 @@ final class MediaS3ArchiveBackend implements MediaArchiveBackend
         }
 
         $parts = parse_url($this->endpoint);
+        $path = is_array($parts)
+            ? trim((string) ($parts['path'] ?? ''), '/')
+            : '';
         if (
             !is_array($parts)
             || strtolower((string) ($parts['scheme'] ?? '')) !== 'https'
             || trim((string) ($parts['host'] ?? '')) === ''
+            || $path !== ''
             || isset($parts['user'])
             || isset($parts['pass'])
             || isset($parts['query'])
             || isset($parts['fragment'])
         ) {
             throw new InvalidArgumentException(
-                'S3 endpoint Media archive должен быть каноническим HTTPS URL.'
+                'S3 endpoint Media archive должен быть корневым каноническим HTTPS URL без пути, query и credentials.'
             );
         }
 
