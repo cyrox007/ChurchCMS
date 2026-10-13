@@ -1,19 +1,8 @@
 {
   "id": "default",
   "name": "ChurchCMS Default",
-  "version": "0.8.31",
-  "profiles": [
-    "small-parish",
-    "parish",
-    "cathedral",
-    "monastery",
-    "deanery",
-    "diocese",
-    "metropolia",
-    "education",
-    "mixed",
-    "organization"
-  ],
+  "version": "0.8.32",
+  "profiles": ["small-parish","parish","cathedral","monastery","deanery","diocese","metropolia","education","mixed","organization"],
   "templates": {
     "layout.main": "layouts/main",
     "page.home": "pages/home",
@@ -34,6 +23,7 @@
     "admin.syndication_exports": "admin/syndication-exports",
     "admin.rambler_validator": "admin/rambler-validator",
     "admin.smi2_validator": "admin/smi2-validator",
+    "admin.news_mail_validator": "admin/news-mail-validator",
     "admin.distribution_webhooks": "admin/distribution-webhooks",
     "admin.pages.index": "admin/pages/index",
     "admin.pages.editor": "admin/pages/editor",
