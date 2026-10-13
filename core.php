@@ -42,6 +42,7 @@ $required = [
     '/core/SyndicationRenderer.php',
     '/core/Rss2SyndicationRenderer.php',
     '/core/RamblerSyndicationRenderer.php',
+    '/core/Smi2SyndicationRenderer.php',
     '/core/ModuleManifest.php',
     '/core/ModuleRegistry.php',
     '/core/ModuleRuntimeProvider.php',
