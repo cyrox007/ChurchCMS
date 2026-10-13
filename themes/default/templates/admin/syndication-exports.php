@@ -1,12 +1,10 @@
 <?php declare(strict_types=1);
-$statusLabels = [
-    'success' => 'Успешно',
-    'failed' => 'Ошибка',
-];
+$statusLabels = ['success' => 'Успешно', 'failed' => 'Ошибка'];
 $targetLabels = [
     'rss' => 'RSS 2.0',
     'rambler' => 'Rambler',
     'smi2' => 'СМИ2',
+    'news_mail' => 'Новости Mail',
 ];
 ?>
 <section class="admin-shell">
@@ -17,6 +15,7 @@ $targetLabels = [
             <p>История фактического формирования фидов. Повторная выдача из кэша не создаёт новую запись.</p>
         </div>
         <div class="admin-heading__actions">
+            <a class="button button--quiet" href="<?= $theme->e($theme->route('admin_news_mail_validator')) ?>">Проверить Новости Mail</a>
             <a class="button button--quiet" href="<?= $theme->e($theme->route('admin_smi2_validator')) ?>">Проверить СМИ2</a>
             <a class="button button--quiet" href="<?= $theme->e($theme->route('admin_rambler_validator')) ?>">Проверить Rambler</a>
             <a class="button button--quiet" href="<?= $theme->e($theme->route('admin_publications')) ?>">К публикациям</a>
@@ -24,13 +23,13 @@ $targetLabels = [
     </header>
 
     <form method="get" class="admin-filter" action="<?= $theme->e($theme->route('admin_syndication_exports')) ?>">
-        <label>
-            Канал
+        <label>Канал
             <select name="target">
                 <option value=""<?= $target === '' ? ' selected' : '' ?>>Все</option>
                 <option value="rss"<?= $target === 'rss' ? ' selected' : '' ?>>RSS 2.0</option>
                 <option value="rambler"<?= $target === 'rambler' ? ' selected' : '' ?>>Rambler</option>
                 <option value="smi2"<?= $target === 'smi2' ? ' selected' : '' ?>>СМИ2</option>
+                <option value="news_mail"<?= $target === 'news_mail' ? ' selected' : '' ?>>Новости Mail</option>
             </select>
         </label>
         <button class="button button--quiet" type="submit">Применить</button>
@@ -40,26 +39,20 @@ $targetLabels = [
         <?= $theme->component('admin.state', [
             'kind' => 'empty',
             'title' => 'Экспортов пока нет',
-            'message' => 'Запись появится после первого формирования включённого RSS, Rambler или СМИ2-фида.',
+            'message' => 'Запись появится после первого формирования включённого внешнего фида.',
         ]) ?>
     <?php else: ?>
         <div class="editorial-list">
             <?php foreach ($entries as $entry): ?>
-                <article class="editorial-item">
-                    <div class="editorial-item__main">
-                        <div class="editorial-item__meta">
-                            <span class="status-pill"><?= $theme->e($statusLabels[$entry['status']] ?? (string) $entry['status']) ?></span>
-                            <span><?= $theme->e($targetLabels[$entry['target']] ?? (string) $entry['target']) ?></span>
-                            <span><?= $theme->e((string) $entry['created_at']) ?> UTC</span>
-                        </div>
-                        <h2><?= (int) $entry['entry_count'] ?> материалов</h2>
-                        <p>
-                            Размер: <?= (int) $entry['body_bytes'] ?> байт ·
-                            Формирование: <?= (int) $entry['duration_ms'] ?> мс
-                            <?php if (!empty($entry['error_code'])): ?>· Код: <?= $theme->e((string) $entry['error_code']) ?><?php endif; ?>
-                        </p>
+                <article class="editorial-item"><div class="editorial-item__main">
+                    <div class="editorial-item__meta">
+                        <span class="status-pill"><?= $theme->e($statusLabels[$entry['status']] ?? (string) $entry['status']) ?></span>
+                        <span><?= $theme->e($targetLabels[$entry['target']] ?? (string) $entry['target']) ?></span>
+                        <span><?= $theme->e((string) $entry['created_at']) ?> UTC</span>
                     </div>
-                </article>
+                    <h2><?= (int) $entry['entry_count'] ?> материалов</h2>
+                    <p>Размер: <?= (int) $entry['body_bytes'] ?> байт · Формирование: <?= (int) $entry['duration_ms'] ?> мс<?php if (!empty($entry['error_code'])): ?> · Код: <?= $theme->e((string) $entry['error_code']) ?><?php endif; ?></p>
+                </div></article>
             <?php endforeach; ?>
         </div>
     <?php endif; ?>
