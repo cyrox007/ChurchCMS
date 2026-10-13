@@ -1,0 +1,28 @@
+# Пример /etc/cron.d/churchcms для production.
+# Корень установки в примере: /var/www/churchcms.
+# Все фоновые команды выполняются от того же пользователя, что и PHP-FPM.
+
+SHELL=/bin/sh
+PATH=/usr/local/sbin:/usr/local/bin:/usr/sbin:/usr/bin:/sbin:/bin
+
+# Отложенная публикация.
+* * * * * churchcms flock -n /run/lock/churchcms-publication-schedule.lock php /var/www/churchcms/bin/publication-schedule.php >/dev/null 2>&1
+
+# Исходящая очередь внешних каналов.
+* * * * * churchcms flock -n /run/lock/churchcms-channel-dispatch.lock php /var/www/churchcms/bin/channel-dispatch.php >/dev/null 2>&1
+
+# Получение входящих данных внешних каналов.
+*/5 * * * * churchcms flock -n /run/lock/churchcms-channels-sync.lock php /var/www/churchcms/bin/channels-sync.php >/dev/null 2>&1
+
+# Федерация ChurchCMS-узлов.
+*/5 * * * * churchcms flock -n /run/lock/churchcms-federation-sync.lock php /var/www/churchcms/bin/federation-sync.php >/dev/null 2>&1
+
+# Подписанные исходящие webhooks распространения.
+* * * * * churchcms flock -n /run/lock/churchcms-distribution-webhooks.lock php /var/www/churchcms/bin/distribution-webhooks.php >/dev/null 2>&1
+
+# Обслуживание и очистка архивов журнала ошибок.
+17 3 * * * churchcms flock -n /run/lock/churchcms-log-maintenance.lock php /var/www/churchcms/bin/log-maintenance.php >/dev/null 2>&1
+
+# Автоматический backup намеренно не включён по умолчанию: сначала задайте
+# политику хранения и внешний мониторинг результата. После этого можно включить:
+# 35 3 * * * churchcms flock -n /run/lock/churchcms-backup.lock php /var/www/churchcms/bin/backup.php create >/var/log/churchcms-backup.log 2>&1

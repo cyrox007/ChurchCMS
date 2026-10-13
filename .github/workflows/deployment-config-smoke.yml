@@ -1,0 +1,43 @@
+name: Проверка production-развёртывания
+
+on:
+  pull_request:
+    branches:
+      - develop
+      - main
+    paths:
+      - 'deploy/**'
+      - 'docs/DEPLOYMENT.md'
+      - 'tools/deployment-config-smoke.php'
+      - '.github/workflows/deployment-config-smoke.yml'
+      - 'README.md'
+      - 'docs/BACKLOG.md'
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  deployment-config:
+    runs-on: ubuntu-24.04
+    steps:
+      - name: Получить исходный код
+        uses: actions/checkout@v4
+
+      - name: Подготовить PHP 8.3
+        uses: shivammathur/setup-php@v2
+        with:
+          php-version: '8.3'
+          coverage: none
+
+      - name: Проверить синтаксис smoke
+        run: php -l tools/deployment-config-smoke.php
+
+      - name: Проверить согласованность production-конфигурации
+        run: php tools/deployment-config-smoke.php
+
+      - name: Проверить отсутствие секретов в шаблонах
+        shell: bash
+        run: |
+          set -euo pipefail
+          ! grep -RIE '(BEGIN (RSA |EC |OPENSSH )?PRIVATE KEY|password[[:space:]]*=[[:space:]]*[^#[:space:]]+|api[_-]?key[[:space:]]*=[[:space:]]*[^#[:space:]]+)' deploy docs/DEPLOYMENT.md

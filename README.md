@@ -22,6 +22,7 @@ ChurchCMS — самостоятельная CMS на PHP 8.3+ для сайто
 - организационное дерево и федерация между ChurchCMS-узлами;
 - внешние каналы Telegram, VK, MAX и YouTube;
 - резервное копирование, восстановление и подписанные обновления;
+- production-шаблоны Nginx, PHP-FPM и cron;
 - инструменты нагрузочного тестирования и release-gate.
 
 Финальная подготовка 1.0 сосредоточена на релизном аудите и фиксации реальных performance-порогов на выбранном эталонном сервере. Исходящая загрузка в Rutube не включается через недокументированные API и остаётся заблокированной до появления подтверждённого официального интерфейса загрузки.
@@ -59,6 +60,7 @@ core/         самостоятельное ядро PHP 8.3+
 modules/      изолированные CMS- и доменные модули
 themes/       заменяемые темы и шаблоны
 config/       конфигурация runtime
+deploy/       production-шаблоны Nginx, PHP-FPM и cron
 docs/         архитектура, эксплуатация и интеграции
 bin/          CLI-команды
 tools/        smoke, аудит, release и performance-инструменты
@@ -87,6 +89,16 @@ php bin/release-audit.php
 
 Для финального 1.0 performance release-gate должен быть выполнен отдельно на зафиксированном эталонном стенде с реальными результатами нагрузочного теста и утверждёнными порогами.
 
+## Production-развёртывание
+
+Полное руководство находится в `docs/DEPLOYMENT.md`. Готовые шаблоны размещены в `deploy/`:
+
+- `deploy/nginx/churchcms.conf.example`;
+- `deploy/php-fpm/churchcms.conf.example`;
+- `deploy/cron/churchcms.example`.
+
+Они рассчитаны на отдельного системного пользователя `churchcms`, HTTPS, отдельный PHP-FPM socket и фоновые задания с защитой от параллельного запуска.
+
 ## Документация
 
 Основные документы:
@@ -94,6 +106,7 @@ php bin/release-audit.php
 - `docs/ROADMAP.md` — этапы продукта и фактический прогресс;
 - `docs/BACKLOG.md` — детальный технический backlog;
 - `docs/ARCHITECTURE.md` — архитектура системы;
+- `docs/DEPLOYMENT.md` — production-развёртывание и post-deploy проверки;
 - `docs/THEMES.md` — темы и шаблоны;
 - `docs/DESIGN_SYSTEM.md` — визуальная система;
 - `docs/API.md` — HTTP API;
