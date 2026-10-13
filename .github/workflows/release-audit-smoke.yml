@@ -9,8 +9,13 @@ on:
       - 'bin/release-audit.php'
       - 'bin/migrate.php'
       - 'bin/theme-check.php'
+      - 'tools/admin-async-audit.php'
       - 'tools/performance/release-gate.php'
+      - 'themes/default/assets/js/admin-async.js'
+      - 'themes/default/assets/css/admin-async.css'
+      - 'themes/default/templates/layouts/admin.php'
       - 'docs/RELEASE_AUDIT.md'
+      - 'docs/UX_ASYNC_RELEASE_GATE.md'
       - '.github/workflows/release-audit-smoke.yml'
   pull_request:
     branches:
@@ -20,8 +25,13 @@ on:
       - 'bin/release-audit.php'
       - 'bin/migrate.php'
       - 'bin/theme-check.php'
+      - 'tools/admin-async-audit.php'
       - 'tools/performance/release-gate.php'
+      - 'themes/default/assets/js/admin-async.js'
+      - 'themes/default/assets/css/admin-async.css'
+      - 'themes/default/templates/layouts/admin.php'
       - 'docs/RELEASE_AUDIT.md'
+      - 'docs/UX_ASYNC_RELEASE_GATE.md'
       - '.github/workflows/release-audit-smoke.yml'
 
 permissions:
@@ -43,7 +53,12 @@ jobs:
           coverage: none
 
       - name: Проверить синтаксис аудита
-        run: php -l bin/release-audit.php
+        run: |
+          php -l bin/release-audit.php
+          php -l tools/admin-async-audit.php
+
+      - name: Проверить синтаксис AJAX-слоя
+        run: node --check themes/default/assets/js/admin-async.js
 
       - name: Выполнить базовый предрелизный аудит
         run: php bin/release-audit.php
