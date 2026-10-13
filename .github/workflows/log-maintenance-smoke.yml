@@ -1,0 +1,47 @@
+name: Проверка ротации журналов
+
+on:
+  pull_request:
+    paths:
+      - 'core/ErrorHandler.php'
+      - 'core/LogManager.php'
+      - 'bin/log-maintenance.php'
+      - 'tools/log-maintenance-smoke.php'
+      - '.github/workflows/log-maintenance-smoke.yml'
+      - 'docs/OBSERVABILITY.md'
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  log-maintenance:
+    runs-on: ubuntu-24.04
+    steps:
+      - name: Получить исходный код
+        uses: actions/checkout@v4
+
+      - name: Подготовить PHP 8.3
+        uses: shivammathur/setup-php@v2
+        with:
+          php-version: '8.3'
+          coverage: none
+
+      - name: Проверить синтаксис
+        run: |
+          set -euo pipefail
+          php -l core/LogManager.php
+          php -l core/ErrorHandler.php
+          php -l bin/log-maintenance.php
+          php -l tools/log-maintenance-smoke.php
+
+      - name: Проверить lifecycle журналов
+        run: php tools/log-maintenance-smoke.php
+
+      - name: Проверить CLI обслуживания
+        run: |
+          set -euo pipefail
+          mkdir -p storage/logs
+          printf 'проверка CLI\n' > storage/logs/error.log
+          php bin/log-maintenance.php --rotate --max-bytes=65536 --max-archives=2 --max-age-days=2
+          test -f storage/logs/error.log.*
