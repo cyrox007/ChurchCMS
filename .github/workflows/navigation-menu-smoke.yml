@@ -30,6 +30,7 @@ on:
       - 'themes/default/assets/css/public-*.css'
       - 'themes/default/theme.json'
       - 'tools/navigation-menu-smoke.php'
+      - 'tools/public-theme-smoke.php'
       - '.github/workflows/navigation-menu-smoke.yml'
   pull_request:
     branches:
@@ -60,6 +61,7 @@ on:
       - 'themes/default/assets/css/public-*.css'
       - 'themes/default/theme.json'
       - 'tools/navigation-menu-smoke.php'
+      - 'tools/public-theme-smoke.php'
       - '.github/workflows/navigation-menu-smoke.yml'
 
 permissions:
@@ -119,6 +121,7 @@ jobs:
           php -l themes/default/templates/worship/index.php
           php -l themes/default/templates/worship/show.php
           php -l tools/navigation-menu-smoke.php
+          php -l tools/public-theme-smoke.php
           php bin/migrate.php validate
           php bin/theme-check.php
 
@@ -148,4 +151,6 @@ jobs:
           php bin/migrate.php
 
       - name: Проверить цели, порядок и данные темы
-        run: php tools/navigation-menu-smoke.php
+        run: |
+          php tools/navigation-menu-smoke.php
+          php tools/public-theme-smoke.php
