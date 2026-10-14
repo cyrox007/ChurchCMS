@@ -1,106 +1,106 @@
-# Performance and scale
+# Производительность и масштабирование
 
-ChurchCMS is designed so public traffic can scale independently from editorial/background work.
+ChurchCMS устроен так, чтобы публичный трафик масштабировался независимо от редакционной и фоновой работы.
 
-The requirement is not a guessed "RPS number". Before 1.0, capacity is measured on documented reference hardware with a production-like dataset.
+Требование 1.0 — не придуманное число RPS, а измерение на зафиксированном эталонном оборудовании с production-подобным набором данных.
 
-## Request-path rules
+## Правила публичного запроса
 
-A public page request must not:
+Публичный запрос страницы не должен:
 
-- call VK/Telegram/MAX/YouTube/Rutube or another remote API;
-- run imports;
-- upload/transcode video;
-- dispatch syndication synchronously;
-- start an admin/user PHP session for anonymous visitors;
-- scan unbounded database result sets.
+- обращаться к VK/Telegram/MAX/YouTube/Rutube или другому внешнему API;
+- запускать импорт;
+- загружать или перекодировать видео;
+- синхронно отправлять syndication;
+- создавать PHP-сессию администратора/пользователя для анонимного посетителя;
+- сканировать неограниченные выборки БД.
 
-## Public page cache
+## Кэш публичных страниц
 
-Anonymous GET pages use a local full-page cache.
+Анонимные GET-страницы используют локальный full-page cache.
 
-Properties:
+Свойства:
 
-- cache only anonymous GET;
-- skip admin/API/feeds/health/assets/robots/sitemap;
-- skip Authorization requests;
-- skip requests carrying the admin session cookie;
-- skip query-string variants;
-- cache version included in the cache key;
-- one version bump invalidates all old entries without deleting/scanning cache files;
-- page responses expose public max-age and stale-while-revalidate.
+- кэшируются только анонимные GET;
+- исключаются admin/API/feeds/health/assets/robots/sitemap;
+- исключаются запросы с Authorization;
+- исключаются запросы с cookie административной сессии;
+- query-string варианты не кэшируются;
+- версия кэша входит в ключ;
+- изменение версии инвалидирует старые записи без удаления/сканирования файлов;
+- ответы содержат public max-age и stale-while-revalidate.
 
-The same HTTP headers make Nginx/CDN caching possible later.
+Те же HTTP-заголовки позволяют позднее подключить Nginx/CDN caching.
 
-## Cache invalidation
+## Инвалидация кэша
 
-The public cache version changes when:
+Версия публичного кэша меняется, когда:
 
-- a publication is updated;
-- a publication is published/withdrawn;
-- syndication/comment visibility settings change;
-- SEO/social metadata changes;
-- an approved comment becomes publicly visible.
+- публикация изменена;
+- публикация опубликована или снята;
+- изменились настройки syndication/видимости комментариев;
+- изменились SEO/social metadata;
+- одобренный комментарий стал публичным.
 
-## Assets
+## Статические ресурсы
 
-Theme asset URLs include theme version and are served with:
+URL ресурсов темы содержит версию темы и обслуживается с:
 
-```
+```text
 Cache-Control: public, max-age=31536000, immutable
 ```
 
-A theme version bump changes the asset URL.
+Повышение версии темы меняет URL ресурса.
 
-## Database
+## База данных
 
-Public queries must:
+Публичные запросы должны:
 
-- use prepared statements;
-- use explicit limits;
-- use indexes matching publication status/date/site filters;
-- avoid N+1 patterns as domains expand.
+- использовать prepared statements;
+- иметь явные ограничения выборки;
+- использовать индексы, соответствующие status/date/site фильтрам публикаций;
+- не создавать N+1 по мере развития доменов.
 
-A query-plan audit with production-scale fixtures is required before 1.0.
+Query-plan аудит с production-масштабным fixture обязателен перед 1.0.
 
-## Background workloads
+## Фоновые нагрузки
 
-These run outside public web requests:
+Вне публичных web-запросов выполняются:
 
-- external channel publication;
-- inbound channel synchronization;
-- RSS/partner export materialization if needed;
-- media derivatives;
-- video upload/transcode;
-- imports;
-- scheduled publications;
-- search indexing.
+- отправка во внешние каналы;
+- синхронизация входящих каналов;
+- материализация RSS/partner export при необходимости;
+- Media derivatives;
+- загрузка/перекодирование видео;
+- импорты;
+- отложенные публикации;
+- поисковая индексация;
+- Media lifecycle и архивирование.
 
-## Release load test
+## Релизный нагрузочный тест
 
-Before 1.0 create a repeatable load scenario covering:
+Перед 1.0 повторяемый сценарий обязан покрывать:
 
-- cached home page;
-- cached publication detail;
-- publication archive;
-- cache-miss publication detail;
-- public API;
-- comment submission at controlled rates.
+- кэшированную главную;
+- кэшированный архив публикаций;
+- кэшированную страницу материала;
+- cache-miss страницы материала;
+- публичный API;
+- отправку комментариев с контролируемой частотой.
 
-Record:
+Фиксируются:
 
-- hardware;
-- PHP-FPM workers;
-- DB settings;
-- cache state;
+- оборудование;
+- число PHP-FPM workers;
+- настройки БД;
+- состояние кэша;
 - requests/sec;
 - p50/p95/p99 latency;
 - error rate;
-- DB connection/query load;
-- memory/CPU.
+- нагрузка соединений/запросов БД;
+- память и CPU.
 
-Release thresholds are set from pilot requirements and reference hardware.
-
+Релизные пороги устанавливаются только по результатам пилотных требований и измерений на эталонном оборудовании.
 
 ## Репрезентативный набор данных
 
@@ -142,7 +142,6 @@ php tools/performance/benchmark.php --iterations=200
 
 Это микробенчмарк БД/репозитория, а не замена HTTP load test. Числовые release-пороги намеренно не зафиксированы до выбора эталонного оборудования и запуска HTTP-сценариев.
 
-
 ## Query-plan аудит
 
 После создания полного benchmark-набора (10 000 публикаций / 30 000 комментариев) выполняется:
@@ -163,19 +162,21 @@ php tools/performance/query-plan.php
 
 CI выполняет проверку на PostgreSQL 16 и MySQL 8.4 с полным репрезентативным набором. Если критический запрос перестаёт использовать ожидаемый индекс, workflow завершается ошибкой.
 
-
 ## HTTP load-сценарий
 
-Dependency-free runner находится в `tools/performance/http-load.php`. Он использует стандартные PHP streams и не добавляет runtime-зависимость ChurchCMS.
+Runner находится в `tools/performance/http-load.php`. Он использует стандартные PHP streams и не добавляет runtime-зависимость ChurchCMS.
 
-Сценарий распределяет запросы между:
+Обычная смесь GET-запросов содержит:
 
-- кешированной главной страницей;
-- кешированным архивом публикаций;
-- кешированной страницей материала;
-- намеренно некешируемой страницей материала с query string.
+- `home_cached` — кэшированная главная;
+- `publications_cached` — кэшированный архив;
+- `publication_detail_cached` — кэшированный материал;
+- `publication_detail_cache_miss` — материал с уникальным query string;
+- `public_api` — `/api/v1/publications`, который намеренно не проходит через full-page cache.
 
-Пример для локального Nginx/PHP-FPM стенда:
+Запись комментариев включается отдельно параметром `--comment-every=N`. Каждый N-й запрос становится `comment_submit`. Runner предварительно получает настоящий `public_form_token` со страницы публикации и отправляет обычный form POST. Чтобы не превращать проверку в тест rate limiter одного URL, комментарии циклически распределяются между `benchmark-000001 ... benchmark-N` через `--comment-slugs=N`.
+
+Пример обязательного эталонного запуска:
 
 ```bash
 php tools/performance/http-load.php \
@@ -183,12 +184,19 @@ php tools/performance/http-load.php \
   --requests=10000 \
   --concurrency=50 \
   --warmup=100 \
-  --slug=benchmark-000001
+  --slug=benchmark-000001 \
+  --comment-every=100 \
+  --comment-slugs=10000 \
+  > /path/http-load.json
 ```
 
-Runner разрешает только localhost, loopback и приватные IPv4-адреса, чтобы инструмент релизной проверки нельзя было случайно направить на произвольный публичный сайт.
+Частота `--comment-every=100` в примере означает около 1% write-запросов. Это **не универсальная релизная константа**: перед финальным замером профиль фиксируется согласно ожидаемой реальной нагрузке. Нельзя повышать долю POST только ради получения красивой цифры или искусственно занижать её ради прохождения gate.
 
-Публичные контроллеры текущего MVP обслуживают `site_key=default`, поэтому disposable load-стенд получает отдельное усиленное подтверждение:
+`--comment-every=0` (значение по умолчанию) отключает запись комментариев. Такой режим подходит для локальной диагностики чтения, но **не является полным эталонным сценарием 1.0**.
+
+Runner принимает только `http://` и разрешает исключительно localhost, loopback и приватные IPv4-адреса. Это предохранитель: релизный инструмент нельзя случайно направить на чужой или рабочий публичный сайт. Реальный эталонный стенд должен быть доступен по приватному адресу либо запускаться локально на тестируемом сервере.
+
+Публичные контроллеры текущего MVP обслуживают `site_key=default`, поэтому одноразовый load-стенд получает отдельное усиленное подтверждение:
 
 ```bash
 php tools/performance/seed.php \
@@ -201,4 +209,4 @@ php tools/performance/seed.php \
 
 Режим `site_key=default` всегда требует `--reset` и отдельную строку подтверждения. Его нельзя использовать на рабочей базе.
 
-В CI сценарий запускается на временном PHP built-in server только как функциональный smoke конкурентных HTTP-запросов. Его цифры не являются release benchmark: реальные p50/p95/p99/RPS фиксируются на выбранном Nginx/PHP-FPM эталонном стенде.
+В CI сценарий запускается на временном PHP built-in server только как функциональный smoke конкурентных HTTP-запросов. Smoke обязательно доказывает наличие `public_api` и `comment_submit`, но его p50/p95/p99/RPS **не являются** релизным benchmark. Реальные показатели и пороги фиксируются только на выбранном Nginx/PHP-FPM эталонном стенде.
