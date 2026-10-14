@@ -1,0 +1,232 @@
+name: Проверка рубрикатора публикаций и админки
+
+on:
+  push:
+    branches:
+      - develop
+      - main
+    paths:
+      - 'modules/publications/PublicationRubricRepository.php'
+      - 'modules/publications/PublicationRubricsAdminController.php'
+      - 'modules/publications/PublicationTaxonomyRepository.php'
+      - 'modules/publications/migrations/20261014_180000_add_publication_rubric_hierarchy.php'
+      - 'modules/publications/runtime.php'
+      - 'themes/default/templates/admin/publications/rubrics.php'
+      - 'themes/default/templates/admin/sunday-school.php'
+      - 'themes/default/templates/layouts/admin.php'
+      - 'themes/default/assets/css/admin-controls.css'
+      - 'themes/default/assets/js/admin-editor.js'
+      - '.github/workflows/publication-rubrics-smoke.yml'
+  pull_request:
+    branches:
+      - develop
+      - main
+    paths:
+      - 'modules/publications/PublicationRubricRepository.php'
+      - 'modules/publications/PublicationRubricsAdminController.php'
+      - 'modules/publications/PublicationTaxonomyRepository.php'
+      - 'modules/publications/migrations/20261014_180000_add_publication_rubric_hierarchy.php'
+      - 'modules/publications/runtime.php'
+      - 'themes/default/templates/admin/publications/rubrics.php'
+      - 'themes/default/templates/admin/sunday-school.php'
+      - 'themes/default/templates/layouts/admin.php'
+      - 'themes/default/assets/css/admin-controls.css'
+      - 'themes/default/assets/js/admin-editor.js'
+      - '.github/workflows/publication-rubrics-smoke.yml'
+
+permissions:
+  contents: read
+
+jobs:
+  publication-rubrics:
+    runs-on: ubuntu-latest
+
+    services:
+      postgres:
+        image: postgres:16
+        env:
+          POSTGRES_DB: churchcms
+          POSTGRES_USER: churchcms
+          POSTGRES_PASSWORD: churchcms
+        ports:
+          - 5432:5432
+        options: >-
+          --health-cmd pg_isready
+          --health-interval 10s
+          --health-timeout 5s
+          --health-retries 5
+
+    steps:
+      - name: Получить исходный код
+        uses: actions/checkout@v4
+
+      - name: Подготовить PHP 8.3
+        uses: shivammathur/setup-php@v2
+        with:
+          php-version: '8.3'
+          extensions: pdo, pdo_pgsql, mbstring
+          coverage: none
+
+      - name: Проверить синтаксис и контракт интерфейса
+        shell: bash
+        run: |
+          set -euo pipefail
+          php -l modules/publications/PublicationRubricRepository.php
+          php -l modules/publications/PublicationRubricsAdminController.php
+          php -l modules/publications/PublicationTaxonomyRepository.php
+          php -l modules/publications/migrations/20261014_180000_add_publication_rubric_hierarchy.php
+          php -l modules/publications/runtime.php
+          php -l themes/default/templates/admin/publications/rubrics.php
+          php -l themes/default/templates/admin/sunday-school.php
+          php -l themes/default/templates/layouts/admin.php
+          node --check themes/default/assets/js/admin-editor.js
+          grep -q 'admin-frame.admin-frame--collapsed' themes/default/assets/css/admin-controls.css
+          grep -q 'admin-nav__icon' themes/default/templates/layouts/admin.php
+          grep -q 'Карточка воскресной школы' themes/default/templates/admin/sunday-school.php
+          grep -q 'data-rubric-picker' themes/default/assets/js/admin-editor.js || grep -q 'rubric-picker' themes/default/assets/js/admin-editor.js
+          php bin/migrate.php validate
+          php bin/theme-check.php
+
+      - name: Подготовить тестовую установку
+        shell: bash
+        run: |
+          set -euo pipefail
+          mkdir -p storage/cache storage/logs storage/sessions storage/rate-limits storage/uploads
+          cat > config/local.php <<'PHP'
+          <?php
+
+          declare(strict_types=1);
+
+          return [
+              'installation' => [
+                  'completed' => true,
+              ],
+              'security' => [
+                  'secret_key' => base64_encode(str_repeat('r', 32)),
+              ],
+              'database' => [
+                  'driver' => 'pgsql',
+                  'host' => '127.0.0.1',
+                  'port' => 5432,
+                  'database' => 'churchcms',
+                  'username' => 'churchcms',
+                  'password' => 'churchcms',
+              ],
+              'syndication' => [
+                  'site_url' => 'https://example.test',
+              ],
+          ];
+          PHP
+          php bin/migrate.php
+
+      - name: Проверить жизненный цикл рубрик
+        shell: bash
+        run: |
+          set -euo pipefail
+          php <<'PHP'
+          <?php
+
+          declare(strict_types=1);
+
+          require 'core.php';
+
+          use ChurchCMS\Modules\Publications\PublicationRepository;
+          use ChurchCMS\Modules\Publications\PublicationRubricRepository;
+          use ChurchCMS\Modules\Publications\PublicationService;
+          use ChurchCMS\Modules\Publications\PublicationTaxonomyRepository;
+          use ChurchCMS\Modules\Publications\PublicationType;
+          use InvalidArgumentException;
+
+          $rubrics = PublicationRubricRepository::fromDatabase();
+          $rootId = $rubrics->create(
+              'Приходская жизнь',
+              null,
+              10,
+          );
+          $childId = $rubrics->create(
+              'Богослужения',
+              $rootId,
+              20,
+          );
+
+          $tree = $rubrics->tree();
+          if (
+              count($tree) !== 2
+              || $tree[0]['name'] !== 'Приходская жизнь'
+              || $tree[0]['depth'] !== 0
+              || $tree[1]['name'] !== 'Богослужения'
+              || $tree[1]['depth'] !== 1
+          ) {
+              fwrite(STDERR, "Иерархия рубрик построена неверно.\n");
+              exit(1);
+          }
+
+          try {
+              $rubrics->update(
+                  $rootId,
+                  'Приходская жизнь',
+                  $childId,
+                  10,
+              );
+              fwrite(STDERR, "Кольцевая вложенность рубрик не была отклонена.\n");
+              exit(1);
+          } catch (InvalidArgumentException) {
+          }
+
+          $service = PublicationService::fromDatabase();
+          $publicationPublicId = $service->createDraft(
+              title: 'Проверка рубрик',
+              type: PublicationType::News,
+              excerpt: 'Описание',
+              bodyHtml: '<p>Текст</p>',
+              categoryNames: [
+                  'Богослужения',
+                  'Временная категория',
+              ],
+              tagNames: [],
+          );
+
+          $publication = PublicationRepository::fromDatabase()
+              ->findByPublicId($publicationPublicId);
+          if ($publication === null) {
+              fwrite(STDERR, "Тестовая публикация не найдена.\n");
+              exit(1);
+          }
+
+          $tree = $rubrics->tree();
+          $child = null;
+          foreach ($tree as $rubric) {
+              if ($rubric['public_id'] === $childId) {
+                  $child = $rubric;
+                  break;
+              }
+          }
+
+          if ($child === null || $child['usage_count'] !== 1) {
+              fwrite(STDERR, "Назначение рубрики публикации не отражено в счётчике.\n");
+              exit(1);
+          }
+
+          PublicationTaxonomyRepository::fromDatabase()
+              ->replaceForPublication(
+                  $publication->id,
+                  'default',
+                  [],
+                  [],
+              );
+
+          $pdo = ChurchCMS\Core\DatabaseManager::getInstance()->connection();
+          $managed = $pdo->query(
+              "SELECT COUNT(*) FROM publication_categories WHERE slug = 'bogosluzheniya' AND is_managed = 1"
+          )->fetchColumn();
+          $transient = $pdo->query(
+              "SELECT COUNT(*) FROM publication_categories WHERE slug = 'vremennaya-kategoriya'"
+          )->fetchColumn();
+
+          if ((int) $managed !== 1 || (int) $transient !== 0) {
+              fwrite(STDERR, "Очистка таксономии удалила рубрику или сохранила временную категорию.\n");
+              exit(1);
+          }
+
+          echo "Жизненный цикл рубрикатора проверен\n";
+          PHP
