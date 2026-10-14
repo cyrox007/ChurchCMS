@@ -192,7 +192,7 @@ final class PublicationTaxonomyRepository
         ]);
 
         if ($names === []) {
-            $this->cleanupOrphans($kind, $siteKey);
+            $this->cleanupTransientTerms($kind, $siteKey);
             return;
         }
 
@@ -217,6 +217,17 @@ final class PublicationTaxonomyRepository
                 'publication_id' => $publicationId,
                 'term_id' => $termId,
             ]);
+        }
+
+        $this->cleanupTransientTerms($kind, $siteKey);
+    }
+
+    private function cleanupTransientTerms(
+        string $kind,
+        string $siteKey,
+    ): void {
+        if ($kind !== 'tag') {
+            return;
         }
 
         $this->cleanupOrphans($kind, $siteKey);
