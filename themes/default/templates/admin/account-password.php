@@ -57,10 +57,10 @@ $error = trim((string) ($passwordError ?? ''));
                 name="new_password"
                 autocomplete="new-password"
                 required
-                minlength="12"
+                minlength="8"
                 maxlength="4096"
             >
-            <small>Не менее 12 символов. Новый пароль должен отличаться от текущего.</small>
+            <small>Не менее 8 символов. Новый пароль должен отличаться от текущего.</small>
         </label>
 
         <label class="field">
@@ -70,7 +70,7 @@ $error = trim((string) ($passwordError ?? ''));
                 name="new_password_confirm"
                 autocomplete="new-password"
                 required
-                minlength="12"
+                minlength="8"
                 maxlength="4096"
             >
         </label>
