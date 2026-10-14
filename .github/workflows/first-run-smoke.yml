@@ -57,5 +57,6 @@ jobs:
           grep -Eiq '^Location: /install\.php\r?$' /tmp/churchcms-first-run.headers
 
           curl --fail --silent --show-error \
-            http://127.0.0.1:18080/install.php \
-            | grep -q 'Установка ChurchCMS'
+            --output /tmp/churchcms-installer.html \
+            http://127.0.0.1:18080/install.php
+          grep -q 'Установка ChurchCMS' /tmp/churchcms-installer.html
