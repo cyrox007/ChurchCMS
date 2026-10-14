@@ -9,6 +9,8 @@ $options = getopt('', [
     'concurrency::',
     'warmup::',
     'slug::',
+    'comment-every::',
+    'comment-slugs::',
 ]);
 
 $base = rtrim((string) ($options['base'] ?? ''), '/');
@@ -16,6 +18,8 @@ $requests = max(3, min(100000, (int) ($options['requests'] ?? 1000)));
 $concurrency = max(1, min(500, (int) ($options['concurrency'] ?? 20)));
 $warmup = max(0, min(5000, (int) ($options['warmup'] ?? 30)));
 $slug = trim((string) ($options['slug'] ?? 'benchmark-000001'));
+$commentEvery = max(0, min(100000, (int) ($options['comment-every'] ?? 0)));
+$commentSlugs = max(1, min(100000, (int) ($options['comment-slugs'] ?? 100)));
 
 if ($base === '' || preg_match('/^[a-z0-9]+(?:-[a-z0-9]+)*$/D', $slug) !== 1) {
     fwrite(STDERR, "Укажите --base=http://локальный-хост[:порт] и корректный --slug.\n");
@@ -23,9 +27,26 @@ if ($base === '' || preg_match('/^[a-z0-9]+(?:-[a-z0-9]+)*$/D', $slug) !== 1) {
 }
 
 $target = parseTarget($base);
+$commentToken = null;
+
+if ($commentEvery > 0) {
+    $commentToken = fetchCommentToken($target, $slug);
+    if ($commentToken === null) {
+        fwrite(STDERR, "Не удалось получить public_form_token для контролируемой отправки комментариев.\n");
+        exit(2);
+    }
+}
 
 if ($warmup > 0) {
-    $warmupResult = runScenario($target, $warmup, min($concurrency, $warmup), $slug);
+    $warmupResult = runScenario(
+        target: $target,
+        requests: $warmup,
+        concurrency: min($concurrency, $warmup),
+        slug: $slug,
+        commentEvery: 0,
+        commentSlugs: $commentSlugs,
+        commentToken: null,
+    );
     if ($warmupResult['errors'] > 0) {
         fwrite(STDERR, "Прогрев HTTP-сценария завершился ошибками.\n");
         echo json_encode($warmupResult, JSON_UNESCAPED_UNICODE | JSON_PRETTY_PRINT) . PHP_EOL;
@@ -33,7 +54,15 @@ if ($warmup > 0) {
     }
 }
 
-$result = runScenario($target, $requests, min($concurrency, $requests), $slug);
+$result = runScenario(
+    target: $target,
+    requests: $requests,
+    concurrency: min($concurrency, $requests),
+    slug: $slug,
+    commentEvery: $commentEvery,
+    commentSlugs: $commentSlugs,
+    commentToken: $commentToken,
+);
 echo json_encode(
     $result,
     JSON_UNESCAPED_UNICODE | JSON_UNESCAPED_SLASHES | JSON_PRETTY_PRINT | JSON_THROW_ON_ERROR,
@@ -42,14 +71,14 @@ echo json_encode(
 exit($result['errors'] === 0 ? 0 : 1);
 
 /**
- * @return array{host:string,port:int,base_path:string,host_header:string}
+ * @return array{host:string,port:int,base_path:string,host_header:string,origin:string}
  */
 function parseTarget(string $base): array
 {
     $parts = parse_url($base);
 
     if (!is_array($parts) || ($parts['scheme'] ?? null) !== 'http') {
-        fwrite(STDERR, "Dependency-free load-сценарий работает только через локальный HTTP.\n");
+        fwrite(STDERR, "Нагрузочный сценарий без внешних зависимостей работает только через локальный HTTP.\n");
         exit(2);
     }
 
@@ -57,7 +86,7 @@ function parseTarget(string $base): array
     if (!allowedHost($host)) {
         fwrite(
             STDERR,
-            "Load-сценарий разрешён только для localhost, loopback или приватного IPv4-адреса.\n",
+            "Нагрузочный сценарий разрешён только для localhost, loopback или приватного IPv4-адреса.\n",
         );
         exit(2);
     }
@@ -76,6 +105,7 @@ function parseTarget(string $base): array
         'port' => $port,
         'base_path' => $basePath,
         'host_header' => $hostHeader,
+        'origin' => 'http://' . $hostHeader,
     ];
 }
 
@@ -99,11 +129,48 @@ function allowedHost(string $host): bool
 }
 
 /**
- * @param array{host:string,port:int,base_path:string,host_header:string} $target
+ * @param array{host:string,port:int,base_path:string,host_header:string,origin:string} $target
+ */
+function fetchCommentToken(array $target, string $slug): ?string
+{
+    $scenario = [
+        'label' => 'comment_token_preflight',
+        'path' => '/publications/' . rawurlencode($slug),
+        'method' => 'GET',
+        'body' => '',
+        'headers' => [],
+        'expected_statuses' => [200],
+    ];
+    $response = requestSynchronously($target, $scenario);
+
+    if ($response === null || responseStatus($response) !== 200) {
+        return null;
+    }
+
+    if (preg_match(
+        '/name=["\']public_form_token["\'][^>]*value=["\']([^"\']+)["\']/i',
+        $response,
+        $match,
+    ) !== 1) {
+        return null;
+    }
+
+    return html_entity_decode($match[1], ENT_QUOTES | ENT_HTML5, 'UTF-8');
+}
+
+/**
+ * @param array{host:string,port:int,base_path:string,host_header:string,origin:string} $target
  * @return array<string,mixed>
  */
-function runScenario(array $target, int $requests, int $concurrency, string $slug): array
-{
+function runScenario(
+    array $target,
+    int $requests,
+    int $concurrency,
+    string $slug,
+    int $commentEvery,
+    int $commentSlugs,
+    ?string $commentToken,
+): array {
     $started = hrtime(true);
     $nextRequest = 0;
     $completed = 0;
@@ -115,7 +182,13 @@ function runScenario(array $target, int $requests, int $concurrency, string $slu
 
     while ($completed < $requests) {
         while (count($active) < $concurrency && $nextRequest < $requests) {
-            $scenario = scenarioFor($nextRequest, $slug);
+            $scenario = scenarioFor(
+                index: $nextRequest,
+                slug: $slug,
+                commentEvery: $commentEvery,
+                commentSlugs: $commentSlugs,
+                commentToken: $commentToken,
+            );
             $connection = openRequest($target, $scenario);
 
             if ($connection === null) {
@@ -147,7 +220,7 @@ function runScenario(array $target, int $requests, int $concurrency, string $slu
                 fclose($connection['stream']);
             }
 
-            throw new RuntimeException('Не удалось ожидать ответы HTTP-сценария.');
+            throw new RuntimeException('Не удалось дождаться ответов нагрузочного HTTP-сценария.');
         }
 
         if ($selected === 0) {
@@ -182,7 +255,7 @@ function runScenario(array $target, int $requests, int $concurrency, string $slu
             $latenciesByScenario[$label][] = $latencyMs;
             $statusCounts[(string) $status] = ($statusCounts[(string) $status] ?? 0) + 1;
 
-            if ($status !== 200) {
+            if (!in_array($status, $connection['scenario']['expected_statuses'], true)) {
                 $errors++;
             }
 
@@ -203,6 +276,8 @@ function runScenario(array $target, int $requests, int $concurrency, string $slu
     return [
         'requests' => $requests,
         'concurrency' => $concurrency,
+        'comments_enabled' => $commentEvery > 0,
+        'comment_every' => $commentEvery,
         'errors' => $errors,
         'error_rate' => round($errors / $requests, 6),
         'elapsed_seconds' => round($elapsedSeconds, 3),
@@ -214,67 +289,98 @@ function runScenario(array $target, int $requests, int $concurrency, string $slu
 }
 
 /**
- * @return array{label:string,path:string}
+ * @return array{label:string,path:string,method:string,body:string,headers:list<string>,expected_statuses:list<int>}
  */
-function scenarioFor(int $index, string $slug): array
-{
+function scenarioFor(
+    int $index,
+    string $slug,
+    int $commentEvery,
+    int $commentSlugs,
+    ?string $commentToken,
+): array {
+    if ($commentEvery > 0 && $commentToken !== null && ($index + 1) % $commentEvery === 0) {
+        return commentScenario($index, $commentEvery, $commentSlugs, $commentToken);
+    }
+
     return match ($index % 10) {
-        0, 1 => ['label' => 'home_cached', 'path' => '/'],
-        2, 3, 4 => ['label' => 'publications_cached', 'path' => '/publications'],
-        5, 6, 7 => [
-            'label' => 'publication_detail_cached',
-            'path' => '/publications/' . rawurlencode($slug),
-        ],
-        default => [
-            'label' => 'publication_detail_cache_miss',
-            'path' => '/publications/' . rawurlencode($slug) . '?load-test=1',
-        ],
+        0, 1 => getScenario('home_cached', '/'),
+        2, 3 => getScenario('publications_cached', '/publications'),
+        4, 5, 6 => getScenario(
+            'publication_detail_cached',
+            '/publications/' . rawurlencode($slug),
+        ),
+        7 => getScenario(
+            'publication_detail_cache_miss',
+            '/publications/' . rawurlencode($slug) . '?load-test=' . ($index + 1),
+        ),
+        default => getScenario('public_api', '/api/v1/publications'),
     };
 }
 
 /**
- * @param array{host:string,port:int,base_path:string,host_header:string} $target
- * @param array{label:string,path:string} $scenario
- * @return array{id:int,stream:resource,started:int,buffer:string,scenario:array{label:string,path:string}}|null
+ * @return array{label:string,path:string,method:string,body:string,headers:list<string>,expected_statuses:list<int>}
+ */
+function getScenario(string $label, string $path): array
+{
+    return [
+        'label' => $label,
+        'path' => $path,
+        'method' => 'GET',
+        'body' => '',
+        'headers' => [],
+        'expected_statuses' => [200],
+    ];
+}
+
+/**
+ * @return array{label:string,path:string,method:string,body:string,headers:list<string>,expected_statuses:list<int>}
+ */
+function commentScenario(
+    int $index,
+    int $commentEvery,
+    int $commentSlugs,
+    string $commentToken,
+): array {
+    $sequence = intdiv($index + 1, $commentEvery);
+    $publicationNumber = (($sequence - 1) % $commentSlugs) + 1;
+    $slug = sprintf('benchmark-%06d', $publicationNumber);
+    $body = http_build_query([
+        'display_name' => 'Нагрузочный тест',
+        'email' => '',
+        'body_text' => 'Контролируемый комментарий нагрузочного сценария ' . $sequence,
+        'public_form_token' => $commentToken,
+    ], '', '&', PHP_QUERY_RFC3986);
+
+    return [
+        'label' => 'comment_submit',
+        'path' => '/publications/' . rawurlencode($slug) . '/comments',
+        'method' => 'POST',
+        'body' => $body,
+        'headers' => ['Content-Type: application/x-www-form-urlencoded'],
+        'expected_statuses' => [302, 303],
+    ];
+}
+
+/**
+ * @param array{host:string,port:int,base_path:string,host_header:string,origin:string} $target
+ * @param array{label:string,path:string,method:string,body:string,headers:list<string>,expected_statuses:list<int>} $scenario
+ * @return array{id:int,stream:resource,started:int,buffer:string,scenario:array}|null
  */
 function openRequest(array $target, array $scenario): ?array
 {
-    $errno = 0;
-    $error = '';
-    $started = hrtime(true);
-    $stream = @stream_socket_client(
-        'tcp://' . $target['host'] . ':' . $target['port'],
-        $errno,
-        $error,
-        3,
-        STREAM_CLIENT_CONNECT,
-    );
-
-    if (!is_resource($stream)) {
+    $stream = openSocket($target);
+    if ($stream === null) {
         return null;
     }
 
-    $path = ($target['base_path'] !== '' ? $target['base_path'] : '') . $scenario['path'];
-    $request = "GET {$path} HTTP/1.1\r\n"
-        . 'Host: ' . $target['host_header'] . "\r\n"
-        . "User-Agent: ChurchCMS-LoadTest/1\r\n"
-        . "Accept: text/html,application/json;q=0.9,*/*;q=0.1\r\n"
-        . "Connection: close\r\n\r\n";
-
-    stream_set_timeout($stream, 10);
-
-    $offset = 0;
-    $length = strlen($request);
-    while ($offset < $length) {
-        $written = fwrite($stream, substr($request, $offset));
-        if ($written === false || $written === 0) {
-            fclose($stream);
-            return null;
-        }
-
-        $offset += $written;
+    $started = hrtime(true);
+    $request = buildHttpRequest($target, $scenario);
+    if (!writeRequest($stream, $request)) {
+        fclose($stream);
+        return null;
     }
 
+    stream_set_timeout($stream, 10);
     stream_set_blocking($stream, false);
 
     return [
@@ -287,7 +393,96 @@ function openRequest(array $target, array $scenario): ?array
 }
 
 /**
- * @param array<int,array{id:int,stream:resource,started:int,buffer:string,scenario:array{label:string,path:string}}> $active
+ * @param array{host:string,port:int,base_path:string,host_header:string,origin:string} $target
+ * @param array{label:string,path:string,method:string,body:string,headers:list<string>,expected_statuses:list<int>} $scenario
+ */
+function requestSynchronously(array $target, array $scenario): ?string
+{
+    $stream = openSocket($target);
+    if ($stream === null) {
+        return null;
+    }
+
+    if (!writeRequest($stream, buildHttpRequest($target, $scenario))) {
+        fclose($stream);
+        return null;
+    }
+
+    stream_set_timeout($stream, 10);
+    $response = stream_get_contents($stream);
+    fclose($stream);
+
+    return is_string($response) ? $response : null;
+}
+
+/**
+ * @param array{host:string,port:int,base_path:string,host_header:string,origin:string} $target
+ * @return resource|null
+ */
+function openSocket(array $target)
+{
+    $errno = 0;
+    $error = '';
+    $stream = @stream_socket_client(
+        'tcp://' . $target['host'] . ':' . $target['port'],
+        $errno,
+        $error,
+        3,
+        STREAM_CLIENT_CONNECT,
+    );
+
+    return is_resource($stream) ? $stream : null;
+}
+
+/**
+ * @param array{host:string,port:int,base_path:string,host_header:string,origin:string} $target
+ * @param array{label:string,path:string,method:string,body:string,headers:list<string>,expected_statuses:list<int>} $scenario
+ */
+function buildHttpRequest(array $target, array $scenario): string
+{
+    $path = ($target['base_path'] !== '' ? $target['base_path'] : '') . $scenario['path'];
+    $headers = [
+        $scenario['method'] . ' ' . $path . ' HTTP/1.1',
+        'Host: ' . $target['host_header'],
+        'User-Agent: ChurchCMS-LoadTest/1',
+        'Accept: text/html,application/json;q=0.9,*/*;q=0.1',
+        'Origin: ' . $target['origin'],
+        'Connection: close',
+    ];
+
+    foreach ($scenario['headers'] as $header) {
+        $headers[] = $header;
+    }
+
+    if ($scenario['body'] !== '') {
+        $headers[] = 'Content-Length: ' . strlen($scenario['body']);
+    }
+
+    return implode("\r\n", $headers) . "\r\n\r\n" . $scenario['body'];
+}
+
+/**
+ * @param resource $stream
+ */
+function writeRequest($stream, string $request): bool
+{
+    $offset = 0;
+    $length = strlen($request);
+
+    while ($offset < $length) {
+        $written = fwrite($stream, substr($request, $offset));
+        if ($written === false || $written === 0) {
+            return false;
+        }
+
+        $offset += $written;
+    }
+
+    return true;
+}
+
+/**
+ * @param array<int,array{id:int,stream:resource,started:int,buffer:string,scenario:array}> $active
  */
 function expireSlowRequests(array &$active, int &$completed, int &$errors): void
 {
