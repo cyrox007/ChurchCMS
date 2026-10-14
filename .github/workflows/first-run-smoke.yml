@@ -53,10 +53,18 @@ jobs:
             --output /dev/null \
             http://127.0.0.1:18080/
 
+          echo 'Ответ точки входа:'
+          cat /tmp/churchcms-first-run.headers
           grep -Eq '^HTTP/[0-9.]+ 302' /tmp/churchcms-first-run.headers
           grep -Eiq '^Location: /install\.php\r?$' /tmp/churchcms-first-run.headers
 
           curl --fail --silent --show-error \
             --output /tmp/churchcms-installer.html \
             http://127.0.0.1:18080/install.php
-          grep -q 'Установка ChurchCMS' /tmp/churchcms-installer.html
+
+          if ! grep -q 'Установка ChurchCMS' /tmp/churchcms-installer.html; then
+            echo 'Страница установщика не содержит ожидаемый заголовок.'
+            cat /tmp/churchcms-first-run.log
+            head -n 40 /tmp/churchcms-installer.html
+            exit 1
+          fi
