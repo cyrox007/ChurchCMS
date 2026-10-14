@@ -115,7 +115,9 @@ jobs:
           php -l themes/default/templates/publications/index.php
           php -l themes/default/templates/publications/show.php
           php -l themes/default/templates/events/index.php
+          php -l themes/default/templates/events/show.php
           php -l themes/default/templates/worship/index.php
+          php -l themes/default/templates/worship/show.php
           php -l tools/navigation-menu-smoke.php
           php bin/migrate.php validate
           php bin/theme-check.php
