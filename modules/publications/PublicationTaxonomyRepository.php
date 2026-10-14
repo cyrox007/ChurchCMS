@@ -226,10 +226,6 @@ final class PublicationTaxonomyRepository
         string $kind,
         string $siteKey,
     ): void {
-        if ($kind !== 'tag') {
-            return;
-        }
-
         $this->cleanupOrphans($kind, $siteKey);
     }
 
@@ -240,10 +236,14 @@ final class PublicationTaxonomyRepository
         [$termTable, $linkTable, $foreignKey] = self::tables(
             $kind,
         );
+        $managedClause = $kind === 'category'
+            ? 'AND is_managed = 0'
+            : '';
 
         $statement = $this->pdo->prepare(
             "DELETE FROM {$termTable}
              WHERE site_key = :site_key
+               {$managedClause}
                AND NOT EXISTS (
                     SELECT 1
                     FROM {$linkTable} l
