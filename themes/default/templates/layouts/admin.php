@@ -147,6 +147,7 @@ $navigation = is_array($adminNavigation ?? null)
 ></div>
 <script src="<?= $theme->e($theme->asset('js/admin-shell.js')) ?>" defer></script>
 <script src="<?= $theme->e($theme->asset('js/admin-async.js')) ?>" defer></script>
+<script src="<?= $theme->e($theme->asset('js/admin-disclosure.js')) ?>" defer></script>
 <script src="<?= $theme->e($theme->asset('js/admin-editor.js')) ?>" defer></script>
 </body>
 </html>
