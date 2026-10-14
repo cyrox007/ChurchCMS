@@ -163,6 +163,12 @@
 - [x] image metadata: безопасные `pixel_width/pixel_height` из проверенного blob без сохранения EXIF/GPS;
 - [x] usage references: атомарный реестр `asset → consumer/type/slot`, capability для модулей и защита от архивации используемого asset;
 - [x] derivatives;
+- [x] экономичное долговременное хранение Media;
+  - [x] content-addressed дедупликация blob по SHA-256;
+  - [x] WebP-веб-версии и пакетная оптимизация существующего фотоархива;
+  - [x] S3-compatible архив оригиналов с проверкой размера и SHA-256;
+  - [x] восстановление архивного blob в локальный cache без изменения публичного URL;
+  - [x] dry-run очистки/архивации, отчёт использования и прогноз заполнения диска;
 - [x] публичная выдача локальных image/document blob и detail API с hash-versioned URL;
 - [x] HTTP Range/streaming для public audio/video;
 - [x] resumable binary upload pipeline для outbound YouTube/Rutube;
@@ -194,8 +200,10 @@
 - [x] syndication export log;
 - [x] target-specific title/excerpt/image overrides;
 - [x] Rambler validator;
-- [ ] СМИ2 adapter — заблокирован до получения актуальной партнёрской спецификации;
-- [ ] News Mail adapter — заблокирован до получения onboarding-контракта;
+- [x] СМИ2 adapter/profile + validator + административная диагностика;
+  - [ ] внешний партнёрский onboarding и сквозная приёмка канала;
+- [x] News Mail adapter/profile + validator + административная диагностика;
+  - [ ] внешний партнёрский onboarding и сквозная приёмка канала;
 - [x] optional webhooks with signed payloads/retry log.
 
 ## P2 — Образование
@@ -210,7 +218,7 @@
 
 ## P3 — Миграция и эксплуатация
 
-- [ ] legacy VPDS importer — заблокирован до получения подтверждённого формата/контракта legacy-экспорта;
+- [x] legacy VPDS importer: проверяемый manifest, dry-run, отчёт, Media/SHA-256, URL/redirect, безопасное сопоставление пользователей и идемпотентный повторный запуск;
 - [x] installer;
 - [x] updater;
 - [x] backup/restore;
@@ -274,9 +282,10 @@
   - [x] inbound public-channel sync через Data API key + uploads playlist;
   - [x] outbound video upload через OAuth 2.0 и Media resumable binary pipeline;
   - [x] отдельные безопасные настройки API key/OAuth/privacy/category в Admin Shell без обратного вывода сохранённых секретов;
-- [ ] Rutube adapter;
+- [x] Rutube adapter — внутренний ChurchCMS-контур;
   - [x] inbound public-channel sync через `/api/video/person/{id}/`;
-  - [ ] outbound video upload — заблокирован до подтверждённого официального upload API;
+  - [x] outbound provider/Media validation/очередь/диагностика без скрытых endpoint Rutube Studio;
+  - [ ] официальный партнёрский upload-контракт и сквозная внешняя приёмка;
 - [x] webhook receiver contract/signature validation;
 - [x] loop prevention tests;
 - [x] retry/dead-letter UI.
