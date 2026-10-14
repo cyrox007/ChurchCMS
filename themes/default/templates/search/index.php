@@ -12,6 +12,20 @@ $query = (string) ($search['query'] ?? '');
 $items = is_array($search['items'] ?? null)
     ? $search['items']
     : [];
+$typeLabels = [
+    'publication' => 'Публикация',
+    'page' => 'Страница',
+    'document' => 'Документ',
+    'person' => 'Люди',
+    'event' => 'Событие',
+    'worship' => 'Богослужение',
+    'ministry' => 'Служение',
+    'shrine' => 'Святыня',
+    'saint' => 'Святые',
+    'library' => 'Библиотека',
+    'sunday_school' => 'Воскресная школа',
+    'education_program' => 'Образование',
+];
 ?>
 <section class="content-section">
     <header class="section-heading">
@@ -38,16 +52,24 @@ $items = is_array($search['items'] ?? null)
     </form>
 
     <?php if ($error !== null): ?>
-        <p role="alert"><?= $theme->e($error) ?></p>
+        <div class="empty-state" role="alert">
+            <h2>Поиск не выполнен</h2>
+            <p><?= $theme->e($error) ?></p>
+        </div>
     <?php elseif ($query !== '' && $items === []): ?>
-        <p>Ничего не найдено.</p>
+        <div class="empty-state">
+            <h2>Ничего не найдено</h2>
+            <p>Попробуйте изменить запрос или использовать более короткую формулировку.</p>
+        </div>
     <?php elseif ($items !== []): ?>
         <div class="card-grid">
             <?php foreach ($items as $item): ?>
+                <?php
+                $type = trim((string) ($item['type'] ?? ''));
+                $typeLabel = $typeLabels[$type] ?? 'Материал';
+                ?>
                 <article class="card">
-                    <p class="eyebrow">
-                        <?= $theme->e((string) ($item['type'] ?? '')) ?>
-                    </p>
+                    <p class="eyebrow"><?= $theme->e($typeLabel) ?></p>
                     <h2>
                         <a href="<?= $theme->e((string) ($item['url'] ?? '#')) ?>">
                             <?= $theme->e((string) ($item['title'] ?? '')) ?>
