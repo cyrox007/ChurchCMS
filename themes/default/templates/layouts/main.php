@@ -2,6 +2,9 @@
 $publicNavigation = is_array($navigation ?? null)
     ? $navigation
     : [];
+$frameClass = $publicNavigation === []
+    ? 'public-frame public-frame--single'
+    : 'public-frame';
 ?>
 <!doctype html>
 <html lang="ru">
@@ -27,7 +30,7 @@ $publicNavigation = is_array($navigation ?? null)
         'navigation' => $publicNavigation,
     ]) ?>
 
-    <div class="public-frame">
+    <div class="<?= $theme->e($frameClass) ?>">
         <?php if ($publicNavigation !== []): ?>
             <aside class="section-nav" aria-label="Разделы сайта">
                 <p class="section-nav__title">Разделы сайта</p>
