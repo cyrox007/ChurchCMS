@@ -62,36 +62,6 @@ final class PublicationSyndicationProvider implements TargetAwareSyndicationProv
             ];
         }
 
-        if (
-            Config::get('syndication.targets.smi2.enabled', false) === true
-            && Config::get(
-                'syndication.targets.smi2.partner_approved',
-                false,
-            ) === true
-        ) {
-            $targets['smi2'] = [
-                'label' => 'СМИ2',
-                'hint' => 'Партнёрский канал подтверждён и включён',
-            ];
-        }
-
-        if (
-            Config::get('syndication.targets.news_mail.enabled', false) === true
-            && Config::get(
-                'syndication.targets.news_mail.partner_approved',
-                false,
-            ) === true
-            && Config::get(
-                'syndication.targets.news_mail.delivery_contract_confirmed',
-                false,
-            ) === true
-        ) {
-            $targets['news_mail'] = [
-                'label' => 'Новости Mail',
-                'hint' => 'Партнёрский канал подтверждён и включён',
-            ];
-        }
-
         return $targets;
     }
 
