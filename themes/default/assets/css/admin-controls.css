@@ -1,4 +1,11 @@
 /* Общие формы административной части. */
+.admin-app .admin-heading h1,
+.admin-app .admin-page-header__title,
+.admin-app .admin-content .section-heading h1 {
+    font-size: clamp(1.65rem, 2.7vw, 2.35rem);
+    line-height: 1.08;
+}
+
 .admin-app form:not(.admin-global-search):not(.admin-sidebar__footer form) {
     min-width: 0;
 }
@@ -158,6 +165,12 @@
 }
 
 @media (max-width: 44rem) {
+    .admin-app .admin-heading h1,
+    .admin-app .admin-page-header__title,
+    .admin-app .admin-content .section-heading h1 {
+        font-size: clamp(1.5rem, 7vw, 2rem);
+    }
+
     .admin-app .editorial-item {
         align-items: stretch;
         flex-direction: column;
