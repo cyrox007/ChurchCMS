@@ -1,0 +1,180 @@
+(() => {
+    'use strict';
+
+    const sourceSelector = '[data-rich-editor-source]';
+
+    const createButton = (label, title, command, value = null) => {
+        const button = document.createElement('button');
+        button.type = 'button';
+        button.textContent = label;
+        button.title = title;
+        button.setAttribute('aria-label', title);
+        button.dataset.editorCommand = command;
+        if (value !== null) {
+            button.dataset.editorValue = value;
+        }
+        return button;
+    };
+
+    const plainTextToFragment = (text) => {
+        const fragment = document.createDocumentFragment();
+        const normalized = text.replace(/\r\n?/g, '\n').trim();
+        if (normalized === '') {
+            return fragment;
+        }
+
+        normalized.split(/\n{2,}/).forEach((paragraphText) => {
+            const paragraph = document.createElement('p');
+            paragraphText.split('\n').forEach((line, index) => {
+                if (index > 0) {
+                    paragraph.append(document.createElement('br'));
+                }
+                paragraph.append(document.createTextNode(line));
+            });
+            fragment.append(paragraph);
+        });
+
+        return fragment;
+    };
+
+    const selectionInside = (surface) => {
+        const selection = window.getSelection();
+        if (!selection || selection.rangeCount === 0) {
+            return false;
+        }
+        return surface.contains(selection.anchorNode);
+    };
+
+    const enhance = (source) => {
+        if (!(source instanceof HTMLTextAreaElement)
+            || source.dataset.richEditorReady === '1') {
+            return;
+        }
+
+        source.dataset.richEditorReady = '1';
+
+        const wrapper = document.createElement('div');
+        wrapper.className = 'rich-editor';
+        wrapper.dataset.richEditor = '';
+
+        const toolbar = document.createElement('div');
+        toolbar.className = 'rich-editor__toolbar';
+        toolbar.setAttribute('role', 'toolbar');
+        toolbar.setAttribute('aria-label', 'Форматирование текста');
+
+        [
+            ['Абзац', 'Обычный абзац', 'formatBlock', 'p'],
+            ['H2', 'Заголовок второго уровня', 'formatBlock', 'h2'],
+            ['H3', 'Заголовок третьего уровня', 'formatBlock', 'h3'],
+            ['Ж', 'Полужирный', 'bold', null],
+            ['К', 'Курсив', 'italic', null],
+            ['Цитата', 'Цитата', 'formatBlock', 'blockquote'],
+            ['• Список', 'Маркированный список', 'insertUnorderedList', null],
+            ['1. Список', 'Нумерованный список', 'insertOrderedList', null],
+            ['Ссылка', 'Добавить ссылку', 'createLink', null],
+            ['↶', 'Отменить', 'undo', null],
+            ['↷', 'Повторить', 'redo', null],
+        ].forEach(([label, title, command, value]) => {
+            toolbar.append(createButton(label, title, command, value));
+        });
+
+        const surface = document.createElement('div');
+        surface.className = 'rich-editor__surface';
+        surface.contentEditable = 'true';
+        surface.setAttribute('role', 'textbox');
+        surface.setAttribute('aria-label', 'Текст публикации');
+        surface.setAttribute('aria-multiline', 'true');
+        surface.setAttribute('data-placeholder', 'Напишите текст публикации…');
+
+        if (source.dataset.richEditorFormat === 'html') {
+            surface.innerHTML = source.value;
+        } else {
+            surface.append(plainTextToFragment(source.value));
+        }
+
+        wrapper.append(toolbar, surface);
+        source.insertAdjacentElement('afterend', wrapper);
+        source.classList.add('rich-editor-source--enhanced');
+        source.tabIndex = -1;
+        source.setAttribute('aria-hidden', 'true');
+
+        const sync = () => {
+            source.value = surface.innerHTML.trim();
+        };
+
+        toolbar.addEventListener('mousedown', (event) => {
+            if (event.target instanceof HTMLButtonElement) {
+                event.preventDefault();
+            }
+        });
+
+        toolbar.addEventListener('click', (event) => {
+            const target = event.target;
+            if (!(target instanceof Element)) {
+                return;
+            }
+
+            const button = target.closest('[data-editor-command]');
+            if (!(button instanceof HTMLButtonElement)) {
+                return;
+            }
+
+            surface.focus();
+            const command = button.dataset.editorCommand || '';
+            let value = button.dataset.editorValue || null;
+
+            if (command === 'createLink') {
+                if (!selectionInside(surface)) {
+                    return;
+                }
+
+                const href = window.prompt('Адрес ссылки');
+                if (href === null || href.trim() === '') {
+                    return;
+                }
+                value = href.trim();
+            }
+
+            document.execCommand(command, false, value);
+            sync();
+        });
+
+        surface.addEventListener('input', sync);
+        surface.addEventListener('blur', sync);
+
+        const form = source.closest('form');
+        if (form) {
+            form.addEventListener('submit', sync);
+        }
+    };
+
+    const scan = (root = document) => {
+        if (root instanceof Element && root.matches(sourceSelector)) {
+            enhance(root);
+        }
+
+        root.querySelectorAll?.(sourceSelector).forEach(enhance);
+    };
+
+    scan();
+
+    const content = document.querySelector('#admin-content');
+    if (!(content instanceof HTMLElement)) {
+        return;
+    }
+
+    const observer = new MutationObserver((mutations) => {
+        for (const mutation of mutations) {
+            for (const node of mutation.addedNodes) {
+                if (node instanceof Element) {
+                    scan(node);
+                }
+            }
+        }
+    });
+
+    observer.observe(content, {
+        childList: true,
+        subtree: true,
+    });
+})();

@@ -12,11 +12,16 @@ on:
       - 'modules/publications/runtime.php'
       - 'modules/comments/runtime.php'
       - 'modules/publications/PublicationsAdminController.php'
+      - 'modules/publications/PublicationSyndicationProvider.php'
       - 'modules/comments/CommentsAdminController.php'
       - 'themes/default/templates/layouts/admin.php'
       - 'themes/default/templates/admin/**'
       - 'themes/default/assets/css/site.css'
+      - 'themes/default/assets/css/admin-*.css'
+      - 'themes/default/assets/js/admin-editor.js'
+      - 'themes/default/assets/js/admin-disclosure.js'
       - 'themes/default/theme.json'
+      - 'tools/admin-profile-ui-smoke.php'
       - '.github/workflows/admin-shell-smoke.yml'
   pull_request:
     branches:
@@ -29,11 +34,16 @@ on:
       - 'modules/publications/runtime.php'
       - 'modules/comments/runtime.php'
       - 'modules/publications/PublicationsAdminController.php'
+      - 'modules/publications/PublicationSyndicationProvider.php'
       - 'modules/comments/CommentsAdminController.php'
       - 'themes/default/templates/layouts/admin.php'
       - 'themes/default/templates/admin/**'
       - 'themes/default/assets/css/site.css'
+      - 'themes/default/assets/css/admin-*.css'
+      - 'themes/default/assets/js/admin-editor.js'
+      - 'themes/default/assets/js/admin-disclosure.js'
       - 'themes/default/theme.json'
+      - 'tools/admin-profile-ui-smoke.php'
       - '.github/workflows/admin-shell-smoke.yml'
 
 permissions:
@@ -53,7 +63,7 @@ jobs:
           php-version: '8.3'
           coverage: none
 
-      - name: Проверить PHP и тему
+      - name: Проверить PHP, тему и редактор
         shell: bash
         run: |
           set -euo pipefail
@@ -63,8 +73,13 @@ jobs:
           php -l modules/publications/runtime.php
           php -l modules/comments/runtime.php
           php -l modules/publications/PublicationsAdminController.php
+          php -l modules/publications/PublicationSyndicationProvider.php
           php -l modules/comments/CommentsAdminController.php
           php -l themes/default/templates/layouts/admin.php
+          php -l themes/default/templates/admin/publications/editor.php
+          php -l tools/admin-profile-ui-smoke.php
+          node --check themes/default/assets/js/admin-editor.js
+          node --check themes/default/assets/js/admin-disclosure.js
           php bin/theme-check.php
 
       - name: Проверить использование общего shell
@@ -75,7 +90,10 @@ jobs:
           grep -q "AdminShell::page" modules/publications/PublicationsAdminController.php
           grep -q "AdminShell::page" modules/comments/CommentsAdminController.php
 
-          if grep -q "ThemeRenderer::fromConfig()->page"             app/controllers/AdminController.php             modules/publications/PublicationsAdminController.php             modules/comments/CommentsAdminController.php; then
+          if grep -q "ThemeRenderer::fromConfig()->page" \
+            app/controllers/AdminController.php \
+            modules/publications/PublicationsAdminController.php \
+            modules/comments/CommentsAdminController.php; then
             echo "Один из административных экранов обходит общий Admin Shell." >&2
             exit 1
           fi
@@ -146,8 +164,15 @@ jobs:
           } catch (RuntimeException) {
           }
 
-          echo "Admin navigation registry smoke OK\n";
+          echo "Реестр Admin Shell: проверка пройдена.\n";
           '
+
+      - name: Проверить профильное меню и каналы публикации
+        shell: bash
+        run: |
+          set -euo pipefail
+          mkdir -p storage/sessions storage/cache storage/logs storage/rate-limits storage/uploads
+          php tools/admin-profile-ui-smoke.php
 
       - name: Отрисовать общий layout
         shell: bash
@@ -160,6 +185,7 @@ jobs:
           $html = $renderer->capture("layout.admin", [
               "title" => "Публикации",
               "siteName" => "Тестовый приход",
+              "siteProfileLabel" => "Приход",
               "adminUser" => [
                   "display_name" => "Редактор",
                   "username" => "editor",
@@ -172,6 +198,7 @@ jobs:
                       "route" => "admin_publications",
                       "permission" => "publications.read",
                       "priority" => 20,
+                      "group" => "Контент",
                   ],
                   [
                       "id" => "comments",
@@ -179,6 +206,7 @@ jobs:
                       "route" => "admin_comments",
                       "permission" => "comments.moderate",
                       "priority" => 30,
+                      "group" => "Контент",
                   ],
               ],
               "adminNavigationBadges" => [
@@ -190,9 +218,16 @@ jobs:
           foreach ([
               "admin-frame",
               "aria-current=\"page\"",
+              "Тестовый приход",
+              "Приход",
+              "Контент",
               "Публикации",
               "Комментарии",
               "Редактор",
+              "admin-modern.css",
+              "admin-controls.css",
+              "admin-disclosure.js",
+              "admin-editor.js",
               "shell-smoke",
           ] as $expected) {
               if (!str_contains($html, $expected)) {
@@ -201,5 +236,5 @@ jobs:
               }
           }
 
-          echo "Admin Shell smoke OK\n";
+          echo "Admin Shell: проверка пройдена.\n";
           '
