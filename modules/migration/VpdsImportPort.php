@@ -23,6 +23,7 @@ interface VpdsImportPort
     /** @param array<string,mixed> $content */
     public function upsertContent(
         int $organizationId,
+        string $sourceSite,
         array $content,
         bool $dryRun,
     ): string;
