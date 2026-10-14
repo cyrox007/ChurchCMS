@@ -106,6 +106,7 @@ final class DatabaseVpdsImportPort implements VpdsImportPort
 
     public function upsertContent(
         int $organizationId,
+        string $sourceSite,
         array $content,
         bool $dryRun,
     ): string {
@@ -129,7 +130,12 @@ final class DatabaseVpdsImportPort implements VpdsImportPort
         $tags = $this->stringList($content['tags'] ?? []);
         $targets = $this->stringList($content['syndication_targets'] ?? []);
         $comments = (bool) ($content['comments_enabled'] ?? false);
-        $targetId = $this->previousTarget($organizationId, 'content', $sourceId);
+        $targetId = $this->previousTarget(
+            $organizationId,
+            $sourceSite,
+            'content',
+            $sourceId,
+        );
 
         if ($targetId === null) {
             $targetId = $this->publications->createDraft(
@@ -404,6 +410,7 @@ final class DatabaseVpdsImportPort implements VpdsImportPort
 
     private function previousTarget(
         int $organizationId,
+        string $sourceSite,
         string $entityType,
         string $sourceId,
     ): ?string {
@@ -411,24 +418,22 @@ final class DatabaseVpdsImportPort implements VpdsImportPort
             'SELECT target_id
              FROM vpds_import_mappings
              WHERE organization_id = :organization_id
+               AND source_site = :source_site
                AND entity_type = :entity_type
                AND source_id = :source_id
-             ORDER BY updated_at DESC, id DESC
-             LIMIT 2'
+             LIMIT 1'
         );
         $statement->execute([
             'organization_id' => $organizationId,
+            'source_site' => $sourceSite,
             'entity_type' => $entityType,
             'source_id' => $sourceId,
         ]);
-        $rows = $statement->fetchAll();
+        $targetId = $statement->fetchColumn();
 
-        if (count($rows) !== 1) {
-            return null;
-        }
-
-        $targetId = trim((string) ($rows[0]['target_id'] ?? ''));
-        return $targetId !== '' ? $targetId : null;
+        return is_string($targetId) && trim($targetId) !== ''
+            ? trim($targetId)
+            : null;
     }
 
     /** @param array<string,mixed> $content */
