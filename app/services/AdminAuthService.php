@@ -152,9 +152,9 @@ final class AdminAuthService
             );
         }
 
-        if (strlen($newPassword) < 12) {
+        if (strlen($newPassword) < 8) {
             throw new \InvalidArgumentException(
-                'Новый пароль должен содержать не менее 12 символов.'
+                'Новый пароль должен содержать не менее 8 символов.'
             );
         }
 
