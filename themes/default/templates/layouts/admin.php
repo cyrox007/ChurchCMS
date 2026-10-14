@@ -1,10 +1,15 @@
-<?php declare(strict_types=1);
+<?php
+declare(strict_types=1);
+
 $displayName = is_array($adminUser ?? null)
     ? (string) (($adminUser['display_name'] ?? null) ?: ($adminUser['username'] ?? ''))
     : '';
 $currentSection = (string) ($adminSection ?? 'overview');
 $current = static fn(string $section): string =>
     $currentSection === $section ? ' aria-current="page"' : '';
+$navigation = is_array($adminNavigation ?? null)
+    ? $adminNavigation
+    : [];
 ?>
 <!doctype html>
 <html lang="ru">
@@ -16,6 +21,7 @@ $current = static fn(string $section): string =>
     <title><?= $theme->e($title ?? 'ChurchCMS') ?> — управление</title>
     <link rel="stylesheet" href="<?= $theme->e($theme->asset('css/site.css')) ?>">
     <link rel="stylesheet" href="<?= $theme->e($theme->asset('css/admin-async.css')) ?>">
+    <link rel="stylesheet" href="<?= $theme->e($theme->asset('css/admin-modern.css')) ?>">
 </head>
 <body class="admin-app">
 <a class="skip-link" href="#admin-content">Перейти к содержанию</a>
@@ -23,21 +29,31 @@ $current = static fn(string $section): string =>
     <aside class="admin-sidebar" id="admin-sidebar" aria-label="Управление сайтом">
         <a class="admin-brand" href="<?= $theme->e($theme->route('admin_dashboard')) ?>">
             <span class="admin-brand__mark" aria-hidden="true">CMS</span>
-            <span><strong><?= $theme->e($siteName ?? 'ChurchCMS') ?></strong><small>Управление сайтом</small></span>
+            <span class="admin-brand__text">
+                <strong><?= $theme->e($siteName ?? 'ChurchCMS') ?></strong>
+                <small><?= $theme->e($siteProfileLabel ?? 'Управление сайтом') ?></small>
+            </span>
         </a>
 
         <nav class="admin-nav" aria-label="Разделы">
             <a href="<?= $theme->e($theme->route('admin_dashboard')) ?>"<?= $current('overview') ?>>Обзор</a>
-            <?php foreach (($adminNavigation ?? []) as $entry): ?>
+
+            <?php $lastGroup = ''; ?>
+            <?php foreach ($navigation as $entry): ?>
                 <?php
                 $entryId = (string) ($entry['id'] ?? '');
                 $badge = (int) (($adminNavigationBadges[$entryId] ?? 0));
+                $group = trim((string) ($entry['group'] ?? 'Дополнительно'));
                 ?>
+                <?php if ($group !== $lastGroup): ?>
+                    <span class="admin-nav__group"><?= $theme->e($group) ?></span>
+                    <?php $lastGroup = $group; ?>
+                <?php endif; ?>
                 <a
                     href="<?= $theme->e($theme->route((string) $entry['route'])) ?>"
                     <?= $current($entryId) ?>
                 >
-                    <?= $theme->e((string) $entry['label']) ?>
+                    <span><?= $theme->e((string) $entry['label']) ?></span>
                     <?php if ($badge > 0): ?>
                         <span class="admin-nav__badge"><?= $theme->e($badge) ?></span>
                     <?php endif; ?>
@@ -130,5 +146,6 @@ $current = static fn(string $section): string =>
 ></div>
 <script src="<?= $theme->e($theme->asset('js/admin-shell.js')) ?>" defer></script>
 <script src="<?= $theme->e($theme->asset('js/admin-async.js')) ?>" defer></script>
+<script src="<?= $theme->e($theme->asset('js/admin-editor.js')) ?>" defer></script>
 </body>
 </html>
