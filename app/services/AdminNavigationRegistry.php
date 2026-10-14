@@ -10,6 +10,51 @@ use RuntimeException;
 final class AdminNavigationRegistry
 {
     /**
+     * Разделы, которые относятся к учебному заведению и не должны
+     * перегружать обычный приходской интерфейс.
+     *
+     * @var list<string>
+     */
+    private const EDUCATION_PREFIXES = [
+        'education_',
+        'education-',
+    ];
+
+    /** @var list<string> */
+    private const STRUCTURE_IDS = [
+        'organizations',
+        'organization',
+        'federation',
+        'relations',
+        'connections',
+        'structure',
+    ];
+
+    /** @var list<string> */
+    private const PARISH_ONLY_IDS = [
+        'ministries',
+        'shrines',
+        'saints',
+        'sunday_school',
+        'sunday-school',
+    ];
+
+    /**
+     * Технические интеграции остаются доступны по прямому адресу и правам,
+     * но не занимают место в основном меню простого приходского сайта.
+     *
+     * @var list<string>
+     */
+    private const ADVANCED_INTEGRATION_MARKERS = [
+        'webhook',
+        'syndication',
+        'rambler',
+        'smi2',
+        'news_mail',
+        'news-mail',
+    ];
+
+    /**
      * @var array<string,array{
      *     id:string,
      *     label:string,
@@ -45,7 +90,7 @@ final class AdminNavigationRegistry
 
             throw new RuntimeException(
                 'Раздел административной навигации уже зарегистрирован: '
-                . $entry['id']
+                . $entry['id'],
             );
         }
 
@@ -76,6 +121,209 @@ final class AdminNavigationRegistry
     }
 
     /**
+     * Возвращает навигацию, соответствующую назначению установленного сайта.
+     * Права пользователя по-прежнему проверяются отдельно в AdminShell.
+     *
+     * @return list<array{
+     *     id:string,
+     *     label:string,
+     *     route:string,
+     *     permission:string,
+     *     priority:int,
+     *     group:string
+     * }>
+     */
+    public static function entriesForProfile(string $profile): array
+    {
+        $profile = self::normalizeProfile($profile);
+        $result = [];
+
+        foreach (self::entries() as $entry) {
+            if (!self::visibleForProfile($entry['id'], $profile)) {
+                continue;
+            }
+
+            $entry['group'] = self::groupFor(
+                $entry['id'],
+                $entry['label'],
+            );
+            $result[] = $entry;
+        }
+
+        return $result;
+    }
+
+    public static function profileLabel(string $profile): string
+    {
+        return match (self::normalizeProfile($profile)) {
+            'small-parish' => 'Небольшой приход',
+            'parish' => 'Приход',
+            'cathedral' => 'Собор',
+            'monastery' => 'Монастырь',
+            'deanery' => 'Благочиние',
+            'diocese' => 'Епархия',
+            'metropolia' => 'Митрополия',
+            'education' => 'Учебное заведение',
+            'mixed' => 'Смешанный профиль',
+            default => 'Организация',
+        };
+    }
+
+    private static function normalizeProfile(string $profile): string
+    {
+        $profile = strtolower(trim($profile));
+
+        return in_array(
+            $profile,
+            [
+                'small-parish',
+                'parish',
+                'cathedral',
+                'monastery',
+                'deanery',
+                'diocese',
+                'metropolia',
+                'education',
+                'mixed',
+                'organization',
+            ],
+            true,
+        ) ? $profile : 'organization';
+    }
+
+    private static function visibleForProfile(
+        string $id,
+        string $profile,
+    ): bool {
+        if (in_array($profile, ['mixed', 'organization'], true)) {
+            return true;
+        }
+
+        if (self::isEducationId($id)) {
+            return $profile === 'education';
+        }
+
+        if ($profile === 'education') {
+            return !in_array($id, self::PARISH_ONLY_IDS, true)
+                && !in_array($id, self::STRUCTURE_IDS, true);
+        }
+
+        if (
+            in_array(
+                $profile,
+                ['small-parish', 'parish', 'cathedral', 'monastery'],
+                true,
+            )
+        ) {
+            if (in_array($id, self::STRUCTURE_IDS, true)) {
+                return false;
+            }
+
+            return !self::hasMarker(
+                $id,
+                self::ADVANCED_INTEGRATION_MARKERS,
+            );
+        }
+
+        return true;
+    }
+
+    private static function isEducationId(string $id): bool
+    {
+        foreach (self::EDUCATION_PREFIXES as $prefix) {
+            if (str_starts_with($id, $prefix)) {
+                return true;
+            }
+        }
+
+        return false;
+    }
+
+    /** @param list<string> $markers */
+    private static function hasMarker(string $id, array $markers): bool
+    {
+        foreach ($markers as $marker) {
+            if (str_contains($id, $marker)) {
+                return true;
+            }
+        }
+
+        return false;
+    }
+
+    private static function groupFor(string $id, string $label): string
+    {
+        if (self::isEducationId($id)) {
+            return 'Образование';
+        }
+
+        if (in_array($id, self::STRUCTURE_IDS, true)) {
+            return 'Структура';
+        }
+
+        if (
+            self::hasMarker($id, self::ADVANCED_INTEGRATION_MARKERS)
+            || str_contains($id, 'external')
+            || str_contains($id, 'channel')
+        ) {
+            return 'Интеграции';
+        }
+
+        if (
+            str_contains($id, 'media')
+            || str_contains($id, 'gallery')
+            || str_contains($id, 'youtube')
+        ) {
+            return 'Медиа';
+        }
+
+        if (
+            in_array(
+                $id,
+                [
+                    'people',
+                    'worship',
+                    'events',
+                    'ministries',
+                    'shrines',
+                    'saints',
+                    'sunday_school',
+                    'sunday-school',
+                ],
+                true,
+            )
+        ) {
+            return 'Жизнь организации';
+        }
+
+        if (
+            str_contains($id, 'system')
+            || str_contains($id, 'operation')
+            || str_contains($id, 'state')
+        ) {
+            return 'Система';
+        }
+
+        if (
+            str_contains($id, 'page')
+            || str_contains($id, 'menu')
+            || str_contains($id, 'redirect')
+            || str_contains($id, 'document')
+        ) {
+            return 'Сайт';
+        }
+
+        if (
+            in_array($id, ['publications', 'comments', 'library'], true)
+            || str_contains(mb_strtolower($label), 'публикац')
+        ) {
+            return 'Контент';
+        }
+
+        return 'Дополнительно';
+    }
+
+    /**
      * @param array{
      *     id:string,
      *     label:string,
@@ -88,21 +336,21 @@ final class AdminNavigationRegistry
     {
         if (preg_match('/^[a-z][a-z0-9_-]{1,63}$/D', $entry['id']) !== 1) {
             throw new InvalidArgumentException(
-                'Некорректный идентификатор раздела административной навигации.'
+                'Некорректный идентификатор раздела административной навигации.',
             );
         }
 
         foreach (['label', 'route', 'permission'] as $field) {
             if ($entry[$field] === '') {
                 throw new InvalidArgumentException(
-                    'Раздел административной навигации заполнен не полностью.'
+                    'Раздел административной навигации заполнен не полностью.',
                 );
             }
         }
 
         if ($entry['priority'] < 0 || $entry['priority'] > 10000) {
             throw new InvalidArgumentException(
-                'Приоритет раздела административной навигации вне допустимого диапазона.'
+                'Приоритет раздела административной навигации вне допустимого диапазона.',
             );
         }
     }
