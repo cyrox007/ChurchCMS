@@ -328,7 +328,19 @@ final class AdminNavigationRegistry
             return 'Сайт';
         }
 
-        if (in_array($id, ['publications', 'comments', 'library'], true)) {
+        if (
+            in_array(
+                $id,
+                [
+                    'publications',
+                    'publication_rubrics',
+                    'publication-rubrics',
+                    'comments',
+                    'library',
+                ],
+                true,
+            )
+        ) {
             return 'Контент';
         }
 
