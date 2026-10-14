@@ -28,7 +28,7 @@
             </p>
         <?php else: ?>
             <p class="auth-card__intro">
-                Установите новый пароль длиной не менее 12 символов.
+                Установите новый пароль длиной не менее 8 символов.
             </p>
 
             <?php if (!empty($error)): ?>
@@ -55,7 +55,7 @@
                         type="password"
                         name="new_password"
                         autocomplete="new-password"
-                        minlength="12"
+                        minlength="8"
                         maxlength="4096"
                         required
                         autofocus
@@ -68,7 +68,7 @@
                         type="password"
                         name="new_password_confirm"
                         autocomplete="new-password"
-                        minlength="12"
+                        minlength="8"
                         maxlength="4096"
                         required
                     >
