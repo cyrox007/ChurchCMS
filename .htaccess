@@ -1,0 +1,28 @@
+# ChurchCMS: правила для Apache / Open Server Panel.
+# Статические существующие файлы Apache отдаёт напрямую,
+# остальные запросы передаются единой точке входа CMS.
+
+Options -Indexes -MultiViews
+DirectoryIndex index.php
+
+<IfModule mod_rewrite.c>
+    RewriteEngine On
+
+    # Внутренние каталоги не должны быть доступны напрямую из браузера.
+    RewriteRule ^(?:\.git|\.github|\.osp|app|bin|config|core|database|deploy|docs|legacy|modules|storage|themes|tools)(?:/|$) - [F,L,NC]
+
+    # Существующие публичные файлы и каталоги Apache обслуживает сам.
+    RewriteCond %{REQUEST_FILENAME} -f [OR]
+    RewriteCond %{REQUEST_FILENAME} -d
+    RewriteRule ^ - [L]
+
+    # Маршруты ChurchCMS, включая /_theme-asset, /admin/* и публичные страницы.
+    RewriteRule ^ index.php [L,QSA]
+</IfModule>
+
+<IfModule !mod_rewrite.c>
+    # Без mod_rewrite приложение не сможет обслуживать красивые URL и ресурсы темы.
+    <IfModule mod_dir.c>
+        FallbackResource /index.php
+    </IfModule>
+</IfModule>
