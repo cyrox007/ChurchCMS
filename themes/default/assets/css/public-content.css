@@ -149,6 +149,30 @@
     object-position: center top;
 }
 
+.public-theme .article-header__meta {
+    margin: .7rem 0 0;
+    color: var(--public-muted);
+    font-size: .84rem;
+    font-weight: 650;
+}
+
+.public-theme .article-fact {
+    margin: 0 0 1rem;
+    padding: .75rem .9rem;
+    border: 1px solid var(--public-line);
+    border-left: .2rem solid var(--public-blue-700);
+    background: var(--public-soft);
+}
+
+.public-theme .article-alert {
+    margin: .9rem 0 0;
+    padding: .65rem .8rem;
+    border: 1px solid #d9aab1;
+    border-left: .2rem solid var(--public-wine-800);
+    color: #812333;
+    background: #fff3f5;
+}
+
 .public-theme .article-shell > section {
     margin-top: 1.6rem;
     padding-top: 1rem;
