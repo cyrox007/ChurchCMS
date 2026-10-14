@@ -1,0 +1,178 @@
+/* Общие формы административной части. */
+.admin-app form:not(.admin-global-search):not(.admin-sidebar__footer form) {
+    min-width: 0;
+}
+
+.admin-app fieldset {
+    min-width: 0;
+    margin: .75rem 0;
+    padding: .75rem;
+    border: 1px solid #c9d3dd;
+    border-radius: .5rem;
+    background: #f8fafb;
+}
+
+.admin-app fieldset legend {
+    padding: 0 .35rem;
+    color: #17334d;
+    font-size: .72rem;
+    font-weight: 780;
+}
+
+.admin-app fieldset > label {
+    min-height: 2.1rem;
+    display: flex;
+    align-items: center;
+    gap: .55rem;
+    padding: .35rem .25rem;
+    color: #263746;
+    font-size: .8rem;
+}
+
+.admin-app fieldset > label + label {
+    border-top: 1px solid #e2e8ed;
+}
+
+.admin-app .editorial-list {
+    display: grid;
+    gap: .55rem;
+}
+
+.admin-app .editorial-item {
+    min-width: 0;
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: .8rem;
+    padding: .72rem .8rem;
+    border: 1px solid #d5dde4;
+    border-radius: .5rem;
+    background: #fff;
+}
+
+.admin-app .editorial-item__main {
+    min-width: 0;
+}
+
+.admin-app .editorial-item__main h3 {
+    margin: .2rem 0 0;
+    font-size: .92rem;
+}
+
+.admin-app .editorial-item__main p {
+    overflow-wrap: anywhere;
+    margin: .25rem 0 0;
+    color: #667481;
+    font-size: .74rem;
+}
+
+.admin-app .editorial-item__meta {
+    display: flex;
+    flex-wrap: wrap;
+    gap: .3rem .55rem;
+    color: #6b7782;
+    font-size: .68rem;
+}
+
+.admin-app .status-pill {
+    display: inline-flex;
+    align-items: center;
+    min-height: 1.35rem;
+    padding: .12rem .38rem;
+    border-radius: 999px;
+    color: #17334d;
+    background: #eaf1f7;
+    font-weight: 760;
+}
+
+.admin-app .admin-state,
+.admin-app .empty-state {
+    border-radius: .5rem;
+}
+
+.admin-app .admin-state {
+    padding: .8rem;
+}
+
+.admin-app .admin-state h2,
+.admin-app .admin-state h3,
+.admin-app .empty-state h2,
+.admin-app .empty-state h3 {
+    font-size: .95rem;
+}
+
+.admin-app .admin-state p,
+.admin-app .empty-state p {
+    font-size: .76rem;
+    line-height: 1.45;
+}
+
+.admin-app .button,
+.admin-app button.button {
+    min-height: 2.35rem;
+    padding: .45rem .7rem;
+    border-radius: .4rem;
+    font-size: .75rem;
+}
+
+.admin-app .publication-state-actions {
+    gap: .55rem;
+    padding: .75rem 0;
+}
+
+.admin-app .external-channel-editor {
+    display: grid;
+    gap: .55rem;
+    padding: .65rem;
+    border: 1px solid #d5dde4;
+    border-radius: .5rem;
+    background: #fff;
+}
+
+.admin-app .external-channel-editor .choice {
+    border: 0;
+    padding: .2rem;
+}
+
+.admin-app .editor-actions {
+    position: sticky;
+    bottom: .65rem;
+    z-index: 4;
+    width: fit-content;
+    padding: .35rem;
+    border: 1px solid rgba(170, 184, 196, .75);
+    border-radius: .55rem;
+    background: rgba(237, 242, 246, .93);
+    backdrop-filter: blur(.45rem);
+}
+
+.admin-app .admin-pane form,
+.admin-app .editor-card form {
+    min-width: 0;
+}
+
+.admin-app .editor-card form > .field + .field,
+.admin-app .editor-card form > .editor-grid + .field,
+.admin-app .editor-card form > .field + .editor-grid {
+    margin-top: .6rem;
+}
+
+@media (max-width: 44rem) {
+    .admin-app .editorial-item {
+        align-items: stretch;
+        flex-direction: column;
+    }
+
+    .admin-app .editorial-item > form,
+    .admin-app .editorial-item > form .button {
+        width: 100%;
+    }
+
+    .admin-app .editor-actions {
+        width: 100%;
+    }
+
+    .admin-app .editor-actions .button {
+        width: 100%;
+    }
+}
