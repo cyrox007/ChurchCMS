@@ -59,10 +59,14 @@ final class VpdsSmokePort implements VpdsImportPort
 
     public function upsertContent(
         int $organizationId,
+        string $sourceSite,
         array $content,
         bool $dryRun,
     ): string {
-        $this->content[] = $content + ['dry_run' => $dryRun];
+        $this->content[] = $content + [
+            'source_site' => $sourceSite,
+            'dry_run' => $dryRun,
+        ];
         return 'publication-' . (string) $content['id'];
     }
 
@@ -227,6 +231,7 @@ try {
     vpdsAssert(($dryReport['counters']['errors'] ?? -1) === 0, 'Dry-run вернул неожиданные ошибки.');
     vpdsAssert(count($dryPort->users) === 1, 'Невалидный пользователь не должен доходить до адаптера.');
     vpdsAssert(!array_key_exists('password_hash', $dryPort->users[0]), 'Legacy password_hash попал в адаптер.');
+    vpdsAssert(($dryPort->content[0]['source_site'] ?? '') === 'legacy-parish', 'source.site_id не передан адаптеру контента.');
     vpdsAssert(($dryPort->content[0]['author_target_id'] ?? null) === '11111111-1111-4111-8111-111111111111', 'Автор не сопоставлен.');
     vpdsAssert(str_contains((string) $dryPort->content[0]['body'], 'href="/news/first-post"'), 'Старая ссылка не переписана.');
     vpdsAssert(($dryReport['counters']['unresolved_links'] ?? 0) === 1, 'Несопоставленная ссылка не попала в диагностику.');
