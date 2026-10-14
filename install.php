@@ -399,8 +399,8 @@ if (($_SERVER['REQUEST_METHOD'] ?? 'GET') === 'POST') {
                 throw new InvalidArgumentException('Проверьте email.');
             }
 
-            if (strlen($password) < 12) {
-                throw new InvalidArgumentException('Пароль должен содержать не менее 12 символов.');
+            if (strlen($password) < 8) {
+                throw new InvalidArgumentException('Пароль должен содержать не менее 8 символов.');
             }
 
             if (!hash_equals($password, $confirmation)) {
@@ -622,8 +622,8 @@ $csrf = htmlspecialchars(installerCsrf(), ENT_QUOTES | ENT_SUBSTITUTE, 'UTF-8');
 <label class="field"><span>Email <small>необязательно</small></span><input name="admin_email" type="email" autocomplete="email"></label>
 
 <div class="grid">
-<label class="field"><span>Пароль</span><input name="admin_password" type="password" required minlength="12" autocomplete="new-password"></label>
-<label class="field"><span>Повторите пароль</span><input name="admin_password_confirm" type="password" required minlength="12" autocomplete="new-password"></label>
+<label class="field"><span>Пароль</span><input name="admin_password" type="password" required minlength="8" autocomplete="new-password"></label>
+<label class="field"><span>Повторите пароль</span><input name="admin_password_confirm" type="password" required minlength="8" autocomplete="new-password"></label>
 </div>
 
 <div class="button-row"><button type="submit">Завершить установку</button></div>
