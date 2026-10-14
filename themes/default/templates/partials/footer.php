@@ -3,9 +3,18 @@
     <div class="container site-footer__inner">
         <div>
             <strong><?= $theme->e($siteName ?? 'ChurchCMS') ?></strong>
-            <?php if (!empty($footerText)): ?>
-                <p><?= $theme->e($footerText) ?></p>
-            <?php endif; ?>
+            <p>
+                <?= $theme->e(
+                    !empty($footerText)
+                        ? (string) $footerText
+                        : 'Официальный сайт организации'
+                ) ?>
+            </p>
+            <nav class="site-footer__links" aria-label="Служебные ссылки">
+                <a href="/publications">Публикации</a>
+                <a href="/search">Поиск</a>
+                <a href="/admin">Администратору</a>
+            </nav>
         </div>
 
         <p class="site-footer__meta">
