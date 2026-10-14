@@ -19,6 +19,15 @@ on:
       - 'modules/pages/runtime.php'
       - 'modules/pages/migrations/20260930_130000_create_navigation_menus.php'
       - 'themes/default/templates/admin/navigation.php'
+      - 'themes/default/templates/layouts/main.php'
+      - 'themes/default/templates/partials/header.php'
+      - 'themes/default/templates/partials/footer.php'
+      - 'themes/default/templates/pages/home.php'
+      - 'themes/default/templates/pages/show.php'
+      - 'themes/default/templates/publications/**'
+      - 'themes/default/templates/events/**'
+      - 'themes/default/templates/worship/**'
+      - 'themes/default/assets/css/public-*.css'
       - 'themes/default/theme.json'
       - 'tools/navigation-menu-smoke.php'
       - '.github/workflows/navigation-menu-smoke.yml'
@@ -40,6 +49,15 @@ on:
       - 'modules/pages/runtime.php'
       - 'modules/pages/migrations/20260930_130000_create_navigation_menus.php'
       - 'themes/default/templates/admin/navigation.php'
+      - 'themes/default/templates/layouts/main.php'
+      - 'themes/default/templates/partials/header.php'
+      - 'themes/default/templates/partials/footer.php'
+      - 'themes/default/templates/pages/home.php'
+      - 'themes/default/templates/pages/show.php'
+      - 'themes/default/templates/publications/**'
+      - 'themes/default/templates/events/**'
+      - 'themes/default/templates/worship/**'
+      - 'themes/default/assets/css/public-*.css'
       - 'themes/default/theme.json'
       - 'tools/navigation-menu-smoke.php'
       - '.github/workflows/navigation-menu-smoke.yml'
@@ -77,7 +95,7 @@ jobs:
           extensions: pdo, pdo_pgsql
           coverage: none
 
-      - name: Проверить PHP
+      - name: Проверить PHP и публичную тему
         run: |
           set -euo pipefail
           php -l core/ThemeGlobalDataProvider.php
@@ -89,6 +107,15 @@ jobs:
           php -l modules/pages/runtime.php
           php -l modules/pages/migrations/20260930_130000_create_navigation_menus.php
           php -l themes/default/templates/admin/navigation.php
+          php -l themes/default/templates/layouts/main.php
+          php -l themes/default/templates/partials/header.php
+          php -l themes/default/templates/partials/footer.php
+          php -l themes/default/templates/pages/home.php
+          php -l themes/default/templates/pages/show.php
+          php -l themes/default/templates/publications/index.php
+          php -l themes/default/templates/publications/show.php
+          php -l themes/default/templates/events/index.php
+          php -l themes/default/templates/worship/index.php
           php -l tools/navigation-menu-smoke.php
           php bin/migrate.php validate
           php bin/theme-check.php
@@ -118,5 +145,5 @@ jobs:
 
           php bin/migrate.php
 
-      - name: Проверить цели, порядок и Theme navigation
+      - name: Проверить цели, порядок и данные темы
         run: php tools/navigation-menu-smoke.php
