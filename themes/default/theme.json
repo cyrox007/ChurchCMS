@@ -1,7 +1,7 @@
 {
   "id": "default",
   "name": "ChurchCMS Default",
-  "version": "0.8.33",
+  "version": "0.8.34",
   "profiles": ["small-parish","parish","cathedral","monastery","deanery","diocese","metropolia","education","mixed","organization"],
   "templates": {
     "layout.main": "layouts/main",
