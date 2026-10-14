@@ -10,3 +10,4 @@ legacy/*.zip
 legacy/*.rar
 legacy/raw/
 /storage/rate-limits/*
+.osp/
