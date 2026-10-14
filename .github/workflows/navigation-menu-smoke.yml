@@ -6,6 +6,7 @@ on:
       - develop
       - main
     paths:
+      - 'app/controllers/HealthController.php'
       - 'core/ThemeGlobalDataProvider.php'
       - 'core/ThemeGlobalDataRegistry.php'
       - 'core/ThemeRenderer.php'
@@ -27,6 +28,7 @@ on:
       - 'themes/default/templates/publications/**'
       - 'themes/default/templates/events/**'
       - 'themes/default/templates/worship/**'
+      - 'themes/default/templates/search/**'
       - 'themes/default/assets/css/public-*.css'
       - 'themes/default/theme.json'
       - 'tools/navigation-menu-smoke.php'
@@ -37,6 +39,7 @@ on:
       - develop
       - main
     paths:
+      - 'app/controllers/HealthController.php'
       - 'core/ThemeGlobalDataProvider.php'
       - 'core/ThemeGlobalDataRegistry.php'
       - 'core/ThemeRenderer.php'
@@ -58,6 +61,7 @@ on:
       - 'themes/default/templates/publications/**'
       - 'themes/default/templates/events/**'
       - 'themes/default/templates/worship/**'
+      - 'themes/default/templates/search/**'
       - 'themes/default/assets/css/public-*.css'
       - 'themes/default/theme.json'
       - 'tools/navigation-menu-smoke.php'
@@ -100,6 +104,7 @@ jobs:
       - name: Проверить PHP и публичную тему
         run: |
           set -euo pipefail
+          php -l app/controllers/HealthController.php
           php -l core/ThemeGlobalDataProvider.php
           php -l core/ThemeGlobalDataRegistry.php
           php -l core/ThemeRenderer.php
@@ -120,6 +125,7 @@ jobs:
           php -l themes/default/templates/events/show.php
           php -l themes/default/templates/worship/index.php
           php -l themes/default/templates/worship/show.php
+          php -l themes/default/templates/search/index.php
           php -l tools/navigation-menu-smoke.php
           php -l tools/public-theme-smoke.php
           php bin/migrate.php validate
