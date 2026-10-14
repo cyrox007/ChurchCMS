@@ -19,6 +19,7 @@ on:
       - 'themes/default/assets/css/site.css'
       - 'themes/default/assets/css/admin-*.css'
       - 'themes/default/assets/js/admin-editor.js'
+      - 'themes/default/assets/js/admin-disclosure.js'
       - 'themes/default/theme.json'
       - 'tools/admin-profile-ui-smoke.php'
       - '.github/workflows/admin-shell-smoke.yml'
@@ -40,6 +41,7 @@ on:
       - 'themes/default/assets/css/site.css'
       - 'themes/default/assets/css/admin-*.css'
       - 'themes/default/assets/js/admin-editor.js'
+      - 'themes/default/assets/js/admin-disclosure.js'
       - 'themes/default/theme.json'
       - 'tools/admin-profile-ui-smoke.php'
       - '.github/workflows/admin-shell-smoke.yml'
@@ -77,6 +79,7 @@ jobs:
           php -l themes/default/templates/admin/publications/editor.php
           php -l tools/admin-profile-ui-smoke.php
           node --check themes/default/assets/js/admin-editor.js
+          node --check themes/default/assets/js/admin-disclosure.js
           php bin/theme-check.php
 
       - name: Проверить использование общего shell
@@ -223,6 +226,7 @@ jobs:
               "Редактор",
               "admin-modern.css",
               "admin-controls.css",
+              "admin-disclosure.js",
               "admin-editor.js",
               "shell-smoke",
           ] as $expected) {
