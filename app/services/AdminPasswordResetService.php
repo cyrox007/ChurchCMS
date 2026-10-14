@@ -406,11 +406,11 @@ final class AdminPasswordResetService
         string $confirmation,
     ): void {
         if (
-            strlen($password) < 12
+            strlen($password) < 8
             || strlen($password) > 4096
         ) {
             throw new InvalidArgumentException(
-                'Новый пароль должен содержать не менее 12 символов.'
+                'Новый пароль должен содержать не менее 8 символов.'
             );
         }
 
