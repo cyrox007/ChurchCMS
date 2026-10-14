@@ -306,7 +306,12 @@ final class VpdsImportService
             }
 
             try {
-                $targetId = $this->port->upsertContent($organizationId, $content, $dryRun);
+                $targetId = $this->port->upsertContent(
+                    $organizationId,
+                    $sourceSite,
+                    $content,
+                    $dryRun,
+                );
                 $this->port->rememberImport(
                     $organizationId,
                     $sourceSite,
