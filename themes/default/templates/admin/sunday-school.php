@@ -9,12 +9,12 @@ $defaultOwnerPublicId = (string) ($defaultOwnerPublicId ?? '');
 ?>
 <section class="admin-shell">
     <header class="admin-heading">
-        <div><p class="eyebrow">Приходская жизнь</p><h1>Воскресная школа</h1><p>Публичные карточки школ с руководителем, контактами и возрастной информацией.</p></div>
+        <div><p class="eyebrow">Приходская жизнь</p><h1>Воскресная школа</h1><p>Публичные карточки воскресных школ с руководителем, контактами и возрастной информацией.</p></div>
     </header>
 
     <?php if ($canManage): ?>
         <section class="admin-operations-section">
-            <h2>Новая школа</h2>
+            <h2>Карточка воскресной школы</h2>
             <form class="admin-update-apply" method="post" action="<?= $theme->e($theme->route('admin_sunday_school_create')) ?>">
                 <?= $theme->csrfInput() ?>
                 <label><span>Организация-владелец</span><select name="owner_organization_public_id" required><option value="">Выберите организацию</option><?php foreach ($organizationUnits as $unit): ?><option value="<?= $theme->e($unit->publicId) ?>" <?= $unit->publicId === $defaultOwnerPublicId ? 'selected' : '' ?>><?= $theme->e($unit->name) ?></option><?php endforeach; ?></select></label>
@@ -27,15 +27,15 @@ $defaultOwnerPublicId = (string) ($defaultOwnerPublicId ?? '');
                 <label><span>Краткое описание</span><textarea name="summary" rows="3" maxlength="2000"></textarea></label>
                 <label><span>Полное описание</span><textarea name="description" rows="6"></textarea></label>
                 <label><span>Порядок</span><input type="number" name="sort_order" value="0"></label>
-                <button class="button button--primary" type="submit">Создать школу</button>
+                <button class="button button--primary" type="submit">Сохранить карточку</button>
             </form>
         </section>
     <?php endif; ?>
 
     <section class="admin-operations-section">
-        <h2>Школы</h2>
+        <h2>Карточки воскресных школ</h2>
         <?php if ($schools === []): ?>
-            <?= $theme->component('admin.state', ['kind' => 'empty', 'title' => 'Воскресных школ пока нет', 'message' => 'Создайте первую карточку через форму выше.']) ?>
+            <?= $theme->component('admin.state', ['kind' => 'empty', 'title' => 'Карточек пока нет', 'message' => 'Заполните карточку воскресной школы через форму выше.']) ?>
         <?php else: ?>
             <div class="admin-operations-list" role="list">
                 <?php foreach ($schools as $school): ?>
@@ -54,7 +54,7 @@ $defaultOwnerPublicId = (string) ($defaultOwnerPublicId ?? '');
                                 <label><span>Краткое описание</span><textarea name="summary" rows="3" maxlength="2000"><?= $theme->e($school->summary) ?></textarea></label>
                                 <label><span>Полное описание</span><textarea name="description" rows="6"><?= $theme->e($school->descriptionHtml) ?></textarea></label>
                                 <label><span>Порядок</span><input type="number" name="sort_order" value="<?= (int) $school->sortOrder ?>"></label>
-                                <button class="button button--primary" type="submit">Сохранить</button>
+                                <button class="button button--primary" type="submit">Сохранить карточку</button>
                             </form>
                             <div class="admin-actions">
                                 <?php if ($school->status === 'draft'): ?><form method="post" action="<?= $theme->e($theme->route('admin_sunday_school_publish', ['publicId' => $school->publicId])) ?>"><?= $theme->csrfInput() ?><button class="button button--quiet" type="submit">Опубликовать</button></form><?php else: ?><form method="post" action="<?= $theme->e($theme->route('admin_sunday_school_unpublish', ['publicId' => $school->publicId])) ?>"><?= $theme->csrfInput() ?><button class="button button--quiet" type="submit">Снять с публикации</button></form><?php endif; ?>
