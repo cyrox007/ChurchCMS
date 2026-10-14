@@ -505,7 +505,21 @@ final class DatabaseVpdsImportPort implements VpdsImportPort
             'site_key' => $siteKey,
         ]);
 
-        if ($statement->rowCount() !== 1) {
+        if ($statement->rowCount() === 1) {
+            return;
+        }
+
+        $exists = $this->pdo->prepare(
+            'SELECT 1 FROM publications
+             WHERE public_id = :public_id
+               AND site_key = :site_key
+             LIMIT 1'
+        );
+        $exists->execute([
+            'public_id' => $publicId,
+            'site_key' => $siteKey,
+        ]);
+        if ($exists->fetchColumn() === false) {
             throw new RuntimeException('Не удалось применить состояние публикации VPDS.');
         }
     }
