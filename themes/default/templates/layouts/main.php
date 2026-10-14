@@ -14,6 +14,7 @@ $publicNavigation = is_array($navigation ?? null)
     <?= $theme->seoTags(is_array($seo ?? null) ? $seo : [], (string) ($title ?? 'ChurchCMS')) ?>
     <link rel="stylesheet" href="<?= $theme->e($theme->asset('css/site.css')) ?>">
     <link rel="stylesheet" href="<?= $theme->e($theme->asset('css/public-modern.css')) ?>">
+    <link rel="stylesheet" href="<?= $theme->e($theme->asset('css/public-content.css')) ?>">
     <script src="<?= $theme->e($theme->asset('js/share.js')) ?>" defer></script>
 </head>
 <body class="public-theme">
