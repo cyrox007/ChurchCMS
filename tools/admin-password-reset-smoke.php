@@ -217,7 +217,29 @@ if (!$service->tokenIsValid($secondToken)) {
     exit(1);
 }
 
-$newPassword = 'Changed-password-456';
+try {
+    $service->resetPassword(
+        $secondToken,
+        '1234567',
+        '1234567',
+    );
+    fwrite(
+        STDERR,
+        "Пароль из 7 символов ошибочно принят.\n",
+    );
+    exit(1);
+} catch (InvalidArgumentException) {
+}
+
+if (!$service->tokenIsValid($secondToken)) {
+    fwrite(
+        STDERR,
+        "Короткий пароль ошибочно погасил reset-токен.\n",
+    );
+    exit(1);
+}
+
+$newPassword = 'Pass1234';
 $service->resetPassword(
     $secondToken,
     $newPassword,
@@ -384,6 +406,8 @@ foreach ([
 foreach ([
     'name="token"',
     'name="new_password"',
+    'minlength="8"',
+    'не менее 8 символов',
     'admin/password/reset',
 ] as $expected) {
     if (!str_contains($resetHtml, $expected)) {
