@@ -37,12 +37,12 @@ $html = ThemeRenderer::forTheme('default')->capture(
 );
 
 foreach ([
-    'Последние публикации',
+    'Последние новости и материалы',
     'Локальная новость',
-    'Этот сайт',
-    'Источник · Дочерний приход',
+    'Материал текущего сайта.',
+    'Дочерний приход',
     'https://child.example/publications/remote',
-    'Открыть на исходном сайте',
+    'Подробнее',
     'Новость &lt;script&gt;alert(1)&lt;/script&gt;',
 ] as $expected) {
     if (!str_contains($html, $expected)) {
@@ -57,7 +57,7 @@ foreach ([
 if (str_contains($html, '<script>alert(1)</script>')) {
     fwrite(
         STDERR,
-        "Публичный блок вывел неэкранированный remote HTML.\n",
+        "Публичный блок вывел неэкранированный удалённый HTML.\n",
     );
     exit(1);
 }
@@ -70,10 +70,23 @@ $empty = ThemeRenderer::forTheme('default')->capture(
     ],
 );
 
-if (str_contains($empty, 'Последние публикации')) {
+foreach ([
+    'Новости и материалы',
+    'Публикаций пока нет',
+] as $expected) {
+    if (!str_contains($empty, $expected)) {
+        fwrite(
+            STDERR,
+            "Пустое состояние главной страницы не содержит: {$expected}\n",
+        );
+        exit(1);
+    }
+}
+
+if (str_contains($empty, 'Последние новости и материалы')) {
     fwrite(
         STDERR,
-        "Пустой блок публикаций не должен занимать место на главной.\n",
+        "Пустое состояние не должно изображать наличие последних публикаций.\n",
     );
     exit(1);
 }
