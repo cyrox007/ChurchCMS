@@ -1,4 +1,8 @@
 /* Дополнительные стили публичных содержательных разделов. */
+.public-theme .public-frame--single {
+    grid-template-columns: minmax(0, 1fr);
+}
+
 .public-theme .publication-card__action {
     margin-top: .75rem;
     font-size: .8rem;
