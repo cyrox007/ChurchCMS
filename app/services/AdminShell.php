@@ -4,6 +4,7 @@ declare(strict_types=1);
 
 namespace ChurchCMS\App\Services;
 
+use ChurchCMS\Core\Config;
 use ChurchCMS\Core\ModuleRuntimeLoader;
 use ChurchCMS\Core\Request;
 use ChurchCMS\Core\ThemeRenderer;
@@ -19,7 +20,8 @@ final class AdminShell
         array $data = [],
         string $section = 'overview',
     ): never {
-        $navigation = self::navigation($request);
+        $profile = (string) Config::get('site.profile', 'parish');
+        $navigation = self::navigation($request, $profile);
         $taskSummary = AdminTaskCenter::summary($request);
         $badges = [];
 
@@ -31,7 +33,9 @@ final class AdminShell
         }
 
         $shared = [
-            'siteName' => 'ChurchCMS',
+            'siteName' => (string) Config::get('site.name', 'ChurchCMS'),
+            'siteProfile' => $profile,
+            'siteProfileLabel' => AdminNavigationRegistry::profileLabel($profile),
             'adminUser' => $request->attribute('admin.user'),
             'adminSection' => $section,
             'adminNavigation' => array_values($navigation),
@@ -53,14 +57,20 @@ final class AdminShell
      *     label:string,
      *     route:string,
      *     permission:string,
-     *     priority:int
+     *     priority:int,
+     *     group:string
      * }>
      */
-    private static function navigation(Request $request): array
-    {
+    private static function navigation(
+        Request $request,
+        string $profile,
+    ): array {
         $visible = [];
 
-        foreach (AdminNavigationRegistry::entries() as $entry) {
+        foreach (
+            AdminNavigationRegistry::entriesForProfile($profile)
+            as $entry
+        ) {
             if (!AdminAuthorization::can($request, $entry['permission'])) {
                 continue;
             }
