@@ -9,12 +9,7 @@ use RuntimeException;
 
 final class AdminNavigationRegistry
 {
-    /**
-     * Разделы, которые относятся к учебному заведению и не должны
-     * перегружать обычный приходской интерфейс.
-     *
-     * @var list<string>
-     */
+    /** @var list<string> */
     private const EDUCATION_PREFIXES = [
         'education_',
         'education-',
@@ -39,12 +34,7 @@ final class AdminNavigationRegistry
         'sunday-school',
     ];
 
-    /**
-     * Технические интеграции остаются доступны по прямому адресу и правам,
-     * но не занимают место в основном меню простого приходского сайта.
-     *
-     * @var list<string>
-     */
+    /** @var list<string> */
     private const ADVANCED_INTEGRATION_MARKERS = [
         'webhook',
         'syndication',
@@ -52,6 +42,19 @@ final class AdminNavigationRegistry
         'smi2',
         'news_mail',
         'news-mail',
+    ];
+
+    /** @var array<string,int> */
+    private const GROUP_ORDER = [
+        'Контент' => 10,
+        'Сайт' => 20,
+        'Жизнь организации' => 30,
+        'Образование' => 40,
+        'Медиа' => 50,
+        'Структура' => 60,
+        'Интеграции' => 70,
+        'Система' => 80,
+        'Дополнительно' => 90,
     ];
 
     /**
@@ -143,12 +146,20 @@ final class AdminNavigationRegistry
                 continue;
             }
 
-            $entry['group'] = self::groupFor(
-                $entry['id'],
-                $entry['label'],
-            );
+            $entry['group'] = self::groupFor($entry['id']);
             $result[] = $entry;
         }
+
+        usort(
+            $result,
+            static function (array $left, array $right): int {
+                $leftGroup = self::GROUP_ORDER[$left['group']] ?? 999;
+                $rightGroup = self::GROUP_ORDER[$right['group']] ?? 999;
+
+                return [$leftGroup, $left['priority'], $left['id']]
+                    <=> [$rightGroup, $right['priority'], $right['id']];
+            },
+        );
 
         return $result;
     }
@@ -251,7 +262,7 @@ final class AdminNavigationRegistry
         return false;
     }
 
-    private static function groupFor(string $id, string $label): string
+    private static function groupFor(string $id): string
     {
         if (self::isEducationId($id)) {
             return 'Образование';
@@ -313,10 +324,7 @@ final class AdminNavigationRegistry
             return 'Сайт';
         }
 
-        if (
-            in_array($id, ['publications', 'comments', 'library'], true)
-            || str_contains(mb_strtolower($label), 'публикац')
-        ) {
+        if (in_array($id, ['publications', 'comments', 'library'], true)) {
             return 'Контент';
         }
 
