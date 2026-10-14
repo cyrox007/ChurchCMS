@@ -42,6 +42,8 @@ final class AdminNavigationRegistry
         'smi2',
         'news_mail',
         'news-mail',
+        'external',
+        'channel',
     ];
 
     /** @var array<string,int> */
@@ -216,7 +218,8 @@ final class AdminNavigationRegistry
 
         if ($profile === 'education') {
             return !in_array($id, self::PARISH_ONLY_IDS, true)
-                && !in_array($id, self::STRUCTURE_IDS, true);
+                && !in_array($id, self::STRUCTURE_IDS, true)
+                && !self::isAdvancedIntegrationId($id);
         }
 
         if (
@@ -230,10 +233,7 @@ final class AdminNavigationRegistry
                 return false;
             }
 
-            return !self::hasMarker(
-                $id,
-                self::ADVANCED_INTEGRATION_MARKERS,
-            );
+            return !self::isAdvancedIntegrationId($id);
         }
 
         return true;
@@ -248,6 +248,14 @@ final class AdminNavigationRegistry
         }
 
         return false;
+    }
+
+    private static function isAdvancedIntegrationId(string $id): bool
+    {
+        return self::hasMarker(
+            $id,
+            self::ADVANCED_INTEGRATION_MARKERS,
+        );
     }
 
     /** @param list<string> $markers */
@@ -272,11 +280,7 @@ final class AdminNavigationRegistry
             return 'Структура';
         }
 
-        if (
-            self::hasMarker($id, self::ADVANCED_INTEGRATION_MARKERS)
-            || str_contains($id, 'external')
-            || str_contains($id, 'channel')
-        ) {
+        if (self::isAdvancedIntegrationId($id)) {
             return 'Интеграции';
         }
 
