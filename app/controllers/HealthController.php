@@ -49,7 +49,7 @@ final class HealthController
             'title' => $siteName,
             'siteName' => $siteName,
             'heading' => $siteName,
-            'lead' => 'Новости и материалы организации и связанных нижестоящих ChurchCMS-сайтов.',
+            'lead' => 'Новости, события и материалы организации и связанных церковных учреждений.',
             'latestPublications' => $latestPublications,
         ]);
     }
