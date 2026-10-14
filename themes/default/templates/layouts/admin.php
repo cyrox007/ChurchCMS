@@ -22,6 +22,7 @@ $navigation = is_array($adminNavigation ?? null)
     <link rel="stylesheet" href="<?= $theme->e($theme->asset('css/site.css')) ?>">
     <link rel="stylesheet" href="<?= $theme->e($theme->asset('css/admin-async.css')) ?>">
     <link rel="stylesheet" href="<?= $theme->e($theme->asset('css/admin-modern.css')) ?>">
+    <link rel="stylesheet" href="<?= $theme->e($theme->asset('css/admin-controls.css')) ?>">
 </head>
 <body class="admin-app">
 <a class="skip-link" href="#admin-content">Перейти к содержанию</a>
