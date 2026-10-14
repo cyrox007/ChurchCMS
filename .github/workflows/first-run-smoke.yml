@@ -8,6 +8,7 @@ on:
     paths:
       - 'index.php'
       - 'install.php'
+      - '.htaccess'
       - '.github/workflows/first-run-smoke.yml'
   workflow_dispatch:
 
@@ -30,6 +31,18 @@ jobs:
 
       - name: Проверить синтаксис точки входа
         run: php -l index.php
+
+      - name: Проверить правила Apache
+        shell: bash
+        run: |
+          set -euo pipefail
+          test -f .htaccess
+          grep -Fq 'RewriteEngine On' .htaccess
+          grep -Fq 'RewriteCond %{REQUEST_FILENAME} -f [OR]' .htaccess
+          grep -Fq 'RewriteCond %{REQUEST_FILENAME} -d' .htaccess
+          grep -Fq 'RewriteRule ^ index.php [L,QSA]' .htaccess
+          grep -Fq '/_theme-asset' .htaccess
+          grep -Fq 'FallbackResource /index.php' .htaccess
 
       - name: Проверить автоматический переход в мастер установки
         shell: bash
