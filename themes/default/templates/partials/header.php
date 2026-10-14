@@ -40,11 +40,23 @@ $today = new \DateTimeImmutable('now');
                 </div>
             </div>
 
-            <div class="site-header__quick" aria-label="Быстрый переход">
-                <p class="site-header__quick-label">Актуальное</p>
-                <a href="/publications">Последние новости</a>
-                <small>События, объявления и материалы организации</small>
-            </div>
+            <form class="site-header__quick site-header__search" method="get" action="/search">
+                <label for="site-header-search" class="site-header__quick-label">
+                    Поиск по сайту
+                </label>
+                <div class="site-header__search-row">
+                    <input
+                        id="site-header-search"
+                        type="search"
+                        name="q"
+                        minlength="2"
+                        maxlength="120"
+                        placeholder="Что найти?"
+                    >
+                    <button type="submit">Найти</button>
+                </div>
+                <small>Новости, страницы, документы и события</small>
+            </form>
         </div>
     </div>
 
