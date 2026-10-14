@@ -1,10 +1,7 @@
 (() => {
     'use strict';
 
-    const sources = document.querySelectorAll('[data-rich-editor-source]');
-    if (sources.length === 0) {
-        return;
-    }
+    const sourceSelector = '[data-rich-editor-source]';
 
     const createButton = (label, title, command, value = null) => {
         const button = document.createElement('button');
@@ -48,10 +45,13 @@
         return surface.contains(selection.anchorNode);
     };
 
-    sources.forEach((source) => {
-        if (!(source instanceof HTMLTextAreaElement)) {
+    const enhance = (source) => {
+        if (!(source instanceof HTMLTextAreaElement)
+            || source.dataset.richEditorReady === '1') {
             return;
         }
+
+        source.dataset.richEditorReady = '1';
 
         const wrapper = document.createElement('div');
         wrapper.className = 'rich-editor';
@@ -83,10 +83,7 @@
         surface.contentEditable = 'true';
         surface.setAttribute('role', 'textbox');
         surface.setAttribute('aria-multiline', 'true');
-        surface.setAttribute(
-            'data-placeholder',
-            'Напишите текст публикации…',
-        );
+        surface.setAttribute('data-placeholder', 'Напишите текст публикации…');
 
         if (source.dataset.richEditorFormat === 'html') {
             surface.innerHTML = source.value;
@@ -110,7 +107,12 @@
         });
 
         toolbar.addEventListener('click', (event) => {
-            const button = event.target.closest('[data-editor-command]');
+            const target = event.target;
+            if (!(target instanceof Element)) {
+                return;
+            }
+
+            const button = target.closest('[data-editor-command]');
             if (!(button instanceof HTMLButtonElement)) {
                 return;
             }
@@ -123,6 +125,7 @@
                 if (!selectionInside(surface)) {
                     return;
                 }
+
                 const href = window.prompt('Адрес ссылки');
                 if (href === null || href.trim() === '') {
                     return;
@@ -141,5 +144,35 @@
         if (form) {
             form.addEventListener('submit', sync);
         }
+    };
+
+    const scan = (root = document) => {
+        if (root instanceof Element && root.matches(sourceSelector)) {
+            enhance(root);
+        }
+
+        root.querySelectorAll?.(sourceSelector).forEach(enhance);
+    };
+
+    scan();
+
+    const content = document.querySelector('#admin-content');
+    if (!(content instanceof HTMLElement)) {
+        return;
+    }
+
+    const observer = new MutationObserver((mutations) => {
+        for (const mutation of mutations) {
+            for (const node of mutation.addedNodes) {
+                if (node instanceof Element) {
+                    scan(node);
+                }
+            }
+        }
+    });
+
+    observer.observe(content, {
+        childList: true,
+        subtree: true,
     });
 })();
