@@ -120,6 +120,7 @@ final class PublicationRubricRepository
                 name,
                 parent_id,
                 sort_order,
+                is_managed,
                 created_at,
                 updated_at
              ) VALUES (
@@ -129,6 +130,7 @@ final class PublicationRubricRepository
                 :name,
                 :parent_id,
                 :sort_order,
+                1,
                 :created_at,
                 :updated_at
              )'
@@ -189,7 +191,8 @@ final class PublicationRubricRepository
                  sort_order = :sort_order,
                  updated_at = :updated_at
              WHERE id = :id
-               AND site_key = :site_key'
+               AND site_key = :site_key
+               AND is_managed = 1'
         );
         $statement->execute([
             'name' => $name,
@@ -223,7 +226,8 @@ final class PublicationRubricRepository
         $statement = $this->pdo->prepare(
             'DELETE FROM publication_categories
              WHERE id = :id
-               AND site_key = :site_key'
+               AND site_key = :site_key
+               AND is_managed = 1'
         );
         $statement->execute([
             'id' => $id,
@@ -241,6 +245,7 @@ final class PublicationRubricRepository
              FROM publication_categories
              WHERE public_id = :public_id
                AND site_key = :site_key
+               AND is_managed = 1
              LIMIT 1'
         );
         $statement->execute([
@@ -274,6 +279,7 @@ final class PublicationRubricRepository
              LEFT JOIN publication_categories p
                 ON p.id = c.parent_id
              WHERE c.site_key = :site_key
+               AND c.is_managed = 1
              ORDER BY c.sort_order ASC, c.name ASC, c.id ASC'
         );
         $statement->execute([
@@ -342,6 +348,7 @@ final class PublicationRubricRepository
                 'SELECT parent_id
                  FROM publication_categories
                  WHERE id = :id
+                   AND is_managed = 1
                  LIMIT 1'
             );
             $statement->execute(['id' => $current]);
