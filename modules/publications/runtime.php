@@ -19,6 +19,7 @@ use ChurchCMS\Modules\Publications\PublicationSyndicationProvider;
 use ChurchCMS\Modules\Publications\FederatedPublicationSyndicationProvider;
 use ChurchCMS\Modules\Publications\PublicationAdminSearchProvider;
 use ChurchCMS\Modules\Publications\PublicationAdminTaskProvider;
+use ChurchCMS\Modules\Publications\PublicationRubricsAdminController;
 use ChurchCMS\Modules\Publications\PublicationSyndicationOverridesAdminController;
 use ChurchCMS\Modules\Publications\PublicationsApiController;
 use ChurchCMS\Modules\Publications\PublicationsCapability;
@@ -35,6 +36,7 @@ foreach ([
     'PublicationPartnerTombstoneApiResource.php',
     'PublicationTaxonomyRepository.php',
     'PublicationTaxonomyService.php',
+    'PublicationRubricRepository.php',
     'PublicationRevisionService.php',
     'PublicationService.php',
     'PublicationOrganizationAccessService.php',
@@ -50,6 +52,7 @@ foreach ([
     'PublicationsController.php',
     'PublicationsApiController.php',
     'PublicationsAdminController.php',
+    'PublicationRubricsAdminController.php',
     'PublicationSyndicationOverridesAdminController.php',
 ] as $file) {
     require_once $moduleRoot . '/' . $file;
@@ -94,6 +97,13 @@ return new class implements ModuleRuntimeProvider {
             route: 'admin_publications',
             permission: 'publications.read',
             priority: 20,
+        );
+        AdminNavigationRegistry::register(
+            id: 'publication_rubrics',
+            label: 'Рубрики',
+            route: 'admin_publication_rubrics',
+            permission: 'publications.read',
+            priority: 21,
         );
 
         AdminSearchRegistry::register(
@@ -142,6 +152,36 @@ return new class implements ModuleRuntimeProvider {
             [RequireAdminMiddleware::class, CsrfMiddleware::class],
             'admin_publication_create',
         );
+
+        $router->add(
+            'GET',
+            '/admin/publications/rubrics',
+            [PublicationRubricsAdminController::class, 'index'],
+            [RequireAdminMiddleware::class],
+            'admin_publication_rubrics',
+        );
+        $router->add(
+            'POST',
+            '/admin/publications/rubrics',
+            [PublicationRubricsAdminController::class, 'create'],
+            [RequireAdminMiddleware::class, CsrfMiddleware::class],
+            'admin_publication_rubric_create',
+        );
+        $router->add(
+            'POST',
+            '/admin/publications/rubrics/{publicId}',
+            [PublicationRubricsAdminController::class, 'update'],
+            [RequireAdminMiddleware::class, CsrfMiddleware::class],
+            'admin_publication_rubric_update',
+        );
+        $router->add(
+            'POST',
+            '/admin/publications/rubrics/{publicId}/delete',
+            [PublicationRubricsAdminController::class, 'delete'],
+            [RequireAdminMiddleware::class, CsrfMiddleware::class],
+            'admin_publication_rubric_delete',
+        );
+
         $router->add(
             'GET',
             '/admin/publications/{publicId}/syndication-overrides',
