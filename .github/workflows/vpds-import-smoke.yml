@@ -1,0 +1,56 @@
+name: Проверка импорта VPDS
+
+on:
+  push:
+    branches: [develop, main]
+    paths:
+      - 'modules/migration/**'
+      - 'database/migrations/20261014_070000_create_vpds_import_mappings.php'
+      - 'bin/vpds-import.php'
+      - 'tools/vpds-import-smoke.php'
+      - 'docs/VPDS_MIGRATION.md'
+      - 'docs/ROADMAP.md'
+      - 'docs/RELEASE_1.0.md'
+      - 'docs/BACKLOG.md'
+      - '.github/workflows/vpds-import-smoke.yml'
+  pull_request:
+    branches: [develop, main]
+    paths:
+      - 'modules/migration/**'
+      - 'database/migrations/20261014_070000_create_vpds_import_mappings.php'
+      - 'bin/vpds-import.php'
+      - 'tools/vpds-import-smoke.php'
+      - 'docs/VPDS_MIGRATION.md'
+      - 'docs/ROADMAP.md'
+      - 'docs/RELEASE_1.0.md'
+      - 'docs/BACKLOG.md'
+      - '.github/workflows/vpds-import-smoke.yml'
+
+permissions:
+  contents: read
+
+jobs:
+  vpds-import:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Получить исходный код
+        uses: actions/checkout@v4
+      - name: Подготовить PHP 8.3
+        uses: shivammathur/setup-php@v2
+        with:
+          php-version: '8.3'
+          extensions: dom, fileinfo, mbstring
+          coverage: none
+      - name: Проверить синтаксис VPDS-контура
+        run: |
+          set -euo pipefail
+          php -l modules/migration/VpdsImportPort.php
+          php -l modules/migration/VpdsImportReport.php
+          php -l modules/migration/VpdsManifestReader.php
+          php -l modules/migration/VpdsImportService.php
+          php -l modules/migration/DatabaseVpdsImportPort.php
+          php -l database/migrations/20261014_070000_create_vpds_import_mappings.php
+          php -l bin/vpds-import.php
+          php -l tools/vpds-import-smoke.php
+      - name: Проверить импорт VPDS без БД и сети
+        run: php tools/vpds-import-smoke.php
