@@ -82,6 +82,7 @@
         surface.className = 'rich-editor__surface';
         surface.contentEditable = 'true';
         surface.setAttribute('role', 'textbox');
+        surface.setAttribute('aria-label', 'Текст публикации');
         surface.setAttribute('aria-multiline', 'true');
         surface.setAttribute('data-placeholder', 'Напишите текст публикации…');
 
@@ -95,6 +96,7 @@
         source.insertAdjacentElement('afterend', wrapper);
         source.classList.add('rich-editor-source--enhanced');
         source.tabIndex = -1;
+        source.setAttribute('aria-hidden', 'true');
 
         const sync = () => {
             source.value = surface.innerHTML.trim();
