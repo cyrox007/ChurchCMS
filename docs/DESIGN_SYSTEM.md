@@ -1,114 +1,134 @@
-# Base design system
+# Базовая система дизайна
 
-The bundled `default` theme modernizes recognizable visual cues from the legacy VPDS design while remaining a reusable parent theme for parishes, cathedrals and theological schools.
+Встроенная тема `default` развивает визуальное наследие старой VPDS-системы, но не копирует конкретный сайт. Старые приходские и епархиальные сайты используются как референсы для структуры, информационной плотности и характера интерфейса.
 
-## Legacy cues retained
+## Визуальное направление
 
-The audited legacy stylesheet used:
+Базовая тема должна восприниматься как современный официальный сайт православной организации, а не как универсальный корпоративный шаблон или рекламная посадочная страница.
 
-- deep blue `#003366` as the structural/header color;
-- burgundy `#660000` for links and emphasis;
-- blue-gray `#9AA7BA` around the central page;
-- an architectural building image tinted into the blue header;
-- a formal academic visual tone.
+Из старой системы сохраняются узнаваемые признаки:
 
-The new theme keeps that identity at the level of palette, hierarchy and atmosphere.
+- глубокий синий как основной структурный цвет;
+- бордовый или тёмно-красный акцент для важных ссылок и заголовков;
+- спокойный серо-синий однотонный фон вокруг центральной страницы;
+- архитектурный мотив в шапке;
+- плотная, но понятная информационная подача;
+- сочетание верхнего меню и структурной навигации по разделам;
+- новостная лента как один из главных элементов главной страницы.
 
-## What is removed
+В качестве референсов рассматриваются, в частности, старые сайты на VPDS, сайт собора Владимирской иконы Божией Матери в Лисках и сайты Воронежской епархии. Их нельзя воспроизводить пиксель в пиксель: задача темы — сохранить узнаваемую основу и исправить накопившиеся проблемы старого интерфейса.
 
-The modern theme deliberately drops:
+## Что принципиально осовременено
 
-- fixed 775 px page width;
-- table-based layout;
-- image-sliced shadows;
-- 10–13 px interface typography;
-- beveled navigation graphics;
-- GIF-driven menus;
-- desktop-only density.
+Тема не переносит ограничения старой верстки:
 
-## Modern palette
+- нет жёсткой ширины в несколько сотен пикселей;
+- нет табличной компоновки;
+- нет нарезанных картинками рамок и теней;
+- нет мелкого интерфейсного текста 10–13 пикселей;
+- нет GIF-меню и декоративных псевдокнопок;
+- мобильная версия не является просто сжатым настольным сайтом;
+- длинные статьи имеют отдельную читательскую ширину и более спокойную типографику.
 
+На больших экранах сохраняется характерная двухколоночная композиция: синяя навигационная колонка слева и белая содержательная область справа. На небольших экранах боковая навигация превращается в компактный раскрывающийся список.
+
+## Цветовая основа
+
+Основные токены публичной темы:
+
+```text
+blue-950   #062847
+blue-900   #08365f
+blue-800   #0b477c
+blue-700   #17629a
+wine-800   #7f1f2d
+wine-700   #9a2939
+canvas     #d7e0e8
+paper      #ffffff
+soft       #f4f8fb
 ```
-navy-950  #071d36
-navy-900  #0b315d
-navy-800  #164574
-wine-800  #6b1f2d
-wine-700  #842a3c
-canvas    #f5f1e9
-paper     #fffdf9
-ink-950   #18202a
-ink-700   #45505d
-```
 
-A child theme may replace every token.
+Дочерняя тема может переопределить эти значения без изменения модулей ChurchCMS.
 
-## Typography
+## Типографика
 
-No external font service is required.
+Для крупных заголовков используется локально доступный набор с засечками:
 
-Display headings use a locally available serif stack:
-
-```
+```text
 Georgia, "Times New Roman", serif
 ```
 
-Interface/body text uses the platform system sans-serif stack.
+Основной интерфейс использует системный набор без засечек. Внешний сервис шрифтов для корректной работы темы не требуется.
 
-A child theme may bundle local font files, but should not require a third-party CDN to render correctly.
+Новости и каталоги используют более компактную интерфейсную типографику, а статьи и обычные содержательные страницы — увеличенную читательскую строку и межстрочный интервал.
 
-## Layout and responsive rules
+## Главная страница
 
-- mobile-first;
-- usable at 320 px without required horizontal scrolling;
-- fluid content container;
-- large editorial type with bounded line length;
-- grids collapse cleanly to one column;
-- touch-friendly interactive targets;
-- no visual behavior depends on hover alone.
+Главная страница является страницей организации, а не демонстрацией возможностей ChurchCMS. На ней приоритетны:
 
-## Accessibility baseline
+- название и назначение сайта;
+- свежие новости, объявления и статьи;
+- быстрые переходы в основные разделы;
+- понятная принадлежность материалов, если публикация получена от связанного сайта;
+- доступ к архиву публикаций и поиску.
 
-The default theme includes:
+Первый материал ленты получает повышенный визуальный приоритет. Остальные материалы показываются более компактно, чтобы сохранить информационную плотность старых сайтов без их визуального шума.
 
-- skip navigation link;
-- visible `:focus-visible`;
-- semantic landmarks;
-- high-contrast structural colors;
-- `prefers-reduced-motion`;
-- `prefers-contrast`;
-- responsive typography via `clamp()`.
+## Новости и статьи
 
-## Architectural-photo motif
+Архив публикаций строится как читаемая вертикальная лента. Тип материала, дата и категории отделены от заголовка. Заголовок остаётся главным элементом карточки.
 
-The old header used a blue-tinted photograph of the seminary building.
+Страница отдельной публикации имеет ограниченную читательскую ширину. Лид, метаданные, основной текст, изображения, видео, блок «Поделиться» и комментарии визуально разделены, но не превращены в набор разрозненных карточек.
 
-The default theme keeps the architectural atmosphere using lightweight CSS geometry so it does not become coupled to one organization.
+## Каталоги и специальные разделы
 
-A site-specific child theme may replace the backdrop with its own locally stored:
+Разделы духовенства, богослужений, событий, святынь, библиотеки, воскресной школы и образовательных модулей используют общие правила:
 
-- cathedral/church photograph;
-- seminary facade;
-- monastery image;
-- iconographic detail;
-- restrained texture.
+- единая шапка раздела;
+- белые или слегка тонированные содержательные блоки;
+- синий структурный цвет;
+- бордовый акцент только для смыслового выделения;
+- одинаковые отступы, рамки и состояния наведения;
+- адаптивная сетка без горизонтальной прокрутки содержимого.
 
-That asset belongs to the child theme, never to CMS business logic.
+Расписание богослужений и календарь событий оформляются как специализированные списки, а не как обычные текстовые абзацы.
 
-## Recommended child themes
+## Доступность
 
-```
+Базовый контракт темы включает:
+
+- ссылку быстрого перехода к содержанию;
+- заметный `:focus-visible`;
+- семантические области страницы;
+- достаточный контраст основных цветов;
+- поддержку `prefers-reduced-motion`;
+- поддержку `prefers-contrast`;
+- адаптивную типографику;
+- удобные области нажатия на мобильных устройствах.
+
+## Архитектурный мотив и изображения
+
+Базовая тема не должна быть привязана к фотографии конкретного храма. Поэтому по умолчанию архитектурная атмосфера создаётся цветом и лёгкой геометрией.
+
+Дочерняя тема конкретной организации может заменить фон шапки локальным изображением:
+
+- храма или собора;
+- духовной семинарии;
+- монастыря;
+- архитектурного или иконографического фрагмента.
+
+Такое изображение относится к теме конкретного сайта и не должно попадать в бизнес-логику CMS.
+
+## Дочерние темы
+
+Рекомендуемая структура:
+
+```text
 themes/vladimir-cathedral/
 themes/annunciation-cathedral/
 themes/tambov-seminary/
 ```
 
-Each inherits `default` and usually overrides:
+Дочерняя тема наследует `default` и обычно меняет только палитру, шапку, локальные изображения, отдельные представления и при необходимости локальные шрифты.
 
-- palette/tokens;
-- header identity;
-- home-page composition;
-- selected logical templates;
-- local imagery;
-- optionally locally bundled fonts.
-
-Do not fork modules to create a visual variant.
+Для визуального варианта нельзя копировать или разветвлять прикладные модули ChurchCMS.

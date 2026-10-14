@@ -1,168 +1,203 @@
-<?php declare(strict_types=1); ?>
-<section class="hero">
-    <div class="hero__content">
-        <p class="eyebrow"><?= $theme->e($eyebrow ?? 'ChurchCMS') ?></p>
-        <h1><?= $theme->e($heading ?? 'Современная CMS для приходов и духовных школ') ?></h1>
-        <p class="hero__lead">
-            <?= $theme->e($lead ?? 'Самостоятельное PHP 8.3+ ядро, модульная архитектура и сменные темы для разных типов церковных и образовательных сайтов.') ?>
-        </p>
+<?php
 
-        <div class="hero__actions">
-            <a class="button button--primary" href="#capabilities">Возможности</a>
-            <a class="button button--quiet" href="<?= $theme->e($theme->route('health')) ?>">Проверить runtime</a>
-        </div>
+declare(strict_types=1);
+
+$latestPublications = is_array($latestPublications ?? null)
+    ? array_values($latestPublications)
+    : [];
+$homeNavigation = is_array($navigation ?? null)
+    ? array_values($navigation)
+    : [];
+
+$typeLabels = [
+    'news' => 'Новости',
+    'article' => 'Статья',
+    'announcement' => 'Объявление',
+];
+
+$publicationMeta = static function (array $publication) use ($typeLabels): array {
+    $type = trim((string) ($publication['type'] ?? ''));
+    $publishedAt = trim((string) ($publication['published_at'] ?? ''));
+    $date = '';
+
+    if ($publishedAt !== '') {
+        try {
+            $date = (new DateTimeImmutable($publishedAt))->format('d.m.Y');
+        } catch (Throwable) {
+            $date = '';
+        }
+    }
+
+    $source = is_array($publication['source'] ?? null)
+        ? $publication['source']
+        : [];
+    $sourceName = trim((string) ($source['name'] ?? ''));
+    $isFederation = ($source['kind'] ?? null) === 'federation';
+
+    return [
+        'type' => $typeLabels[$type] ?? 'Материал',
+        'date' => $date,
+        'source' => $isFederation && $sourceName !== ''
+            ? $sourceName
+            : '',
+    ];
+};
+?>
+<section class="home-intro" aria-labelledby="home-title">
+    <div class="home-intro__content">
+        <p class="eyebrow">Официальный сайт</p>
+        <h1 id="home-title">
+            <?= $theme->e($heading ?? 'ChurchCMS') ?>
+        </h1>
+        <p class="home-intro__lead">
+            <?= $theme->e(
+                $lead
+                ?? 'Новости, события, богослужения и материалы организации.'
+            ) ?>
+        </p>
     </div>
 
-    <aside class="hero__panel" aria-label="Принципы базовой темы">
-        <p class="hero__panel-kicker">Наследие → современный интерфейс</p>
-        <p class="hero__panel-title">Синий архитектурный мотив и бордовый акцент сохранены из legacy-дизайна.</p>
-        <dl class="hero__stats">
-            <div>
-                <dt>PHP</dt>
-                <dd>8.3+</dd>
-            </div>
-            <div>
-                <dt>Runtime</dt>
-                <dd>0 deps</dd>
-            </div>
-            <div>
-                <dt>Theme</dt>
-                <dd>replaceable</dd>
-            </div>
-        </dl>
+    <aside class="home-intro__note" aria-label="Навигация по актуальным материалам">
+        <strong>Жизнь организации</strong>
+        <span>
+            Последние события, объявления и публикации собраны на главной странице.
+        </span>
     </aside>
 </section>
 
-
-<?php
-$latestPublications = is_array($latestPublications ?? null)
-    ? $latestPublications
-    : [];
-?>
 <?php if ($latestPublications !== []): ?>
-    <section
-        class="section section--tinted"
-        aria-labelledby="latest-publications-title"
-    >
-        <div class="section-heading">
-            <p class="eyebrow">Общая лента</p>
-            <h2 id="latest-publications-title">Последние публикации</h2>
-            <p>
-                Материалы этого сайта и связанных нижестоящих организаций.
-                Для внешних материалов всегда указан исходный сайт.
-            </p>
-        </div>
+    <?php
+    $featured = array_shift($latestPublications);
+    $featuredMeta = $publicationMeta($featured);
+    $featuredUrl = trim((string) ($featured['url'] ?? ''));
+    ?>
+    <section class="home-section" aria-labelledby="latest-publications-title">
+        <header class="home-section__heading">
+            <div>
+                <p class="eyebrow">Актуальное</p>
+                <h2 id="latest-publications-title">Последние новости и материалы</h2>
+            </div>
+            <a href="/publications">Все публикации →</a>
+        </header>
 
-        <div class="feature-grid">
+        <div class="news-feed">
+            <article class="news-feature">
+                <p class="news-feature__meta">
+                    <span class="news-feature__type">
+                        <?= $theme->e($featuredMeta['type']) ?>
+                    </span>
+                    <?php if ($featuredMeta['date'] !== ''): ?>
+                        <span><?= $theme->e($featuredMeta['date']) ?></span>
+                    <?php endif; ?>
+                    <?php if ($featuredMeta['source'] !== ''): ?>
+                        <span> · <?= $theme->e($featuredMeta['source']) ?></span>
+                    <?php endif; ?>
+                </p>
+
+                <h3>
+                    <?php if ($featuredUrl !== ''): ?>
+                        <a href="<?= $theme->e($featuredUrl) ?>">
+                            <?= $theme->e((string) ($featured['title'] ?? '')) ?>
+                        </a>
+                    <?php else: ?>
+                        <?= $theme->e((string) ($featured['title'] ?? '')) ?>
+                    <?php endif; ?>
+                </h3>
+
+                <?php if (!empty($featured['excerpt'])): ?>
+                    <p class="news-feature__excerpt">
+                        <?= $theme->e((string) $featured['excerpt']) ?>
+                    </p>
+                <?php endif; ?>
+            </article>
+
             <?php foreach ($latestPublications as $publication): ?>
                 <?php
-                $source = is_array($publication['source'] ?? null)
-                    ? $publication['source']
-                    : [];
-                $isFederation = ($source['kind'] ?? null)
-                    === 'federation';
-                $sourceName = trim(
-                    (string) ($source['name'] ?? '')
-                );
+                $meta = $publicationMeta($publication);
                 $url = trim((string) ($publication['url'] ?? ''));
                 ?>
-                <article class="card">
-                    <p class="card__eyebrow">
-                        <?= $theme->e(
-                            $isFederation
-                                ? 'Источник · ' . (
-                                    $sourceName !== ''
-                                        ? $sourceName
-                                        : 'связанный сайт'
-                                )
-                                : 'Этот сайт'
-                        ) ?>
+                <article class="news-row">
+                    <p class="news-row__meta">
+                        <span class="news-row__type">
+                            <?= $theme->e($meta['type']) ?>
+                        </span>
+                        <?php if ($meta['date'] !== ''): ?>
+                            <span><?= $theme->e($meta['date']) ?></span>
+                        <?php endif; ?>
+                        <?php if ($meta['source'] !== ''): ?>
+                            <span><?= $theme->e($meta['source']) ?></span>
+                        <?php endif; ?>
                     </p>
 
-                    <h3>
-                        <?php if ($url !== ''): ?>
-                            <a href="<?= $theme->e($url) ?>">
-                                <?= $theme->e(
-                                    (string) ($publication['title'] ?? '')
-                                ) ?>
-                            </a>
-                        <?php else: ?>
-                            <?= $theme->e(
-                                (string) ($publication['title'] ?? '')
-                            ) ?>
+                    <div>
+                        <h3>
+                            <?php if ($url !== ''): ?>
+                                <a href="<?= $theme->e($url) ?>">
+                                    <?= $theme->e((string) ($publication['title'] ?? '')) ?>
+                                </a>
+                            <?php else: ?>
+                                <?= $theme->e((string) ($publication['title'] ?? '')) ?>
+                            <?php endif; ?>
+                        </h3>
+
+                        <?php if (!empty($publication['excerpt'])): ?>
+                            <p class="news-row__excerpt">
+                                <?= $theme->e((string) $publication['excerpt']) ?>
+                            </p>
                         <?php endif; ?>
-                    </h3>
+                    </div>
 
-                    <?php if (!empty($publication['excerpt'])): ?>
-                        <p>
-                            <?= $theme->e(
-                                (string) $publication['excerpt']
-                            ) ?>
-                        </p>
-                    <?php endif; ?>
-
-                    <?php if (
-                        $isFederation
-                        && $url !== ''
-                    ): ?>
-                        <p>
-                            <a href="<?= $theme->e($url) ?>">
-                                Открыть на исходном сайте
-                            </a>
-                        </p>
+                    <?php if ($url !== ''): ?>
+                        <a class="news-row__more" href="<?= $theme->e($url) ?>">
+                            Подробнее
+                        </a>
                     <?php endif; ?>
                 </article>
             <?php endforeach; ?>
         </div>
     </section>
+<?php else: ?>
+    <section class="home-section" aria-labelledby="latest-publications-title">
+        <header class="home-section__heading">
+            <div>
+                <p class="eyebrow">Актуальное</p>
+                <h2 id="latest-publications-title">Новости и материалы</h2>
+            </div>
+        </header>
+        <div class="empty-state">
+            <h3>Публикаций пока нет</h3>
+            <p>Новые материалы появятся здесь после публикации редактором.</p>
+        </div>
+    </section>
 <?php endif; ?>
 
-<section class="section" id="capabilities" aria-labelledby="capabilities-title">
-    <div class="section-heading">
-        <p class="eyebrow">Основа</p>
-        <h2 id="capabilities-title">Один движок — разные сайты и дизайн</h2>
-        <p>Базовая тема задаёт безопасный и доступный фундамент. Приход, кафедральный собор или семинария могут наследовать её и менять только нужные представления.</p>
-    </div>
+<?php if ($homeNavigation !== []): ?>
+    <section class="home-section" aria-labelledby="site-sections-title">
+        <header class="home-section__heading">
+            <div>
+                <p class="eyebrow">Разделы</p>
+                <h2 id="site-sections-title">Полезные разделы сайта</h2>
+            </div>
+        </header>
 
-    <div class="feature-grid">
-        <?= $theme->component('component.card', [
-            'eyebrow' => '01',
-            'title' => 'Контент отдельно от дизайна',
-            'text' => 'Модули передают данные по логическому контракту, а тема сама решает, как их показывать.',
-        ]) ?>
-
-        <?= $theme->component('component.card', [
-            'eyebrow' => '02',
-            'title' => 'Адаптивность по умолчанию',
-            'text' => 'Никакой фиксированной ширины старого сайта: сетки, типографика и отступы рассчитаны на телефон, планшет и десктоп.',
-        ]) ?>
-
-        <?= $theme->component('component.card', [
-            'eyebrow' => '03',
-            'title' => 'Доступный интерфейс',
-            'text' => 'Высокий контраст, заметный focus, skip-link, semantic HTML и поддержка reduced motion входят в базовый контракт.',
-        ]) ?>
-    </div>
-</section>
-
-<section class="section section--tinted">
-    <div class="section-heading section-heading--compact">
-        <p class="eyebrow">Визуальное направление</p>
-        <h2>Узнаваемость без визуального наследия 2000-х</h2>
-    </div>
-
-    <div class="principles">
-        <article>
-            <h3>Глубокий синий</h3>
-            <p>Сохраняет академическую и архитектурную ассоциацию старого оформления, но используется крупными спокойными поверхностями.</p>
-        </article>
-        <article>
-            <h3>Бордовый акцент</h3>
-            <p>Наследует цвет ссылок legacy-сайта и теперь применяется точечно: активные элементы, кнопки и смысловые маркеры.</p>
-        </article>
-        <article>
-            <h3>Светлая типографика</h3>
-            <p>Тёплый фон, крупный набор и ограниченная длина строк делают длинные исторические и образовательные материалы удобнее для чтения.</p>
-        </article>
-    </div>
-</section>
+        <div class="home-quick-grid">
+            <?php foreach (array_slice($homeNavigation, 0, 6) as $item): ?>
+                <?php
+                $label = is_array($item)
+                    ? trim((string) ($item['label'] ?? ''))
+                    : '';
+                $url = is_array($item)
+                    ? trim((string) ($item['url'] ?? ''))
+                    : '';
+                if ($label === '' || $url === '') {
+                    continue;
+                }
+                ?>
+                <a class="home-quick-link" href="<?= $theme->e($url) ?>">
+                    <span><?= $theme->e($label) ?></span>
+                    <span>Перейти к разделу →</span>
+                </a>
+            <?php endforeach; ?>
+        </div>
+    </section>
+<?php endif; ?>

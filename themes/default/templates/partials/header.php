@@ -1,39 +1,89 @@
-<?php declare(strict_types=1); ?>
+<?php declare(strict_types=1);
+$headerNavigation = is_array($navigation ?? null)
+    ? array_slice($navigation, 0, 8)
+    : [];
+$today = new \DateTimeImmutable('now');
+?>
 <header class="site-header">
-    <div class="site-header__backdrop" aria-hidden="true"></div>
+    <div class="site-servicebar">
+        <div class="container site-servicebar__inner">
+            <p class="site-servicebar__date">
+                <?= $theme->e($today->format('d.m.Y')) ?>
+            </p>
+            <nav class="site-servicebar__links" aria-label="Служебная навигация">
+                <a href="/publications">Новости и публикации</a>
+                <a href="/search">Поиск</a>
+                <a href="/admin">Администратору</a>
+            </nav>
+        </div>
+    </div>
 
-    <div class="container site-header__inner">
-        <div class="identity">
-            <a class="identity__mark" href="<?= $theme->e($theme->route('home')) ?>" aria-label="На главную">
-                <span aria-hidden="true">CMS</span>
-            </a>
-
-            <div class="identity__text">
-                <a class="identity__name" href="<?= $theme->e($theme->route('home')) ?>">
-                    <?= $theme->e($siteName ?? 'ChurchCMS') ?>
+    <div class="site-header__visual">
+        <div class="container site-header__inner">
+            <div class="identity">
+                <a class="identity__mark" href="<?= $theme->e($theme->route('home')) ?>" aria-label="На главную">
+                    <span class="identity__mark-cross" aria-hidden="true"></span>
                 </a>
 
-                <?php if (!empty($siteSubtitle)): ?>
-                    <p class="identity__subtitle"><?= $theme->e($siteSubtitle) ?></p>
-                <?php endif; ?>
-            </div>
-        </div>
+                <div class="identity__text">
+                    <a class="identity__name" href="<?= $theme->e($theme->route('home')) ?>">
+                        <?= $theme->e($siteName ?? 'ChurchCMS') ?>
+                    </a>
 
-        <?php if (is_array($navigation) && $navigation !== []): ?>
-            <nav class="primary-nav" aria-label="Основная навигация">
+                    <p class="identity__subtitle">
+                        <?= $theme->e(
+                            !empty($siteSubtitle)
+                                ? (string) $siteSubtitle
+                                : 'Официальный сайт православной организации'
+                        ) ?>
+                    </p>
+                </div>
+            </div>
+
+            <form class="site-header__quick site-header__search" method="get" action="/search">
+                <label for="site-header-search" class="site-header__quick-label">
+                    Поиск по сайту
+                </label>
+                <div class="site-header__search-row">
+                    <input
+                        id="site-header-search"
+                        type="search"
+                        name="q"
+                        minlength="2"
+                        maxlength="120"
+                        placeholder="Что найти?"
+                    >
+                    <button type="submit">Найти</button>
+                </div>
+                <small>Новости, страницы, документы и события</small>
+            </form>
+        </div>
+    </div>
+
+    <?php if ($headerNavigation !== []): ?>
+        <nav class="primary-nav" aria-label="Основная навигация">
+            <div class="container primary-nav__inner">
                 <ul>
-                    <?php foreach ($navigation as $item): ?>
+                    <?php foreach ($headerNavigation as $item): ?>
                         <?php
-                        $label = is_array($item) ? (string) ($item['label'] ?? '') : '';
-                        $url = is_array($item) ? (string) ($item['url'] ?? '') : '';
+                        $label = is_array($item)
+                            ? trim((string) ($item['label'] ?? ''))
+                            : '';
+                        $url = is_array($item)
+                            ? trim((string) ($item['url'] ?? ''))
+                            : '';
                         if ($label === '' || $url === '') {
                             continue;
                         }
                         ?>
-                        <li><a href="<?= $theme->e($url) ?>"><?= $theme->e($label) ?></a></li>
+                        <li>
+                            <a href="<?= $theme->e($url) ?>">
+                                <?= $theme->e($label) ?>
+                            </a>
+                        </li>
                     <?php endforeach; ?>
                 </ul>
-            </nav>
-        <?php endif; ?>
-    </div>
+            </div>
+        </nav>
+    <?php endif; ?>
 </header>

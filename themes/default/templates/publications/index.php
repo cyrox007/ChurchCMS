@@ -1,4 +1,13 @@
-<?php declare(strict_types=1); ?>
+<?php
+
+declare(strict_types=1);
+
+$typeLabels = [
+    'news' => 'Новости',
+    'article' => 'Статья',
+    'announcement' => 'Объявление',
+];
+?>
 <section class="publication-hero">
     <p class="eyebrow">Архив</p>
     <h1><?= $theme->e($heading ?? 'Публикации') ?></h1>
@@ -13,9 +22,13 @@
 <?php else: ?>
     <section class="publication-list" aria-label="Список публикаций">
         <?php foreach ($publications as $publication): ?>
+            <?php
+            $type = $publication->type->value;
+            $typeLabel = $typeLabels[$type] ?? 'Материал';
+            ?>
             <article class="publication-card">
                 <p class="publication-card__meta">
-                    <span><?= $theme->e($publication->type->value) ?></span>
+                    <span><?= $theme->e($typeLabel) ?></span>
                     <?php if ($publication->publishedAt !== null): ?>
                         <time datetime="<?= $theme->e($publication->publishedAt->format(DATE_ATOM)) ?>">
                             <?= $theme->e($publication->publishedAt->format('d.m.Y')) ?>
@@ -48,6 +61,12 @@
                 <?php if ($publication->excerpt !== ''): ?>
                     <p><?= $theme->e($publication->excerpt) ?></p>
                 <?php endif; ?>
+
+                <p class="publication-card__action">
+                    <a href="<?= $theme->e($theme->route('publication_show', ['slug' => $publication->slug])) ?>">
+                        Читать материал →
+                    </a>
+                </p>
             </article>
         <?php endforeach; ?>
     </section>

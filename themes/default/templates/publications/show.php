@@ -1,8 +1,18 @@
-<?php declare(strict_types=1);
-$canonical = \ChurchCMS\Core\SeoRenderer::absoluteUrl('/publications/' . rawurlencode($publication->slug));
+<?php
+declare(strict_types=1);
+
+$canonical = \ChurchCMS\Core\SeoRenderer::absoluteUrl(
+    '/publications/' . rawurlencode($publication->slug),
+);
 $shareLinks = \ChurchCMS\Core\Config::get('sharing.enabled', true) === true
     ? $theme->shareLinks($canonical, $publication->title)
     : [];
+$typeLabels = [
+    'news' => 'Новости',
+    'article' => 'Статья',
+    'announcement' => 'Объявление',
+];
+$typeLabel = $typeLabels[$publication->type->value] ?? 'Материал';
 ?>
 <article
     class="publication"
@@ -20,7 +30,7 @@ $shareLinks = \ChurchCMS\Core\Config::get('sharing.enabled', true) === true
     <?php endif; ?>
 
     <header class="publication__header">
-        <p class="eyebrow"><?= $theme->e($publication->type->value) ?></p>
+        <p class="eyebrow"><?= $theme->e($typeLabel) ?></p>
         <h1 itemprop="headline"><?= $theme->e($publication->title) ?></h1>
 
         <div class="publication__meta">
