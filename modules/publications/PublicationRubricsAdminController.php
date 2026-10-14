@@ -21,13 +21,21 @@ final class PublicationRubricsAdminController
             'publications.read',
         );
 
+        $rubrics = PublicationRubricRepository::fromDatabase()
+            ->tree(self::SITE_KEY);
+
+        if ((string) $request->get('format', '') === 'json') {
+            Response::json([
+                'rubrics' => $rubrics,
+            ]);
+        }
+
         AdminShell::page(
             $request,
             'admin.publications.rubrics',
             [
                 'title' => 'Рубрики публикаций',
-                'rubrics' => PublicationRubricRepository::fromDatabase()
-                    ->tree(self::SITE_KEY),
+                'rubrics' => $rubrics,
                 'canManage' => AdminAuthorization::can(
                     $request,
                     'publications.edit',
