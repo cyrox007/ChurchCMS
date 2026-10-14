@@ -1,0 +1,61 @@
+name: Проверка первого запуска
+
+on:
+  pull_request:
+    branches:
+      - develop
+      - main
+    paths:
+      - 'index.php'
+      - 'install.php'
+      - '.github/workflows/first-run-smoke.yml'
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  first-run:
+    runs-on: ubuntu-24.04
+    steps:
+      - name: Получить исходный код
+        uses: actions/checkout@v4
+
+      - name: Подготовить PHP 8.3
+        uses: shivammathur/setup-php@v2
+        with:
+          php-version: '8.3'
+          coverage: none
+          extensions: pdo, pdo_sqlite, dom, fileinfo, openssl
+
+      - name: Проверить синтаксис точки входа
+        run: php -l index.php
+
+      - name: Проверить автоматический переход в мастер установки
+        shell: bash
+        run: |
+          set -euo pipefail
+          test ! -e config/local.php
+
+          php -S 127.0.0.1:18080 -t . >/tmp/churchcms-first-run.log 2>&1 &
+          server_pid=$!
+          trap 'kill "$server_pid" 2>/dev/null || true' EXIT
+
+          for attempt in {1..30}; do
+            if curl --silent --output /dev/null http://127.0.0.1:18080/; then
+              break
+            fi
+            sleep 0.2
+          done
+
+          curl --silent --show-error \
+            --dump-header /tmp/churchcms-first-run.headers \
+            --output /dev/null \
+            http://127.0.0.1:18080/
+
+          grep -Eq '^HTTP/[0-9.]+ 302' /tmp/churchcms-first-run.headers
+          grep -Eiq '^Location: /install\.php\r?$' /tmp/churchcms-first-run.headers
+
+          curl --fail --silent --show-error \
+            http://127.0.0.1:18080/install.php \
+            | grep -q 'Установка ChurchCMS'
