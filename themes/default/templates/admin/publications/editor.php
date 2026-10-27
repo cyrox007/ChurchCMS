@@ -132,6 +132,7 @@ $editorBody = $bodyIsStoredHtml
                         </option>
                     <?php endforeach; ?>
                 </select>
+                <small class="field__hint">Доступны только активные организации в пределах ваших прав.</small>
             </label>
 
             <div class="editor-grid">
@@ -268,7 +269,7 @@ $editorBody = $bodyIsStoredHtml
                             </label>
 
                             <label class="field">
-                                <span>Текст для канала <small>необязательно</small></span>
+                                <span>Текст для этого канала <small>необязательно</small></span>
                                 <textarea
                                     name="external_channel_text[<?= $theme->e($channelPublicId) ?>]"
                                     rows="2"

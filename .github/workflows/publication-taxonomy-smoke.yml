@@ -177,7 +177,6 @@ jobs:
           }
 
           $pdo = ChurchCMS\Core\DatabaseManager::getInstance()->connection();
-
           $sharedStatement = $pdo->prepare(
               "SELECT COUNT(*)
                FROM publication_categories
@@ -350,8 +349,9 @@ jobs:
           foreach ([
               "name=\"categories\"",
               "name=\"tags\"",
-              "До 8 категорий",
-              "До 20 тегов",
+              "Категории",
+              "Теги",
+              "через запятую",
           ] as $expected) {
               if (!str_contains($editor, $expected)) {
                   fwrite(

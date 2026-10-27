@@ -164,6 +164,188 @@
     margin-top: .6rem;
 }
 
+/* Свёрнутое боковое меню не должно оставлять пустую колонку. */
+.admin-app .admin-frame.admin-frame--collapsed {
+    grid-template-columns: 0 minmax(0, 1fr);
+}
+
+.admin-app .admin-frame--collapsed .admin-sidebar {
+    width: 0;
+    padding-inline: 0;
+    overflow: hidden;
+    visibility: hidden;
+    pointer-events: none;
+}
+
+/* Единая сетка старых административных форм. */
+.admin-app .admin-update-apply {
+    width: 100%;
+    max-width: 56rem;
+    flex: 1 1 42rem;
+    justify-self: start;
+    justify-items: stretch;
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    gap: .7rem 1rem;
+}
+
+.admin-app .admin-update-apply > h3,
+.admin-app .admin-update-apply > .admin-form-wide,
+.admin-app .admin-update-apply > button {
+    grid-column: 1 / -1;
+}
+
+.admin-app .admin-update-apply > label {
+    min-width: 0;
+    display: grid;
+    align-content: start;
+    gap: .28rem;
+    color: #263746;
+    font-size: .78rem;
+}
+
+.admin-app .admin-update-apply > label > span {
+    font-size: .7rem;
+    font-weight: 760;
+    line-height: 1.25;
+}
+
+.admin-app .admin-update-apply > label > input,
+.admin-app .admin-update-apply > label > select,
+.admin-app .admin-update-apply > label > textarea {
+    width: 100%;
+    min-width: 0;
+}
+
+.admin-app .admin-update-apply > label:has(textarea),
+.admin-app .admin-update-apply > label:has(select[name="owner_organization_public_id"]) {
+    grid-column: 1 / -1;
+}
+
+.admin-app .admin-update-apply > button {
+    width: fit-content;
+    justify-self: end;
+}
+
+.admin-app .admin-operations-section > .admin-update-apply {
+    max-width: 62rem;
+}
+
+.admin-app .admin-operations-row {
+    flex-wrap: wrap;
+}
+
+.admin-app .admin-operations-row > .admin-update-apply {
+    flex-basis: 100%;
+    max-width: none;
+}
+
+/* Иконки меню остаются компактными и не меняют ширину навигации. */
+.admin-app .admin-nav__label {
+    min-width: 0;
+    display: inline-flex;
+    align-items: center;
+    gap: .55rem;
+}
+
+.admin-app .admin-nav__icon {
+    width: 1rem;
+    height: 1rem;
+    flex: 0 0 1rem;
+    color: rgba(239, 246, 255, .72);
+}
+
+.admin-app .admin-nav__icon svg {
+    width: 100%;
+    height: 100%;
+    display: block;
+    fill: none;
+    stroke: currentColor;
+    stroke-width: 1.8;
+    stroke-linecap: round;
+    stroke-linejoin: round;
+}
+
+.admin-app .admin-nav > a[aria-current="page"] .admin-nav__icon {
+    color: #fff;
+}
+
+/* Рубрикатор публикаций. */
+.admin-app .rubric-tree {
+    display: grid;
+    gap: .5rem;
+    margin: 0;
+    padding: 0;
+    list-style: none;
+}
+
+.admin-app .rubric-tree__item {
+    display: grid;
+    grid-template-columns: minmax(0, 1fr) auto;
+    align-items: center;
+    gap: .75rem;
+    padding: .65rem .75rem;
+    border: 1px solid #d5dde4;
+    border-radius: .48rem;
+    background: #fff;
+}
+
+.admin-app .rubric-tree__item[data-depth="1"] {
+    margin-left: 1.25rem;
+}
+
+.admin-app .rubric-tree__item[data-depth="2"] {
+    margin-left: 2.5rem;
+}
+
+.admin-app .rubric-tree__item[data-depth="3"] {
+    margin-left: 3.75rem;
+}
+
+.admin-app .rubric-tree__main {
+    min-width: 0;
+}
+
+.admin-app .rubric-tree__main strong,
+.admin-app .rubric-tree__main small {
+    display: block;
+}
+
+.admin-app .rubric-tree__main small {
+    margin-top: .15rem;
+    color: #6b7782;
+    font-size: .7rem;
+}
+
+.admin-app .rubric-choice-list {
+    display: grid;
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    gap: .4rem;
+}
+
+.admin-app .rubric-choice {
+    min-width: 0;
+    display: flex;
+    align-items: center;
+    gap: .5rem;
+    padding: .48rem .55rem;
+    border: 1px solid #dce3e8;
+    border-radius: .42rem;
+    background: #fff;
+    font-size: .76rem;
+}
+
+.admin-app .rubric-choice[data-depth="1"] span {
+    padding-left: .65rem;
+}
+
+.admin-app .rubric-choice[data-depth="2"] span {
+    padding-left: 1.3rem;
+}
+
+.admin-app .rubric-choice[data-depth="3"] span {
+    padding-left: 1.95rem;
+}
+
 @media (max-width: 44rem) {
     .admin-app .admin-heading h1,
     .admin-app .admin-page-header__title,
@@ -187,5 +369,18 @@
 
     .admin-app .editor-actions .button {
         width: 100%;
+    }
+
+    .admin-app .admin-update-apply,
+    .admin-app .rubric-choice-list {
+        grid-template-columns: 1fr;
+    }
+
+    .admin-app .admin-update-apply > button {
+        width: 100%;
+    }
+
+    .admin-app .rubric-tree__item {
+        grid-template-columns: 1fr;
     }
 }
