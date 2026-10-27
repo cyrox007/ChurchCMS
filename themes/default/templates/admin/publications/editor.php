@@ -269,7 +269,7 @@ $editorBody = $bodyIsStoredHtml
                             </label>
 
                             <label class="field">
-                                <span>Текст для канала <small>необязательно</small></span>
+                                <span>Текст для этого канала <small>необязательно</small></span>
                                 <textarea
                                     name="external_channel_text[<?= $theme->e($channelPublicId) ?>]"
                                     rows="2"
