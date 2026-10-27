@@ -132,6 +132,7 @@ $editorBody = $bodyIsStoredHtml
                         </option>
                     <?php endforeach; ?>
                 </select>
+                <small class="field__hint">Доступны только активные организации в пределах ваших прав.</small>
             </label>
 
             <div class="editor-grid">
